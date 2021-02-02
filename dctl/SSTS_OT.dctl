@@ -1,0 +1,127 @@
+// ACES 1.2 RRTODT OFX DCTL
+
+DEFINE_UI_PARAMS(Y_MIN, Y Min, DCTLUI_VALUE_BOX, 0.0001)
+DEFINE_UI_PARAMS(Y_MID, Y Mid, DCTLUI_VALUE_BOX, 15.0)
+DEFINE_UI_PARAMS(Y_MAX, Y Max, DCTLUI_VALUE_BOX, 1000.0)
+DEFINE_UI_PARAMS(DISPLAY_PRI_SELECT, Display Primaries, DCTLUI_COMBO_BOX, 1, { D_Rec709, D_Rec2020, D_P3DCI, D_P3D65 }, { Rec.709, Rec.2020, P3-DCI, P3-D65 })
+DEFINE_UI_PARAMS(LIMITING_PRI_SELECT, Limiting Primaries, DCTLUI_COMBO_BOX, 3, { L_Rec709, L_Rec2020, L_P3DCI, L_P3D65 }, { Rec.709, Rec.2020, P3-DCI, P3-D65 })
+DEFINE_UI_PARAMS(EOTF_SELECT, EOTF, DCTLUI_COMBO_BOX, 0, { PQ, BT1886, sRGB, G26, lin, HLG }, { ST-2084 (PQ), BT.1886, sRGB, gamma 2.6, linear (no EOTF), HLG })
+DEFINE_UI_PARAMS(SURROUND_SELECT, Surround, DCTLUI_COMBO_BOX, 0, { dark, dim, normal }, { dark, dim, normal })
+DEFINE_UI_PARAMS(STRETCH_BLACK, Stretch Black, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(D60_SIM, D60 Sim, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(LEGAL_RANGE, Legal Range, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(GLOW_ON, Glow Module, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(REDMOD_ON, Red Modifier, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(DESAT_ON, Global Desaturation, DCTLUI_CHECK_BOX, 1)
+#include "ACES_LIB.h"
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+float3 aces = make_float3(p_R, p_G, p_B);
+
+Chromaticities DISPLAY_PRI;
+switch(DISPLAY_PRI_SELECT){
+	case D_Rec709:
+	{
+		DISPLAY_PRI = REC709_PRI;
+		break;
+	}
+	case D_Rec2020:
+	{
+		DISPLAY_PRI = REC2020_PRI;
+		break;
+	}
+	case D_P3DCI:
+	{
+		DISPLAY_PRI = P3DCI_PRI;
+		break;
+	}
+	case D_P3D65:
+	{
+		DISPLAY_PRI = P3D65_PRI;
+		break;
+	}
+}
+
+Chromaticities LIMITING_PRI;
+switch(LIMITING_PRI_SELECT){
+	case L_Rec709:
+	{
+		LIMITING_PRI = REC709_PRI;
+		break;
+	}
+	case L_Rec2020:
+	{
+		LIMITING_PRI = REC2020_PRI;
+		break;
+	}
+	case L_P3DCI:
+	{
+		LIMITING_PRI = P3DCI_PRI;
+		break;
+	}
+	case L_P3D65:
+	{
+		LIMITING_PRI = P3D65_PRI;
+		break;
+	}
+}
+
+int EOTF;
+switch(EOTF_SELECT){
+    case PQ:
+    {
+        EOTF = 0;
+        break;
+    }
+    case BT1886:
+    {
+        EOTF = 1;
+        break;
+    }
+    case sRGB:
+    {
+        EOTF = 2;
+        break;
+    }
+    case G26:
+    {
+        EOTF = 3;
+        break;
+    }
+    case lin:
+    {
+        EOTF = 4;
+        break;
+    }
+    case HLG:
+    {
+        EOTF = 5;
+        break;
+    }
+}
+
+int SURROUND;
+switch(SURROUND_SELECT){
+    case dark:
+    {
+        SURROUND = 0;
+        break;
+    }
+    case dim:
+    {
+        SURROUND = 1;
+        break;
+    }
+    case normal:
+    {
+        SURROUND = 2;
+        break;
+    }
+}
+
+// int SURROUND = 0;
+float3 cv = outputTransform( aces, Y_MIN, Y_MID, Y_MAX, DISPLAY_PRI,
+LIMITING_PRI, EOTF, SURROUND, STRETCH_BLACK, D60_SIM, LEGAL_RANGE, GLOW_ON, REDMOD_ON, DESAT_ON );
+return cv;
+}
