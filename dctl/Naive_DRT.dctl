@@ -1,0 +1,108 @@
+DEFINE_UI_PARAMS(norm_select, Norm, DCTLUI_COMBO_BOX, 0, {WYP, maxRGB, Luminance, Euclidian}, {Weighted Yellow Power, max(RGB), Luminance, Euclidian distance});
+DEFINE_UI_PARAMS(tonemap, Tonemap, DCTLUI_COMBO_BOX, 0, {SDR, HDR600, HDR1000, HDR2000, HDR4000, Custom, None}, {SDR, HDR 600 nits, HDR 1000 nits, HDR 2000 nits, HDR 4000 nits, Custom, None})
+DEFINE_UI_PARAMS(mid_x, Mid x, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(mid_y, Mid y, DCTLUI_VALUE_BOX, 0.11)
+DEFINE_UI_PARAMS(white_x, White x, DCTLUI_VALUE_BOX, 42.0)
+DEFINE_UI_PARAMS(white_y, White y, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(cont, Contrast, DCTLUI_VALUE_BOX, 1.47)
+DEFINE_UI_PARAMS(toe, Toe, DCTLUI_VALUE_BOX, 0.003)
+DEFINE_UI_PARAMS(toe_pivot, Toe Pivot, DCTLUI_VALUE_BOX, 0.5)
+DEFINE_UI_PARAMS(output_gain, Output Gain, DCTLUI_VALUE_BOX, 1.0)
+
+__DEVICE__ float ToneCompress(float x, float gx, float gy, float wx, float wy, float c, float t, float p)
+{
+    float st = (p + t) / p;
+    float sx = (wx * gx * (_powf(gy, 1.0f / c) - 1.0f)) / (gx - wx * _powf(gy, 1.0f / c));
+    float sy = wy * _powf(wx / (wx + sx), -c);
+
+    x = sy * _powf(x / (x + sx), c);
+
+    x = (st * x * x) / (x + t);
+
+    return x;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
+{ 
+    float r = _fmaxf(0.0f, p_R);
+    float g = _fmaxf(0.0f, p_G);
+    float b = _fmaxf(0.0f, p_B);
+    float norm;
+
+    if (norm_select == WYP)
+    {
+        norm = 0.83743219f * (_powf(1.22f*r, 5) + _powf(1.20f*g, 5.0f) + _powf(0.58f*b, 5.0f)) / (_powf(1.22f*r, 4.0f) + _powf(1.20f*g, 4.0f) + _powf(0.58f*b, 4.0f));
+    }
+    if (norm_select == maxRGB)
+    {
+        norm = _fmaxf(r, _fmaxf(g, b));
+    }
+    if (norm_select == Luminance)
+    {
+        norm = 0.2722287168f * r + 0.6740817658f * g + 0.0536895174f * b;
+    }
+    if (norm_select == Euclidian)
+    {
+        norm = _sqrtf(r * r + g * g + b * b);
+    }
+
+    float tonemapped_norm;
+    float scale;
+
+    if (tonemap == SDR)
+    {
+        tonemapped_norm = ToneCompress(norm, 0.18f, 0.11f, 42.0f, 1.0f, 1.47f, 0.003f, 0.5f);
+        scale = 1.0f;
+    }
+    if (tonemap == HDR600)
+    {
+        tonemapped_norm = ToneCompress(norm, 0.18f, 0.023f, 80.0f, 1.0f, 1.2f, 0.00266667f, 1.0f);
+        scale = 6.0f;
+    }
+    if (tonemap == HDR1000)
+    {
+        tonemapped_norm = ToneCompress(norm, 0.18f, 0.0145f, 90.0f, 1.0f, 1.2f, 0.0016f, 1.0f);
+        scale = 10.0f;
+    }
+    if (tonemap == HDR2000)
+    {
+        tonemapped_norm = ToneCompress(norm, 0.18f, 0.0077495f, 100.0f, 1.0f, 1.2f, 0.0008f, 1.0f);
+        scale = 20.0f;
+    }
+    if (tonemap == HDR4000)
+    {
+        tonemapped_norm = ToneCompress(norm, 0.18f, 0.004f, 112.0f, 1.0f, 1.2f, 0.0004f, 1.0f);
+        scale = 40.0f;
+    }    
+    if (tonemap == Custom)
+    {
+        tonemapped_norm =  ToneCompress(norm, mid_x, mid_y, white_x, white_y, cont, toe, toe_pivot);
+        scale = output_gain;
+    }
+    if (tonemap == None)
+    {
+        tonemapped_norm = norm;
+        scale = output_gain;
+    }
+    
+    tonemapped_norm *= scale;
+    
+    if (norm == 0.0f || isnan(tonemapped_norm))
+    {
+        norm = 1.0f;
+        tonemapped_norm = 1.0f;
+    }
+    
+    r *= tonemapped_norm / norm;
+    g *= tonemapped_norm / norm;
+    b *= tonemapped_norm / norm;
+    
+    float3 output;
+    
+    // Apply AP0 to Rec.2020 matrix
+    output.x = r * 1.02582475f + g * -0.02005319f + b * -0.00577156f;
+    output.y = r * -0.00223437f + g * 1.00458650f + b * -0.00235213f;
+    output.z = r * -0.00501335f + g * -0.02529007f + b * 1.03030342f;
+
+    return output;
+}
