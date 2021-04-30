@@ -7,19 +7,6 @@ DEFINE_UI_PARAMS(output_gain, Output Gain, DCTLUI_VALUE_BOX, 1.0)
 
 #include "ACES_LIB_MOD.h"
 
-__DEVICE__ float ToneCompress(float x, float gx, float gy, float wx, float wy, float c, float t, float p)
-{
-    float st = (p + t) / p;
-    float sx = (wx * gx * (_powf(gy, 1.0f / c) - 1.0f)) / (gx - wx * _powf(gy, 1.0f / c));
-    float sy = wy * _powf(wx / (wx + sx), -c);
-
-    x = sy * _powf(x / (x + sx), c);
-
-    x = (st * x * x) / (x + t);
-
-    return x;
-}
-
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
 { 
     float r = _fmaxf(0.0f, p_R);
@@ -45,7 +32,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     float tonemapped_norm;
-    float scale = 1.0f;
+    float scale;
     float Y_MIN;
     float Y_MID;
     float Y_MAX;
@@ -55,20 +42,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Y_MIN = 0.02f;
         Y_MID = 4.8f;
         Y_MAX = 48.0f;
-        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
-        tonemapped_norm = ssts(norm, PARAMS_DEFAULT);
-        tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
+        scale =1.0f;
     }
     if (tonemap == HDR600)
     {
         Y_MIN = 0.0001f;
         Y_MID = 15.0f;
         Y_MAX = 600.0f;
-        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
-        float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
-        TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
-        tonemapped_norm = ssts(norm, PARAMS);
-        tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
         scale = Y_MAX / 100.0f;
     }
     if (tonemap == HDR1000)
@@ -76,11 +56,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Y_MIN = 0.0001f;
         Y_MID = 15.0f;
         Y_MAX = 1000.0f;
-        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
-        float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
-        TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
-        tonemapped_norm = ssts(norm, PARAMS);
-        tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
         scale = Y_MAX / 100.0f;
     }
     if (tonemap == HDR2000)
@@ -88,11 +63,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Y_MIN = 0.0001f;
         Y_MID = 15.0f;
         Y_MAX = 2000.0f;
-        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
-        float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
-        TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
-        tonemapped_norm = ssts(norm, PARAMS);
-        tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
         scale = Y_MAX / 100.0f;
     }
     if (tonemap == HDR4000)
@@ -100,11 +70,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Y_MIN = 0.0001f;
         Y_MID = 15.0f;
         Y_MAX = 4000.0f;
-        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
-        float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
-        TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
-        tonemapped_norm = ssts(norm, PARAMS);
-        tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
         scale = Y_MAX / 100.0f;
     }    
     if (tonemap == Custom)
@@ -112,19 +77,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Y_MIN = min_y;
         Y_MID = mid_y;
         Y_MAX = max_y;
-        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
-        float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
-        TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
-        tonemapped_norm = ssts(norm, PARAMS);
-        tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
         scale = output_gain;
     }
+    
+	TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
+	float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
+	TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
+	tonemapped_norm = ssts(norm, PARAMS);
+	tonemapped_norm = Y_2_linCV(tonemapped_norm, Y_MAX, Y_MIN);
+    
     if (tonemap == None)
     {
         tonemapped_norm = norm;
         scale = 1.0f;
     }
     
+    // Scale so 100 nits is 1.0
     tonemapped_norm *= scale;
     
     if (norm == 0.0f || isnan(tonemapped_norm))
@@ -139,7 +107,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     
     float3 output;
     
-    // Apply AP0 to Rec.2020 matrix
+    // Apply AP0 to Rec.2020 matrix with Bradford CAT to produce D65 Rec.2020 display linear
     output.x = r * 1.02582475f + g * -0.02005319f + b * -0.00577156f;
     output.y = r * -0.00223437f + g * 1.00458650f + b * -0.00235213f;
     output.z = r * -0.00501335f + g * -0.02529007f + b * 1.03030342f;

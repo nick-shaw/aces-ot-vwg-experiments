@@ -2,7 +2,7 @@
 This repo contains various experiments related to the ACES 2.0 [Output Transforms Virtual Working Group](https://paper.dropbox.com/doc/Output-Transforms-Architecture-Virtual-Working-Group--BHNkZoNAA~9dfXH1BcmddBLaAg-HKNpj824NA0Z8tn7jiPS0).
 
 ## DCTL
-* `ACES_LIB_MOD.h` – a modified version of the DCTL conversion of the ACES CTL library by [Paul Dore](https://github.com/baldavenger/ACES_DCTL)
+* `ACES_LIB_MOD.h` – a modified version of the DCTL conversion of the ACES CTL library by [Paul Dore](https://github.com/baldavenger/ACES_DCTL) for use with the SSTS_OT DCTL
 
 * `SSTS_OT.dctl` – an implementation of the SSTS Output Transform using the above library, with user switches to disable the various "RRT sweeteners"
 
@@ -24,4 +24,4 @@ To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*
 
 The DRTs include various presets for targets, based on the SSTS parameters in current ACES, and versions of Jed Smith's presets modified for more consistent black levels.
 
-When a preset is chosen, the numerical values shown are ignored. These are only used when "Custom" is selected. Unfortunately DCTL does not permit display of the actual values used by a given preset (look at the DCTL source code) or greying out of fields which are not currently being used.
+When a preset is chosen, the numerical values shown are ignored. These are only used when "Custom" is selected. Unfortunately DCTL does not permit display of the actual values used by a given preset (look at the DCTL source code for the values) or greying out of fields which are not currently being used.
