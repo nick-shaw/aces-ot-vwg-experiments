@@ -2394,6 +2394,7 @@ float Y_MID,
 float Y_MAX,
 Chromaticities DISPLAY_PRI,
 Chromaticities LIMITING_PRI,
+int ORDER,
 int EOTF,
 int SURROUND,
 bool STRETCH_BLACK = true,
@@ -2418,11 +2419,17 @@ if ((EOTF == 1) || (EOTF == 2) || (EOTF == 3)) {
 XYZ = dark_to_dim( XYZ);
 }} else if (SURROUND == 2) {
 }
-XYZ = limit_to_primaries( XYZ, LIMITING_PRI);
+// XYZ = limit_to_primaries( XYZ, LIMITING_PRI);
+if (ORDER == 0) {
+    XYZ = limit_to_primaries( XYZ, LIMITING_PRI);
+}
 if (D60_SIM == false) {
 if ((DISPLAY_PRI.white.x != AP0.white.x) && (DISPLAY_PRI.white.y != AP0.white.y)) {
 XYZ = mult_f3_f33( XYZ, calculate_cat_matrix( AP0.white, REC709_PRI.white));
 }}
+if (ORDER == 1) {
+    XYZ = limit_to_primaries( XYZ, LIMITING_PRI);
+}
 linearCV = mult_f3_f33( XYZ, XYZ_2_DISPLAY_PRI_MAT);
 if (D60_SIM == true) {
 float SCALE = 1.0f;

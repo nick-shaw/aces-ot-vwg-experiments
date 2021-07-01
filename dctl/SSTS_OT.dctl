@@ -5,6 +5,7 @@ DEFINE_UI_PARAMS(Y_MID, Y Mid, DCTLUI_VALUE_BOX, 15.0)
 DEFINE_UI_PARAMS(Y_MAX, Y Max, DCTLUI_VALUE_BOX, 1000.0)
 DEFINE_UI_PARAMS(DISPLAY_PRI_SELECT, Display Primaries, DCTLUI_COMBO_BOX, 1, { D_Rec709, D_Rec2020, D_P3DCI, D_P3D65 }, { Rec.709, Rec.2020, P3-DCI, P3-D65 })
 DEFINE_UI_PARAMS(LIMITING_PRI_SELECT, Limiting Primaries, DCTLUI_COMBO_BOX, 3, { L_Rec709, L_Rec2020, L_P3DCI, L_P3D65 }, { Rec.709, Rec.2020, P3-DCI, P3-D65 })
+DEFINE_UI_PARAMS(LIMITING_PRI_ORDER, Order of Operations, DCTLUI_COMBO_BOX, 0, {L_first, C_first}, {Limit First, CAT First})
 DEFINE_UI_PARAMS(EOTF_SELECT, EOTF, DCTLUI_COMBO_BOX, 0, { PQ, BT1886, sRGB, G26, lin, HLG }, { ST-2084 (PQ), BT.1886, sRGB, gamma 2.6, linear (no EOTF), HLG })
 DEFINE_UI_PARAMS(SURROUND_SELECT, Surround, DCTLUI_COMBO_BOX, 0, { dark, dim, normal }, { dark, dim, normal })
 DEFINE_UI_PARAMS(STRETCH_BLACK, Stretch Black, DCTLUI_CHECK_BOX, 1)
@@ -120,8 +121,21 @@ switch(SURROUND_SELECT){
     }
 }
 
-// int SURROUND = 0;
-float3 cv = outputTransform( aces, Y_MIN, Y_MID, Y_MAX, DISPLAY_PRI,
-LIMITING_PRI, EOTF, SURROUND, STRETCH_BLACK, D60_SIM, LEGAL_RANGE, GLOW_ON, REDMOD_ON, DESAT_ON );
+int ORDER;
+switch(LIMITING_PRI_ORDER){
+    case L_first:
+    {
+        ORDER = 0;
+        break;
+    }
+    case C_first:
+    {
+        ORDER = 1;
+        break;
+    }
+}
+
+float3 cv = outputTransform( aces, Y_MIN, Y_MID, Y_MAX, DISPLAY_PRI, LIMITING_PRI, ORDER,
+EOTF, SURROUND, STRETCH_BLACK, D60_SIM, LEGAL_RANGE, GLOW_ON, REDMOD_ON, DESAT_ON );
 return cv;
 }
