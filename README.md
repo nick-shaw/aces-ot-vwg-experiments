@@ -4,21 +4,21 @@ This repo contains various experiments related to the ACES 2.0 [Output Transform
 ## DCTL
 * `ACES_LIB_MOD.h` – a modified version of the DCTL conversion of the ACES CTL library by [Paul Dore](https://github.com/baldavenger/ACES_DCTL) for use with the SSTS_OT DCTL
 
-* `SSTS_OT.dctl` – an implementation of the SSTS Output Transform using the above library, with user switches to disable the various "RRT sweeteners"
+* `SSTS_OT.dctl` – an implementation of the SSTS Output Transform using the above library, with user switches to disable the various "RRT sweeteners" and alter the order of operations.
 
 * `HLG_to_PQ.dctl` – a modified version of the HLG to PQ conversion from the CTL library with `L_b` and `L_w` user controllable, rather than fixed at 0 and 1000.
 
-* `K1S1_LMT_ACEScct_SSTS.cube` - an LMT, to be applied in ACEScct, to emulate the ARRI K1S1 under the Simple SSTS based DRT
+* `K1S1_LMT_ACEScct_SSTS.cube` - an LMT, to be applied in ACEScct, to emulate the ARRI K1S1 under the Simple SSTS based DRT.
 
-* `K1S1_LMT_ACEScct_v4.cube` - an LMT, to be applied in ACEScct, to emulate the ARRI K1S1 under the Naive DRT
+* `K1S1_LMT_ACEScct_v4.cube` - an LMT, to be applied in ACEScct, to emulate the ARRI K1S1 under the Naive DRT.
 
-* `Naive_DRT.dctl` - A naive chromaticity preserving DRT based on the Jed/Daniele tone mapper
+* `Naive_DRT.dctl` - A naive chromaticity preserving DRT based on the Jed/Daniele tone mapper.
 
-* `Naive_DRT_K1S1.drx` - A Resolve saved grade to set up the Naive DRT and corresponding K1S1 LMT
+* `Naive_DRT_K1S1.drx` - A Resolve saved grade to set up the Naive DRT and corresponding K1S1 LMT.
 
-* `Simple_DRT_SSTS.dctl` - A naive chromaticity preserving DRT based on the SSTS tone mapper
+* `Simple_DRT_SSTS.dctl` - A naive chromaticity preserving DRT based on the SSTS tone mapper.
 
-* `Simple_SSTS_DRT_K1S1.drx` - A Resolve saved grade to set up the simple SSTS DRT and corresponding K1S1 LMT
+* `Simple_SSTS_DRT_K1S1.drx` - A Resolve saved grade to set up the simple SSTS DRT and corresponding K1S1 LMT.
 
 To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*, *.cube* and *.h* files must be placed in a folder called `AMPAS` in the root of the Resolve LUT folder. Resolve should be in DaVinci YRGB mode, with the timeline colour space set to whatever the connected monitor is expecting. The first node in the node tree of the DRX is a conversion from LogC to ACEScct. This will obviously need to be modified if your source is not LogC.
 
