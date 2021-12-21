@@ -20,6 +20,8 @@ This repo contains various experiments related to the ACES 2.0 [Output Transform
 
 * `Simple_SSTS_DRT_K1S1.drx` - A Resolve saved grade to set up the simple SSTS DRT and corresponding K1S1 LMT.
 
+* `ZCAM.dctl` - A basic implementation of ZCAM XYZ to IzMh transform (not the whole DRT yet) based on the Nuke version by [Matthias Scharfenberg](https://github.com/Tristimulus/aces_vwg_output_transform/blob/master/DRT_ZCAM_IzMh_v02_Blink.nk)
+
 To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*, *.cube* and *.h* files must be placed in a folder called `AMPAS` in the root of the Resolve LUT folder. Resolve should be in DaVinci YRGB mode, with the timeline colour space set to whatever the connected monitor is expecting. The first node in the node tree of the DRX is a conversion from LogC to ACEScct. This will obviously need to be modified if your source is not LogC.
 
 The DRTs include various presets for targets, based on the SSTS parameters in current ACES, and versions of Jed Smith's presets modified for more consistent black levels.
