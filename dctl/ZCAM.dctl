@@ -1,9 +1,11 @@
-DEFINE_UI_PARAMS(refLum, Reference Luminance, DCTLUI_VALUE_BOX, 100.0)
-DEFINE_UI_PARAMS(bgLum, Background Luminance, DCTLUI_VALUE_BOX, 10.0)
+DEFINE_UI_PARAMS(refLum, Reference Luminance, DCTLUI_VALUE_BOX, 100)
+DEFINE_UI_PARAMS(bgLum, Background Luminance, DCTLUI_VALUE_BOX, 10)
+DEFINE_UI_PARAMS(inputScale, Input Scale, DCTLUI_VALUE_BOX, 100)
+DEFINE_UI_PARAMS(outputScale, Output Scale, DCTLUI_VALUE_BOX, 100)
 DEFINE_UI_PARAMS(discountIllum, Discount Illuminant, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(refWhiteSelect, Reference White, DCTLUI_COMBO_BOX, 0, {ACES, D65}, {ACES, D65});
 DEFINE_UI_PARAMS(viewCond, Viewing Conditions, DCTLUI_COMBO_BOX, 1, {dark, dim, average}, {dark, dim, average})
-DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {forward, reverse}, {forward, reverse});
+DEFINE_UI_PARAMS(direction, Conversion, DCTLUI_COMBO_BOX, 0, {XYZ2IzMh, IzMh2XYZ, XYZ2JMh, JMh2XYZ, IzMh2JMh, JMh2IzMh}, {XYZ to IzMh, IzMh to XYZ, XYZ to JMh, JMh to XYZ, IzMh to JMh, JMh to IzMh});
 
 typedef struct {
 float3 r0, r1, r2;
@@ -20,23 +22,21 @@ __CONSTANT__ float eta = 0.1593017578125f;
 __CONSTANT__ float rho = 134.034375f;
 __CONSTANT__ float epsilon = 3.703522621e-11f;
 
-__CONSTANT__ mat3 CAT02_XYZ_to_LMS = {
-    {0.7328f, 0.4296f, -0.1624f},
-    {-0.7036f, 1.6975f, 0.0061f},
-    {0.003f, 0.0136f, 0.9834f}
-};
+__CONSTANT__ mat3 CAT02_XYZ_to_LMS = { {0.7328f, 0.4296f, -0.1624f}, {-0.7036f, 1.6975f, 0.0061f}, {0.003f, 0.0136f, 0.9834f} };
 
-__CONSTANT__ mat3 ZCAM_XYZ_to_LMS = {
-    {0.41478972f, 0.579999f, 0.014648f},
-    {-0.20151f, 1.120649f, 0.0531008f},
-    {-0.0166008f, 0.2648f, 0.6684799f}
-};
+__CONSTANT__ mat3 ZCAM_XYZ_to_LMS = {     {0.41478972f, 0.579999f, 0.014648f}, {-0.20151f, 1.120649f, 0.0531008f}, {-0.0166008f, 0.2648f, 0.6684799f} };
 
-__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = {
-    {0.0f, 1.0f - epsilon, 0.0f},
-    {3.524f, -4.066708f, 0.542708f},
-    {0.199076f, 1.096799f, -1.295875f}
-};
+#ifdef DEVICE_IS_OPENCL
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 0.9999999999629647f, 0.0f}, {3.524f, -4.066708f, 0.542708f}, {0.199076f, 1.096799f, -1.295875f} };
+#endif
+
+#ifdef DEVICE_IS_CUDA
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - epsilon, 0.0f}, {3.524f, -4.066708f, 0.542708f}, {0.199076f, 1.096799f, -1.295875f} };
+#endif
+
+#ifdef DEVICE_IS_METAL
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - epsilon, 0.0f}, {3.524f, -4.066708f, 0.542708f}, {0.199076f, 1.096799f, -1.295875f} };
+#endif
 
 __DEVICE__  mat3 inverse( mat3 m)
 {
@@ -84,37 +84,42 @@ __DEVICE__ float3 CAT_Zhai2018( float3 XYZ_b, float3 XYZ_wb, float3 XYZ_wd, floa
     return XYZ_d;
   }
 
+__DEVICE__ float lin_to_ZCAMPQ(float x)
+{
+    return _powf( ( c1 + c2 * _powf((x/10000.0f),eta) ) / ( 1.0f + c3 * _powf((x/10000.0f),eta) ), rho);
+}
+
 __DEVICE__ float3 XYZ_to_Izazbz( float3 XYZD65 )
 {
     float3 XYZpD65 = XYZD65;
     XYZpD65.x = cb * XYZD65.x - (cb - 1.0f) * XYZD65.z;
     XYZpD65.y = cg * XYZD65.y - (cg - 1.0f) * XYZD65.x;
     float3 LMS = vector_dot(ZCAM_XYZ_to_LMS, XYZpD65);
-    float3 LMSp = 0.0f;
-    LMSp.x = _powf( ( c1 + c2 * _powf((LMS.x/10000.0f),eta) ) / ( 1.0f + c3 * _powf((LMS.x/10000.0f),eta) ), rho);
-    LMSp.y = _powf( ( c1 + c2 * _powf((LMS.y/10000.0f),eta) ) / ( 1.0f + c3 * _powf((LMS.y/10000.0f),eta) ), rho);
-    LMSp.z = _powf( ( c1 + c2 * _powf((LMS.z/10000.0f),eta) ) / ( 1.0f + c3 * _powf((LMS.z/10000.0f),eta) ), rho);
+    float3 LMSp = make_float3(0.0f, 0.0f, 0.0f);
+    LMSp.x = lin_to_ZCAMPQ(LMS.x);
+    LMSp.y = lin_to_ZCAMPQ(LMS.y);
+    LMSp.z = lin_to_ZCAMPQ(LMS.z);
     float3 Izazbz = vector_dot(ZCAM_LMS_to_Izazbz, LMSp);
     return Izazbz;
 }
 
-__DEVICE__ float degrees( float radians )
+__DEVICE__ float radians_to_degrees( float radians )
 {
     return radians * 180.0f / PI;
 }
 
 
-__DEVICE__ float radians( float degrees )
+__DEVICE__ float degrees_to_radians( float degrees )
 {
     return degrees / 180.0f * PI;
 }
 
 __DEVICE__ float3 Izazbz_to_IzMh( float3 Izazbz, float refWhiteIz, float F_b, float F_L )
 {
-	float3 IzMh = 0.0f;
+	float3 IzMh = make_float3(0.0f, 0.0f, 0.0f);
 
-	IzMh.z = _fmod(degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
-	float ez = 1.015f + _cosf(radians(89.038f+IzMh.z));
+	IzMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
+	float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
 	IzMh.x = Izazbz.x;
 	IzMh.y = 100.0f * _powf ((_powf (Izazbz.y, 2.0f) + _powf (Izazbz.z, 2.0f)), 0.37f) * ((_powf (ez, 0.068f) * _powf (F_L, 0.2f)) / (_powf (F_b, 0.1f) * _powf (refWhiteIz, 0.78f)));
 
@@ -123,25 +128,77 @@ __DEVICE__ float3 Izazbz_to_IzMh( float3 Izazbz, float refWhiteIz, float F_b, fl
 
 __DEVICE__ float3 IzMh_to_Izazbz( float3 IzMh, float refWhiteIz, float F_b, float F_L )
 {
-	float ez = 1.015f + _cosf(radians(89.038f+IzMh.z));
-	float hzr = radians(IzMh.z);
+	float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
+	float hzr = degrees_to_radians(IzMh.z);
 	float Czp = _powf ((IzMh.y * _powf (refWhiteIz, 0.78f) * _powf (F_b, 0.1f)) / (100.0f * _powf (ez, 0.068f) * _powf (F_L, 0.2f)), 50.0f / 37.0f);
 
 	return float3( IzMh.x, Czp * _cosf(hzr), Czp * _sinf(hzr));
+}
+
+__DEVICE__ float PQZCAM_to_lin(float x)
+{
+    return 10000.0f*_powf ((c1-_powf (x,1.0f/rho)) / (c3*_powf (x,1.0f/rho)-c2),1.0f/eta);
 }
 
 __DEVICE__ float3 Izazbz_to_XYZ( float3 Izazbz )
 {
 	float3 LMSp = vector_dot(inverse(ZCAM_LMS_to_Izazbz), Izazbz);
 	float3 LMS = 0.0f;
-	LMS.x = 10000.0f*_powf ((c1-_powf (LMSp.x,1.0f/rho)) / (c3*_powf (LMSp.x,1.0f/rho)-c2),1.0f/eta);
-	LMS.y = 10000.0f*_powf ((c1-_powf (LMSp.y,1.0f/rho)) / (c3*_powf (LMSp.y,1.0f/rho)-c2),1.0f/eta);
-	LMS.z = 10000.0f*_powf ((c1-_powf (LMSp.z,1.0f/rho)) / (c3*_powf (LMSp.z,1.0f/rho)-c2),1.0f/eta);
+	LMS.x = PQZCAM_to_lin(LMSp.x);
+	LMS.y = PQZCAM_to_lin(LMSp.y);
+	LMS.z = PQZCAM_to_lin(LMSp.z);
 	float3 XYZpD65 = vector_dot(inverse(ZCAM_XYZ_to_LMS), LMS);
 	float3 XYZD65 = XYZpD65;
 	XYZD65.x = (XYZpD65.x+(cb-1.0f)*XYZpD65.z)/cb;
 	XYZD65.y = (XYZpD65.y+(cg-1.0f)*XYZD65.x)/cg;
 	return XYZD65;
+}
+
+__DEVICE__ float3 Izazbz_to_JMh( float3 Izazbz, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float3 JMh = make_float3( 0.0f, 0.0f, 0.0f );
+
+    JMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
+    float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
+    float Qz = 2700.0f * _powf(Izazbz.x, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    JMh.x = 100.0f * (Qz / Qzw);
+    JMh.y = 100.0f * _powf((_powf(Izazbz.y, 2.0f) + _powf(Izazbz.z, 2.0f)), 0.37f) * ((_powf(ez, 0.068f) * _powf(F_L, 0.2f)) / (_powf(F_b, 0.1f) * _powf(refWhiteIz, 0.78f)));
+
+    return JMh;
+}
+
+__DEVICE__ float3 JMh_to_Izazbz( float3 JMh, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
+    float Izd = 2700.0f * 100.0f * Qzm;
+    float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
+    float hzr = degrees_to_radians(JMh.z);
+    float Czp = _powf((JMh.y * _powf(refWhiteIz, 0.78f) * _powf(F_b, 0.1f)) / (100.0f * _powf(ez, 0.068f) * _powf(F_L, 0.2f)), 50.0f / 37.0f);
+
+    return make_float3( _powf((JMh.x * Qzw) / Izd, Izp), Czp * _cosf(hzr), Czp * _sinf(hzr));
+}
+
+__DEVICE__ float3 IzMh_to_JMh( float3 IzMh, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
+    float Izd = 2700.0f * 100.0f * Qzm;
+
+    return make_float3( Izd * _powf(IzMh.x, 1.0f / Izp) / Qzw , IzMh.y, IzMh.z );
+}
+
+__DEVICE__ float3 JMh_to_IzMh( float3 JMh, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
+    float Izd = 2700.0f * 100.0f * Qzm;
+
+    return make_float3( _powf((JMh.x * Qzw) / Izd, Izp), JMh.y, JMh.z );
 }
 
 __DEVICE__ float3 XYZ_to_ZCAM_IzMh( float3 XYZ, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L )
@@ -155,6 +212,18 @@ __DEVICE__ float3 ZCAM_IzMh_to_XYZ( float3 JMh, float3 refWhite, float3 d65White
 	float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
 	return CAT_Zhai2018(Izazbz_to_XYZ(IzMh_to_Izazbz(JMh, refWhiteIzazbz.x, F_b, F_L)), d65White, refWhite, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS );
 }
+
+__DEVICE__ float3 XYZ_to_ZCAM_JMh( float3 XYZ, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L, float F_s )
+{
+    float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
+    return Izazbz_to_JMh(XYZ_to_Izazbz(CAT_Zhai2018(XYZ, refWhite, d65White, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS)), refWhiteIzazbz.x, F_b, F_L, F_s );
+}
+
+__DEVICE__ float3 ZCAM_JMh_to_XYZ( float3 JMh, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L, float F_s )
+  {
+    float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
+    return CAT_Zhai2018(Izazbz_to_XYZ(JMh_to_Izazbz(JMh, refWhiteIzazbz.x, F_b, F_L, F_s)), d65White, refWhite, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS);
+  }
 
 __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
 { 
@@ -198,13 +267,31 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
 
     float3 output;
 
-    if( direction == 0 )
+    if( direction == XYZ2IzMh )
     {
-        output = XYZ_to_ZCAM_IzMh(input * 100.0f, inputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L) / 100.0f;
+        output = XYZ_to_ZCAM_IzMh(input * inputScale, inputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L) / outputScale;
     }
-    else
+    else if (direction == IzMh2XYZ )
     {
-        output = ZCAM_IzMh_to_XYZ(input * 100.0f, inputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L) / 100.0f;
+        output = ZCAM_IzMh_to_XYZ(input * inputScale, inputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L) / outputScale;
+    }
+    else if (direction == XYZ2JMh )
+    {
+        output = XYZ_to_ZCAM_JMh(input * inputScale, inputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s) / outputScale;
+    }
+    else if (direction == JMh2XYZ )
+    {
+        output = ZCAM_JMh_to_XYZ(input * inputScale, inputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s) / outputScale;
+    }
+    else if (direction == IzMh2JMh )
+    {
+        float3 refWhiteIzazbz = XYZ_to_Izazbz(inputRefWhite * refLum / inputRefWhite.y);
+        output = IzMh_to_JMh(input * inputScale, refWhiteIzazbz.x, F_b, F_L, F_s) / outputScale;
+    }
+    else if (direction == JMh2IzMh )
+    {
+        float3 refWhiteIzazbz = XYZ_to_Izazbz(inputRefWhite * refLum / inputRefWhite.y);
+        output = JMh_to_IzMh(input * inputScale, refWhiteIzazbz.x, F_b, F_L, F_s) / outputScale;
     }
 
     return output;
