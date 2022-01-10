@@ -1,0 +1,712 @@
+DEFINE_UI_PARAMS(refLum, Reference Luminance, DCTLUI_VALUE_BOX, 100)
+DEFINE_UI_PARAMS(bgLum, Background Luminance, DCTLUI_VALUE_BOX, 10)
+DEFINE_UI_PARAMS(Y_MIN, Y Min, DCTLUI_VALUE_BOX, 0.0001)
+DEFINE_UI_PARAMS(Y_MID, Y Mid, DCTLUI_VALUE_BOX, 10)
+DEFINE_UI_PARAMS(Y_MAX, Y Max, DCTLUI_VALUE_BOX, 100)
+DEFINE_UI_PARAMS(hlDesat, Highlight Desat, DCTLUI_SLIDER_FLOAT, 2.5, 0.0, 5.0, 0.1)
+DEFINE_UI_PARAMS(gmThresh, GC Threshold, DCTLUI_SLIDER_FLOAT, 0.8, 0.001, 0.999, 0.1)
+DEFINE_UI_PARAMS(gmLimit, GC Limit, DCTLUI_SLIDER_FLOAT, 1.3, 1.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gmPower, GC Power, DCTLUI_SLIDER_FLOAT, 1.2, 1.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(discountIllum, Discount Illuminant, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(inRefWhiteSelect, Input Reference White, DCTLUI_COMBO_BOX, 0, {ACESin, D65in}, {ACES, D65})
+DEFINE_UI_PARAMS(outRefWhiteSelect, Output Reference White, DCTLUI_COMBO_BOX, 1, {ACESout, D65out}, {ACES, D65})
+DEFINE_UI_PARAMS(outPrimaries, Output Primaries, DCTLUI_COMBO_BOX, 0, {rec709, rec2020, p3d65}, {Rec.709, Rec.2020, P3-D65})
+DEFINE_UI_PARAMS(limPrimaries, Limiting Primaries, DCTLUI_COMBO_BOX, 0, {rec709lim, p3d65lim}, {Rec.709, P3-D65})
+DEFINE_UI_PARAMS(outEOTF, Output EOTF, DCTLUI_COMBO_BOX, 0, {BT1886, PQ}, {BT.1886, ST.2084})
+DEFINE_UI_PARAMS(viewCond, Viewing Conditions, DCTLUI_COMBO_BOX, 0, {dark, dim, average}, {dark, dim, average})
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {forward, inverse}, {Forward, Inverse});
+// DEFINE_UI_PARAMS(gm, Gamut Map, DCTLUI_CHECK_BOX, 1)
+
+
+typedef struct {
+float3 r0, r1, r2;
+} mat3;
+
+typedef struct {
+float x; float y; float slope;
+} TsPoint;
+
+typedef struct {
+TsPoint Min; TsPoint Mid; TsPoint Max;
+float coefsLow[6]; float coefsHigh[6];
+} TsParams;
+
+typedef struct {
+float x, y, z, w, m;
+} float5;
+
+__CONSTANT__ float PI = 3.141592653589793f;
+
+__CONSTANT__ float cb  = 1.15f;
+__CONSTANT__ float cg  = 0.66f;
+__CONSTANT__ float c1  = 0.8359375f;
+__CONSTANT__ float c2  = 18.8515625f;
+__CONSTANT__ float c3  = 18.6875f;
+__CONSTANT__ float eta = 0.1593017578125f;
+__CONSTANT__ float rho = 134.034375f;
+__CONSTANT__ float m2 = 78.84375f;
+__CONSTANT__ float epsilon = 3.703522621e-11f;
+
+__CONSTANT__ mat3 M1 = { {0.5f, -1.0f, 0.5f}, {-1.0f, 1.0f, 0.5f}, {0.5f, 0.0f, 0.0f} };
+__CONSTANT__ float MIN_STOP_SDR = -6.5f;
+__CONSTANT__ float MAX_STOP_SDR = 6.5f;
+__CONSTANT__ float MIN_STOP_RRT = -15.0f;
+__CONSTANT__ float MAX_STOP_RRT = 18.0f;
+__CONSTANT__ float MIN_LUM_SDR = 0.02f;
+__CONSTANT__ float MAX_LUM_SDR = 48.0f;
+__CONSTANT__ float MIN_LUM_RRT = 0.0001f;
+__CONSTANT__ float MAX_LUM_RRT = 10000.0f;
+
+__CONSTANT__ mat3 AP0_to_XYZ = { { 0.95255240f,  0.00000000f,  0.00009368f},
+                                 { 0.34396645f,  0.72816610f, -0.07213255f},
+                                 { 0.00000000f,  0.00000000f,  1.00882518f} };
+
+__CONSTANT__ mat3 XYZ_to_709 = { { 3.24096994f, -1.53738318f, -0.49861076f},
+                                 {-0.96924364f,  1.87596750f,  0.04155506f},
+                                 { 0.05563008f, -0.20397696f,  1.05697151f} };
+
+__CONSTANT__ mat3 XYZ_to_2020 = { { 1.71665119f, -0.35567078f, -0.25336628f},
+                                  {-0.66668435f,  1.61648124f,  0.01576855f},
+                                  { 0.01763986f, -0.04277061f,  0.94210312f} };
+
+__CONSTANT__ mat3 XYZ_to_P3D65 = { { 2.49349691f, -0.93138362f, -0.40271078f},
+                                   {-0.82948897f,  1.76266406f,  0.02362469f},
+                                   { 0.03584583f, -0.07617239f,  0.95688452} };
+
+__CONSTANT__ mat3 CAT02_XYZ_to_LMS = { {0.7328f, 0.4296f, -0.1624f},
+                                       {-0.7036f, 1.6975f, 0.0061f},
+                                       {0.003f, 0.0136f, 0.9834f} };
+
+__CONSTANT__ mat3 ZCAM_XYZ_to_LMS = { {0.41478972f, 0.579999f, 0.014648f},
+                                      {-0.20151f, 1.120649f, 0.0531008f},
+                                      {-0.0166008f, 0.2648f, 0.6684799f} };
+
+#ifdef DEVICE_IS_OPENCL
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 0.9999999999629647f, 0.0f},
+                                         {3.524f, -4.066708f, 0.542708f}
+                                         {0.199076f, 1.096799f, -1.295875f} };
+#endif
+
+#ifdef DEVICE_IS_CUDA
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - epsilon, 0.0f},
+                                         {3.524f, -4.066708f, 0.542708f},
+                                         {0.199076f, 1.096799f, -1.295875f} };
+#endif
+
+#ifdef DEVICE_IS_METAL
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - epsilon, 0.0f},
+                                         {3.524f, -4.066708f, 0.542708f},
+                                         {0.199076f, 1.096799f, -1.295875f} };
+#endif
+
+__DEVICE__  mat3 invert( mat3 m)
+{
+    float det = m.r0.x * (m.r1.y * m.r2.z - m.r2.y * m.r1.z) - m.r0.y * (m.r1.x * m.r2.z - m.r1.z * m.r2.x) + m.r0.z * (m.r1.x * m.r2.y - m.r1.y * m.r2.x);
+    float invdet = 1.0f / det;
+    mat3 minv;
+    minv.r0.x = (m.r1.y * m.r2.z - m.r2.y * m.r1.z) * invdet;
+    minv.r0.y = (m.r0.z * m.r2.y - m.r0.y * m.r2.z) * invdet;
+    minv.r0.z = (m.r0.y * m.r1.z - m.r0.z * m.r1.y) * invdet;
+    minv.r1.x = (m.r1.z * m.r2.x - m.r1.x * m.r2.z) * invdet;
+    minv.r1.y = (m.r0.x * m.r2.z - m.r0.z * m.r2.x) * invdet;
+    minv.r1.z = (m.r1.x * m.r0.z - m.r0.x * m.r1.z) * invdet;
+    minv.r2.x = (m.r1.x * m.r2.y - m.r2.x * m.r1.y) * invdet;
+    minv.r2.y = (m.r2.x * m.r0.y - m.r0.x * m.r2.y) * invdet;
+    minv.r2.z = (m.r0.x * m.r1.y - m.r1.x * m.r0.y) * invdet;
+    return minv;
+}
+
+__DEVICE__ float3 vector_dot( mat3 m, float3 v)
+{
+    float3 result;
+
+    result.x = m.r0.x * v.x + m.r0.y * v.y + m.r0.z * v.z;
+    result.y = m.r1.x * v.x + m.r1.y * v.y + m.r1.z * v.z;
+    result.z = m.r2.x * v.x + m.r2.y * v.y + m.r2.z * v.z;
+
+    return result;
+}
+
+__DEVICE__ float3 CAT_Zhai2018( float3 XYZ_b, float3 XYZ_wb, float3 XYZ_wd, float D_b, float D_d, mat3 M)
+  {
+    float3 XYZ_wo = 100.0f;
+    float3 RGB_b = vector_dot(M, XYZ_b);
+    float3 RGB_wb = vector_dot(M, XYZ_wb);
+    float3 RGB_wd = vector_dot(M, XYZ_wd);
+    float3 RGB_wo = vector_dot(M, XYZ_wo);
+
+    float3 D_RGB_b = D_b * (XYZ_wb.y / XYZ_wo.y) * (RGB_wo / RGB_wb) + 1.0f - D_b;
+    float3 D_RGB_d = D_d * (XYZ_wd.y / XYZ_wo.y) * (RGB_wo / RGB_wd) + 1.0f - D_d;
+    float3 D_RGB = D_RGB_b / D_RGB_d;
+
+    float3 RGB_d = D_RGB * RGB_b;
+    float3 XYZ_d = vector_dot(invert(M), RGB_d);
+    
+    return XYZ_d;
+  }
+
+__DEVICE__ float lin_to_ZCAMPQ(float x)
+{
+    return _powf( ( c1 + c2 * _powf((x/10000.0f),eta) ) / ( 1.0f + c3 * _powf((x/10000.0f),eta) ), rho);
+}
+
+__DEVICE__ float lin_to_PQ(float x)
+{
+    return _powf( ( c1 + c2 * _powf((x/10000.0f),eta) ) / ( 1.0f + c3 * _powf((x/10000.0f),eta) ), m2);
+}
+
+__DEVICE__ float3 XYZ_to_Izazbz( float3 XYZD65 )
+{
+    float3 XYZpD65 = XYZD65;
+    XYZpD65.x = cb * XYZD65.x - (cb - 1.0f) * XYZD65.z;
+    XYZpD65.y = cg * XYZD65.y - (cg - 1.0f) * XYZD65.x;
+    float3 LMS = vector_dot(ZCAM_XYZ_to_LMS, XYZpD65);
+    float3 LMSp = make_float3(0.0f, 0.0f, 0.0f);
+    LMSp.x = lin_to_ZCAMPQ(LMS.x);
+    LMSp.y = lin_to_ZCAMPQ(LMS.y);
+    LMSp.z = lin_to_ZCAMPQ(LMS.z);
+    float3 Izazbz = vector_dot(ZCAM_LMS_to_Izazbz, LMSp);
+    return Izazbz;
+}
+
+__DEVICE__ float radians_to_degrees( float radians )
+{
+    return radians * 180.0f / PI;
+}
+
+
+__DEVICE__ float degrees_to_radians( float degrees )
+{
+    return degrees / 180.0f * PI;
+}
+
+__DEVICE__ float3 Izazbz_to_IzMh( float3 Izazbz, float refWhiteIz, float F_b, float F_L )
+{
+	float3 IzMh = make_float3(0.0f, 0.0f, 0.0f);
+
+	IzMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
+	float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
+	IzMh.x = Izazbz.x;
+	IzMh.y = 100.0f * _powf ((_powf (Izazbz.y, 2.0f) + _powf (Izazbz.z, 2.0f)), 0.37f) * ((_powf (ez, 0.068f) * _powf (F_L, 0.2f)) / (_powf (F_b, 0.1f) * _powf (refWhiteIz, 0.78f)));
+
+	return IzMh;
+}
+
+__DEVICE__ float3 IzMh_to_Izazbz( float3 IzMh, float refWhiteIz, float F_b, float F_L )
+{
+	float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
+	float hzr = degrees_to_radians(IzMh.z);
+	float Czp = _powf ((IzMh.y * _powf (refWhiteIz, 0.78f) * _powf (F_b, 0.1f)) / (100.0f * _powf (ez, 0.068f) * _powf (F_L, 0.2f)), 50.0f / 37.0f);
+
+	return float3( IzMh.x, Czp * _cosf(hzr), Czp * _sinf(hzr));
+}
+
+__DEVICE__ float PQZCAM_to_lin(float x)
+{
+    return 10000.0f*_powf ((c1-_powf (x,1.0f/rho)) / (c3*_powf (x,1.0f/rho)-c2),1.0f/eta);
+}
+
+__DEVICE__ float PQ_to_lin(float x)
+{
+    return 10000.0f*_powf ((c1-_powf (x,1.0f/m2)) / (c3*_powf (x,1.0f/m2)-c2),1.0f/eta);
+}
+
+__DEVICE__ float3 Izazbz_to_XYZ( float3 Izazbz )
+{
+	float3 LMSp = vector_dot(invert(ZCAM_LMS_to_Izazbz), Izazbz);
+	float3 LMS = 0.0f;
+	LMS.x = PQZCAM_to_lin(LMSp.x);
+	LMS.y = PQZCAM_to_lin(LMSp.y);
+	LMS.z = PQZCAM_to_lin(LMSp.z);
+	float3 XYZpD65 = vector_dot(invert(ZCAM_XYZ_to_LMS), LMS);
+	float3 XYZD65 = XYZpD65;
+	XYZD65.x = (XYZpD65.x+(cb-1.0f)*XYZpD65.z)/cb;
+	XYZD65.y = (XYZpD65.y+(cg-1.0f)*XYZD65.x)/cg;
+	return XYZD65;
+}
+
+__DEVICE__ float3 Izazbz_to_JMh( float3 Izazbz, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float3 JMh = make_float3( 0.0f, 0.0f, 0.0f );
+
+    JMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
+    float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
+    float Qz = 2700.0f * _powf(Izazbz.x, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    JMh.x = 100.0f * (Qz / Qzw);
+    JMh.y = 100.0f * _powf((_powf(Izazbz.y, 2.0f) + _powf(Izazbz.z, 2.0f)), 0.37f) * ((_powf(ez, 0.068f) * _powf(F_L, 0.2f)) / (_powf(F_b, 0.1f) * _powf(refWhiteIz, 0.78f)));
+
+    return JMh;
+}
+
+__DEVICE__ float3 JMh_to_Izazbz( float3 JMh, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
+    float Izd = 2700.0f * 100.0f * Qzm;
+    float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
+    float hzr = degrees_to_radians(JMh.z);
+    float Czp = _powf((JMh.y * _powf(refWhiteIz, 0.78f) * _powf(F_b, 0.1f)) / (100.0f * _powf(ez, 0.068f) * _powf(F_L, 0.2f)), 50.0f / 37.0f);
+
+    return make_float3( _powf((JMh.x * Qzw) / Izd, Izp), Czp * _cosf(hzr), Czp * _sinf(hzr));
+}
+
+__DEVICE__ float3 IzMh_to_JMh( float3 IzMh, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
+    float Izd = 2700.0f * 100.0f * Qzm;
+
+    return make_float3( Izd * _powf(IzMh.x, 1.0f / Izp) / Qzw , IzMh.y, IzMh.z );
+}
+
+__DEVICE__ float3 JMh_to_IzMh( float3 JMh, float refWhiteIz, float F_b, float F_L, float F_s )
+{
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
+    float Izd = 2700.0f * 100.0f * Qzm;
+
+    return make_float3( _powf((JMh.x * Qzw) / Izd, Izp), JMh.y, JMh.z );
+}
+
+__DEVICE__ float3 XYZ_to_ZCAM_IzMh( float3 XYZ, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L )
+{
+	float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
+	return Izazbz_to_IzMh(XYZ_to_Izazbz(CAT_Zhai2018(XYZ, refWhite, d65White, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS)), refWhiteIzazbz.x, F_b, F_L );
+}
+
+__DEVICE__ float3 ZCAM_IzMh_to_XYZ( float3 JMh, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L )
+{
+	float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
+	return CAT_Zhai2018(Izazbz_to_XYZ(IzMh_to_Izazbz(JMh, refWhiteIzazbz.x, F_b, F_L)), d65White, refWhite, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS );
+}
+
+__DEVICE__ float3 XYZ_to_ZCAM_JMh( float3 XYZ, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L, float F_s )
+{
+    float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
+    return Izazbz_to_JMh(XYZ_to_Izazbz(CAT_Zhai2018(XYZ, refWhite, d65White, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS)), refWhiteIzazbz.x, F_b, F_L, F_s );
+}
+
+__DEVICE__ float3 ZCAM_JMh_to_XYZ( float3 JMh, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L, float F_s )
+  {
+    float3 refWhiteIzazbz = XYZ_to_Izazbz(refWhite*referenceLuminance/refWhite.y);
+    return CAT_Zhai2018(Izazbz_to_XYZ(JMh_to_Izazbz(JMh, refWhiteIzazbz.x, F_b, F_L, F_s)), d65White, refWhite, adaptDegree, adaptDegree, CAT02_XYZ_to_LMS);
+  }
+
+
+// SSTS adapted from https://github.com/baldavenger/ACES_DCTL by Paul Dore
+__DEVICE__ inline float dot_f3_f3( float3 x, float3 y) {
+	return x.x * y.x + x.y * y.y + x.z * y.z;
+}
+
+__DEVICE__ inline float3 mult_f3_f33( float3 X, mat3 A) {
+	float r[3];
+	float x[3] = {X.x, X.y, X.z};
+	float a[3][3] = {{A.r0.x, A.r0.y, A.r0.z}, {A.r1.x, A.r1.y, A.r1.z}, {A.r2.x, A.r2.y, A.r2.z}};
+	for( int i = 0; i < 3; ++i){
+		r[i] = 0.0f;
+	for( int j = 0; j < 3; ++j){
+		r[i] = r[i] + x[j] * a[j][i];}}
+	return make_float3(r[0], r[1], r[2]);
+}
+
+__DEVICE__ inline float interpolate1D( float2 table[], int Size, float p) {
+if( p <= table[0].x ) return table[0].y;
+if( p >= table[Size - 1].x ) return table[Size - 1].y;
+for( int i = 0; i < Size - 1; ++i ){
+if( table[i].x <= p && p < table[i + 1].x ){
+float s = (p - table[i].x) / (table[i + 1].x - table[i].x);
+return table[i].y * ( 1.0f - s ) + table[i+1].y * s;}}
+return 0.0f;
+}
+
+__DEVICE__ float lookup_ACESmin( float minLum ) {
+float2 minTable[2] = { { _log10f(MIN_LUM_RRT), MIN_STOP_RRT }, { _log10f(MIN_LUM_SDR), MIN_STOP_SDR } };
+return 0.18f * _exp2f(interpolate1D( minTable, 2, _log10f( minLum)));
+}
+
+__DEVICE__ float lookup_ACESmax( float maxLum ) {
+float2 maxTable[2] = { { _log10f(MAX_LUM_SDR), MAX_STOP_SDR }, { _log10f(MAX_LUM_RRT), MAX_STOP_RRT } };
+return 0.18f * _exp2f(interpolate1D( maxTable, 2, _log10f( maxLum)));
+}
+
+__DEVICE__ float5 init_coefsLow( TsPoint TsPointLow, TsPoint TsPointMid) {
+float5 coefsLow;
+float knotIncLow = (_log10f(TsPointMid.x) - _log10f(TsPointLow.x)) / 3.0f;
+coefsLow.x = (TsPointLow.slope * (_log10f(TsPointLow.x) - 0.5f * knotIncLow)) + ( _log10f(TsPointLow.y) - TsPointLow.slope * _log10f(TsPointLow.x));
+coefsLow.y = (TsPointLow.slope * (_log10f(TsPointLow.x) + 0.5f * knotIncLow)) + ( _log10f(TsPointLow.y) - TsPointLow.slope * _log10f(TsPointLow.x));
+coefsLow.w = (TsPointMid.slope * (_log10f(TsPointMid.x) - 0.5f * knotIncLow)) + ( _log10f(TsPointMid.y) - TsPointMid.slope * _log10f(TsPointMid.x));
+coefsLow.m = (TsPointMid.slope * (_log10f(TsPointMid.x) + 0.5f * knotIncLow)) + ( _log10f(TsPointMid.y) - TsPointMid.slope * _log10f(TsPointMid.x));
+float2 bendsLow[2] = { {MIN_STOP_RRT, 0.18f}, {MIN_STOP_SDR, 0.35f} };
+float pctLow = interpolate1D( bendsLow, 2, log2(TsPointLow.x / 0.18f));
+coefsLow.z = _log10f(TsPointLow.y) + pctLow*(_log10f(TsPointMid.y) - _log10f(TsPointLow.y));
+return coefsLow;
+}
+
+__DEVICE__ float5 init_coefsHigh( TsPoint TsPointMid, TsPoint TsPointMax) {
+float5 coefsHigh;
+float knotIncHigh = (_log10f(TsPointMax.x) - _log10f(TsPointMid.x)) / 3.0f;
+coefsHigh.x = (TsPointMid.slope * (_log10f(TsPointMid.x) - 0.5f * knotIncHigh)) + ( _log10f(TsPointMid.y) - TsPointMid.slope * _log10f(TsPointMid.x));
+coefsHigh.y = (TsPointMid.slope * (_log10f(TsPointMid.x) + 0.5f * knotIncHigh)) + ( _log10f(TsPointMid.y) - TsPointMid.slope * _log10f(TsPointMid.x));
+coefsHigh.w = (TsPointMax.slope * (_log10f(TsPointMax.x) - 0.5f * knotIncHigh)) + ( _log10f(TsPointMax.y) - TsPointMax.slope * _log10f(TsPointMax.x));
+coefsHigh.m = (TsPointMax.slope * (_log10f(TsPointMax.x) + 0.5f * knotIncHigh)) + ( _log10f(TsPointMax.y) - TsPointMax.slope * _log10f(TsPointMax.x));
+float2 bendsHigh[2] = { {MAX_STOP_SDR, 0.89f}, {MAX_STOP_RRT, 0.90f} };
+float pctHigh = interpolate1D( bendsHigh, 2, log2(TsPointMax.x / 0.18f));
+coefsHigh.z = _log10f(TsPointMid.y) + pctHigh*(_log10f(TsPointMax.y) - _log10f(TsPointMid.y));
+return coefsHigh;
+}
+
+__DEVICE__ float shift( float in, float expShift) {
+return _exp2f((_log2f(in) - expShift));
+}
+
+__DEVICE__ TsParams init_TsParams( float minLum, float maxLum, float expShift) {
+TsPoint MIN_PT = { lookup_ACESmin(minLum), minLum, 0.0f};
+TsPoint MID_PT = { 0.18f, 4.8f, 1.55f};
+TsPoint MAX_PT = { lookup_ACESmax(maxLum), maxLum, 0.0f};
+float5 cLow;
+cLow = init_coefsLow( MIN_PT, MID_PT);
+float5 cHigh;
+cHigh = init_coefsHigh( MID_PT, MAX_PT);
+MIN_PT.x = shift(lookup_ACESmin(minLum),expShift);
+MID_PT.x = shift(0.18f, expShift);
+MAX_PT.x = shift(lookup_ACESmax(maxLum),expShift);
+TsParams P = { {MIN_PT.x, MIN_PT.y, MIN_PT.slope}, {MID_PT.x, MID_PT.y, MID_PT.slope},
+{MAX_PT.x, MAX_PT.y, MAX_PT.slope}, {cLow.x, cLow.y, cLow.z, cLow.w, cLow.m, cLow.m},
+{cHigh.x, cHigh.y, cHigh.z, cHigh.w, cHigh.m, cHigh.m} };
+return P;
+}
+
+__DEVICE__ float ssts( float x, TsParams C) {
+const int N_KNOTS_LOW = 4;
+const int N_KNOTS_HIGH = 4;
+float logx = _log10f( _fmaxf(x, 1e-10f));
+float logy = 0.0f;
+if ( logx <= _log10f(C.Min.x) ) {
+logy = logx * C.Min.slope + ( _log10f(C.Min.y) - C.Min.slope * _log10f(C.Min.x) );
+} else if (( logx > _log10f(C.Min.x) ) && ( logx < _log10f(C.Mid.x) )) {
+float knot_coord = (N_KNOTS_LOW - 1) * (logx - _log10f(C.Min.x)) / (_log10f(C.Mid.x) - _log10f(C.Min.x));
+int j = knot_coord;
+float t = knot_coord - j;
+float3 cf = { C.coefsLow[ j], C.coefsLow[ j + 1], C.coefsLow[ j + 2]};
+float3 monomials = { t * t, t, 1.0f };
+logy = dot_f3_f3( monomials, mult_f3_f33( cf, M1));
+} else if (( logx >= _log10f(C.Mid.x) ) && ( logx < _log10f(C.Max.x) )) {
+float knot_coord = (N_KNOTS_HIGH - 1) * (logx - _log10f(C.Mid.x)) / (_log10f(C.Max.x) - _log10f(C.Mid.x));
+int j = knot_coord;
+float t = knot_coord - j;
+float3 cf = { C.coefsHigh[ j], C.coefsHigh[ j + 1], C.coefsHigh[ j + 2]};
+float3 monomials = { t * t, t, 1.0f };
+logy = dot_f3_f3( monomials, mult_f3_f33( cf, M1));
+} else {
+logy = logx * C.Max.slope + ( _log10f(C.Max.y) - C.Max.slope * _log10f(C.Max.x) );
+}
+return _exp10f(logy);
+}
+
+__DEVICE__ float inv_ssts( float y, TsParams C) {
+const int N_KNOTS_LOW = 4;
+const int N_KNOTS_HIGH = 4;
+const float KNOT_INC_LOW = (_log10f(C.Mid.x) - _log10f(C.Min.x)) / (N_KNOTS_LOW - 1.0f);
+const float KNOT_INC_HIGH = (_log10f(C.Max.x) - _log10f(C.Mid.x)) / (N_KNOTS_HIGH - 1.0f);
+float KNOT_Y_LOW[ N_KNOTS_LOW];
+for (int i = 0; i < N_KNOTS_LOW; i = i + 1) {
+KNOT_Y_LOW[ i] = ( C.coefsLow[i] + C.coefsLow[i + 1]) / 2.0f;
+};
+float KNOT_Y_HIGH[ N_KNOTS_HIGH];
+for (int i = 0; i < N_KNOTS_HIGH; i = i + 1) {
+KNOT_Y_HIGH[ i] = ( C.coefsHigh[i] + C.coefsHigh[i + 1]) / 2.0f;
+};
+float logy = _log10f( _fmaxf(y, 1e-10f));
+float logx;
+if (logy <= _log10f(C.Min.y)) {
+logx = _log10f(C.Min.x);
+} else if ( (logy > _log10f(C.Min.y)) && (logy <= _log10f(C.Mid.y)) ) {
+unsigned int j = 0;
+float3 cf = make_float3(0.0f, 0.0f, 0.0f);
+if ( logy > KNOT_Y_LOW[ 0] && logy <= KNOT_Y_LOW[ 1]) {
+cf.x = C.coefsLow[0]; cf.y = C.coefsLow[1]; cf.z = C.coefsLow[2]; j = 0;
+} else if ( logy > KNOT_Y_LOW[ 1] && logy <= KNOT_Y_LOW[ 2]) {
+cf.x = C.coefsLow[1]; cf.y = C.coefsLow[2]; cf.z = C.coefsLow[3]; j = 1;
+} else if ( logy > KNOT_Y_LOW[ 2] && logy <= KNOT_Y_LOW[ 3]) {
+cf.x = C.coefsLow[2]; cf.y = C.coefsLow[3]; cf.z = C.coefsLow[4]; j = 2;
+}
+const float3 tmp = mult_f3_f33( cf, M1);
+float a = tmp.x; float b = tmp.y; float c = tmp.z;
+c = c - logy;
+const float d = _sqrtf( b * b - 4.0f * a * c);
+const float t = ( 2.0f * c) / ( -d - b);
+logx = _log10f(C.Min.x) + ( t + j) * KNOT_INC_LOW;
+} else if ( (logy > _log10f(C.Mid.y)) && (logy < _log10f(C.Max.y)) ) {
+unsigned int j = 0;
+float3 cf = make_float3(0.0f, 0.0f, 0.0f);
+if ( logy >= KNOT_Y_HIGH[ 0] && logy <= KNOT_Y_HIGH[ 1]) {
+cf.x = C.coefsHigh[0]; cf.y = C.coefsHigh[1]; cf.z = C.coefsHigh[2]; j = 0;
+} else if ( logy > KNOT_Y_HIGH[ 1] && logy <= KNOT_Y_HIGH[ 2]) {
+cf.x = C.coefsHigh[1]; cf.y = C.coefsHigh[2]; cf.z = C.coefsHigh[3]; j = 1;
+} else if ( logy > KNOT_Y_HIGH[ 2] && logy <= KNOT_Y_HIGH[ 3]) {
+cf.x = C.coefsHigh[2]; cf.y = C.coefsHigh[3]; cf.z = C.coefsHigh[4]; j = 2;
+}
+const float3 tmp = mult_f3_f33( cf, M1);
+float a = tmp.x; float b = tmp.y; float c = tmp.z;
+c = c - logy;
+const float d = _sqrtf( b * b - 4.0f * a * c);
+const float t = ( 2.0f * c) / ( -d - b);
+logx = _log10f(C.Mid.x) + ( t + j) * KNOT_INC_HIGH;
+} else {
+logx = _log10f(C.Max.x);
+}
+return _exp10f( logx);
+}
+
+__DEVICE__ float compress(float dist, float lim, float thr, bool invert, float power) {
+  float cdist, s;
+  if (dist < thr) {
+    cdist = dist;
+  } else {
+    // power(p) compression function plot https://www.desmos.com/calculator/54aytu7hek
+    if (lim < 1.0001f) {
+      return dist; // disable compression, avoid nan
+    }
+    s = (lim-thr)/_powf(_powf((1.0f-thr)/(lim-thr),-power)-1.0f,1.0f/power); // calc y=1 intersect
+    if (invert == 0) {
+      cdist = thr+s*((dist-thr)/s)/(_powf(1.0f+_powf((dist-thr)/s,power),1.0f/power)); // compress
+    } else {
+      if (dist > (thr + s)) {
+        cdist = dist; // avoid singularity
+      } else {
+        cdist = thr+s*_powf(-(_powf((dist-thr)/s,power)/(_powf((dist-thr)/s,power)-1.0f)),1.0f/power); // uncompress
+      }
+    }
+  }
+  return cdist;
+}
+
+__DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
+{ 
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    float3 inputD65White = make_float3(0.9504559270516716, 1.0, 1.0890577507598784);
+    float3 inputRefWhite;
+    float3 outputRefWhite;
+    
+    mat3 limit;
+    if (limPrimaries == rec709lim)
+    {
+        limit = XYZ_to_709;
+    }
+    else if (limPrimaries == p3d65lim)
+    {
+        limit = XYZ_to_P3D65;
+    }
+    
+    if (inRefWhiteSelect == ACESin)
+    {
+        inputRefWhite = make_float3(0.9526460745698463, 1.0, 1.0088251843515859);
+    }
+    else
+    {
+        inputRefWhite = make_float3(0.9504559270516716, 1.0, 1.0890577507598784);
+    }
+    if (outRefWhiteSelect == ACESout)
+    {
+        outputRefWhite = make_float3(0.9526460745698463, 1.0, 1.0088251843515859);
+    }
+    else
+    {
+        outputRefWhite = make_float3(0.9504559270516716, 1.0, 1.0890577507598784);
+    }
+    float F;
+    float F_s;
+    float F_in = 0.8f;
+    float F_s_in = 0.525f;
+
+    if (viewCond == dark)
+    {
+        F = 0.8f;
+        F_s = 0.525f;
+    }
+    else if (viewCond == dim)
+    {
+        F = 0.9f;
+        F_s = 0.59f;
+    }
+    else if (viewCond == average)
+    {
+        F = 1.0f;
+        F_s = 0.69f;
+    }
+    float L_A = refLum * bgLum / 100.0f;
+    float adaptDegree = F * (1.0f - (1.0f / 3.6f) * _expf((-L_A - 42.0f) / 92.0f));
+    float adaptDegree_in = F_in * (1.0f - (1.0f / 3.6f) * _expf((-L_A - 42.0f) / 92.0f));
+    if ( discountIllum )
+    {
+        adaptDegree = 1.0f;
+    }
+    float F_b = _sqrtf(bgLum / refLum);
+    float F_L = 0.171f * _powf(L_A, 1.0f/3.0f) * (1.0f - _expf(-48.0f/9.0f * L_A));
+
+    float3 output;
+    float3 IzMh;
+    float3 JMh;
+    float3 XYZ;
+
+    if (direction == forward )
+    {
+        input.x = _clampf(input.x, -65504.0f, 65505.0f);
+        input.y = _clampf(input.y, -65504.0f, 65505.0f);
+        input.z = _clampf(input.z, -65504.0f, 65505.0f);
+        XYZ = vector_dot(AP0_to_XYZ, input);
+        XYZ *= refLum;
+        IzMh = XYZ_to_ZCAM_IzMh(XYZ, inputRefWhite, inputD65White, refLum, adaptDegree_in, F_b, F_L);
+        float lum;
+        lum = PQZCAM_to_lin(IzMh.x);
+        lum /= 0.97224f;
+        lum /= refLum;
+        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
+		float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
+		TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
+		lum = ssts( lum, PARAMS);
+		float desat_A = (lum - Y_MID) / Y_MID;
+		desat_A = _clampf(desat_A, 0.0f, 1.0f);
+		float desat_B = IzMh.x;
+        lum *= 0.97224f;
+        IzMh.x = lin_to_ZCAMPQ(lum);
+        desat_B -= IzMh.x;
+        desat_A *= desat_B;
+        desat_A *= hlDesat;
+        desat_A = desat_A > 0.8f ? ( -1.0f / (( desat_A - 0.8f ) / ( 1.0f - 0.8f ) + 1.0f ) + 1.0f ) * ( 1.0f - 0.8f ) + 0.8f : desat_A;
+        desat_A = 1.0f - desat_A;
+
+        float3 refWhiteIzazbz = XYZ_to_Izazbz(inputRefWhite * refLum / inputRefWhite.y);
+        JMh = IzMh_to_JMh(IzMh, refWhiteIzazbz.x, F_b, F_L, F_s_in);
+        JMh.y *= desat_A;
+
+        float3 JMh_test = JMh;
+        float3 XYZ_test;
+        float3 RGB_test;
+        float bound = -1.0f;
+        for( int i = 0; i < 128; ++i)
+        {
+            JMh_test.y = (float)i + 1.0f;
+            XYZ_test = ZCAM_JMh_to_XYZ(JMh_test, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
+            RGB_test = vector_dot(limit, XYZ_test);
+            if ((RGB_test.x < 0.0f || RGB_test.y < 0.0f || RGB_test.z < 0.0f) && bound < 0.0f)
+            {
+                bound = JMh_test.y;
+            }
+        }
+
+        JMh.y = bound * compress(JMh.y / bound, gmLimit, gmThresh, 0, gmPower);
+
+        XYZ = ZCAM_JMh_to_XYZ(JMh, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
+        if (outPrimaries == rec709)
+        {
+            output = vector_dot(XYZ_to_709, XYZ);
+        }
+        else if (outPrimaries == rec2020)
+        {
+            output = vector_dot(XYZ_to_2020, XYZ);
+        }
+        else if (outPrimaries == p3d65)
+        {
+            output = vector_dot(XYZ_to_P3D65, XYZ);
+        }
+        if (outEOTF == BT1886)
+        {
+            output /= 100.0f;
+			output.x = _powf(output.x, 1.0f / 2.4);
+			output.y = _powf(output.y, 1.0f / 2.4);
+			output.z = _powf(output.z, 1.0f / 2.4);
+        }
+        else if (outEOTF == PQ)
+        {
+            output.x = lin_to_PQ(output.x);
+            output.y = lin_to_PQ(output.y);
+            output.z = lin_to_PQ(output.z);
+        }
+    }
+    else if (direction == inverse )
+    {
+        input.x = _clampf(input.x, 0.0f, 1.0f);
+        input.y = _clampf(input.y, 0.0f, 1.0f);
+        input.z = _clampf(input.z, 0.0f, 1.0f);
+        if (outEOTF == BT1886)
+        {
+			input.x = _powf(input.x, 2.4);
+			input.y = _powf(input.y, 2.4);
+			input.z = _powf(input.z, 2.4);
+			input *= 100.0f;
+        }
+        else if (outEOTF == PQ)
+        {
+            input.x = PQ_to_lin(input.x);
+            input.y = PQ_to_lin(input.y);
+            input.z = PQ_to_lin(input.z);
+        }
+        if (outPrimaries == rec709)
+        {
+            XYZ = vector_dot(invert(XYZ_to_709), input);
+        }
+        else if (outPrimaries == rec2020)
+        {
+            XYZ = vector_dot(invert(XYZ_to_2020), input);
+        }
+        else if (outPrimaries == p3d65)
+        {
+            XYZ = vector_dot(invert(XYZ_to_P3D65), input);
+        }
+        JMh = XYZ_to_ZCAM_JMh(XYZ, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
+
+        float3 JMh_test = JMh;
+        float3 XYZ_test;
+        float3 RGB_test;
+        float bound = -1.0f;
+        for( int i = 0; i < 128; ++i)
+        {
+            JMh_test.y = (float)i + 1.0f;
+            XYZ_test = ZCAM_JMh_to_XYZ(JMh_test, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
+            RGB_test = vector_dot(limit, XYZ_test);
+            if ((RGB_test.x < 0.0f || RGB_test.y < 0.0f || RGB_test.z < 0.0f) && bound < 0.0f)
+            {
+                bound = JMh_test.y;
+            }
+        }
+
+        JMh.y = bound * compress(JMh.y / bound, gmLimit, gmThresh, 1, gmPower);
+
+        float lum;
+        float3 refWhiteIzazbz = XYZ_to_Izazbz(inputRefWhite * refLum / inputRefWhite.y);
+        IzMh = JMh_to_IzMh(JMh, refWhiteIzazbz.x, F_b, F_L, F_s_in);
+        
+        lum = PQZCAM_to_lin(IzMh.x);
+        lum /= 0.97224f;
+        TsParams PARAMS_DEFAULT = init_TsParams( Y_MIN, Y_MAX, 0.0f);
+		float expShift = _log2f(inv_ssts(Y_MID, PARAMS_DEFAULT)) - _log2f(0.18f);
+		TsParams PARAMS = init_TsParams( Y_MIN, Y_MAX, expShift);
+		float desat_A = (lum - Y_MID) / Y_MID;
+		desat_A = _clampf(desat_A, 0.0f, 1.0f);
+		lum = inv_ssts( lum, PARAMS);
+		lum *= refLum;
+        lum *= 0.97224f;
+        IzMh.x = lin_to_ZCAMPQ(lum);
+        float desat_B = IzMh.x;
+        desat_B -= IzMh.x;
+        desat_A *= desat_B;
+        desat_A *= hlDesat;
+        desat_A = desat_A > 0.8f ? ( -1.0f / (( desat_A - 0.8f ) / ( 1.0f - 0.8f ) + 1.0f ) + 1.0f ) * ( 1.0f - 0.8f ) + 0.8f : desat_A;
+        desat_A = 1.0f - desat_A;
+
+        IzMh.y /= desat_A;
+
+        XYZ = ZCAM_IzMh_to_XYZ(IzMh, inputRefWhite, inputD65White, refLum, adaptDegree_in, F_b, F_L);
+        
+        XYZ /= refLum;
+        output = vector_dot(invert(AP0_to_XYZ), XYZ);
+    }
+
+    return output;
+}
