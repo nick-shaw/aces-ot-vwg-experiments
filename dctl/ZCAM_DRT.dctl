@@ -7,6 +7,7 @@ DEFINE_UI_PARAMS(hlDesat, Highlight Desat, DCTLUI_SLIDER_FLOAT, 2.5, 0.0, 5.0, 0
 DEFINE_UI_PARAMS(gmThresh, GC Threshold, DCTLUI_SLIDER_FLOAT, 0.8, 0.001, 0.999, 0.1)
 DEFINE_UI_PARAMS(gmLimit, GC Limit, DCTLUI_SLIDER_FLOAT, 1.3, 1.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gmPower, GC Power, DCTLUI_SLIDER_FLOAT, 1.2, 1.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gmLowCut, GC M Toe, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.1)
 DEFINE_UI_PARAMS(discountIllum, Discount Illuminant, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(inRefWhiteSelect, Input Reference White, DCTLUI_COMBO_BOX, 0, {ACESin, D65in}, {ACES, D65})
 DEFINE_UI_PARAMS(outRefWhiteSelect, Output Reference White, DCTLUI_COMBO_BOX, 1, {ACESout, D65out}, {ACES, D65})
@@ -72,7 +73,7 @@ __CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 0.9999999999629647f, 0.0f}, {3.5
 #endif
 
 #ifdef DEVICE_IS_CUDA
-__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - epsilon, 0.0f}, {3.524f, -4.066708f, 0.542708f}, {0.199076f, 1.096799f, -1.295875f} };
+__CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - 3.703522621e-11f, 0.0f}, {3.524f, -4.066708f, 0.542708f}, {0.199076f, 1.096799f, -1.295875f} };
 #endif
 
 #ifdef DEVICE_IS_METAL
@@ -141,7 +142,7 @@ __DEVICE__ float3 XYZ_to_Izazbz( float3 XYZD65 )
     XYZpD65.x = cb * XYZD65.x - (cb - 1.0f) * XYZD65.z;
     XYZpD65.y = cg * XYZD65.y - (cg - 1.0f) * XYZD65.x;
     float3 LMS = vector_dot(ZCAM_XYZ_to_LMS, XYZpD65);
-    float3 LMSp = make_float3(0.0f, 0.0f, 0.0f);
+    float3 LMSp;
     LMSp.x = lin_to_ZCAMPQ(LMS.x);
     LMSp.y = lin_to_ZCAMPQ(LMS.y);
     LMSp.z = lin_to_ZCAMPQ(LMS.z);
@@ -162,8 +163,7 @@ __DEVICE__ float degrees_to_radians( float degrees )
 
 __DEVICE__ float3 Izazbz_to_IzMh( float3 Izazbz, float refWhiteIz, float F_b, float F_L )
 {
-    float3 IzMh = make_float3(0.0f, 0.0f, 0.0f);
-
+    float3 IzMh;
     IzMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
     IzMh.x = Izazbz.x;
@@ -178,7 +178,7 @@ __DEVICE__ float3 IzMh_to_Izazbz( float3 IzMh, float refWhiteIz, float F_b, floa
     float hzr = degrees_to_radians(IzMh.z);
     float Czp = _powf ((IzMh.y * _powf (refWhiteIz, 0.78f) * _powf (F_b, 0.1f)) / (100.0f * _powf (ez, 0.068f) * _powf (F_L, 0.2f)), 50.0f / 37.0f);
 
-    return float3( IzMh.x, Czp * _cosf(hzr), Czp * _sinf(hzr));
+    return make_float3( IzMh.x, Czp * _cosf(hzr), Czp * _sinf(hzr));
 }
 
 __DEVICE__ float PQZCAM_to_lin(float x)
@@ -194,7 +194,7 @@ __DEVICE__ float PQ_to_lin(float x)
 __DEVICE__ float3 Izazbz_to_XYZ( float3 Izazbz )
 {
     float3 LMSp = vector_dot(invert(ZCAM_LMS_to_Izazbz), Izazbz);
-    float3 LMS = make_float3(0.0f, 0.0f, 0.0f);
+    float3 LMS;
     LMS.x = PQZCAM_to_lin(LMSp.x);
     LMS.y = PQZCAM_to_lin(LMSp.y);
     LMS.z = PQZCAM_to_lin(LMSp.z);
@@ -207,8 +207,7 @@ __DEVICE__ float3 Izazbz_to_XYZ( float3 Izazbz )
 
 __DEVICE__ float3 Izazbz_to_JMh( float3 Izazbz, float refWhiteIz, float F_b, float F_L, float F_s )
 {
-    float3 JMh = make_float3( 0.0f, 0.0f, 0.0f );
-
+    float3 JMh;
     JMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
     float Qz = 2700.0f * _powf(Izazbz.x, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
@@ -465,6 +464,11 @@ __DEVICE__ float compress(float dist, float lim, float thr, bool invert, float p
   return cdist;
 }
 
+__DEVICE__ float toe(float x, float lift)
+{
+    return x > 2.0f * lift ? x : lift + _powf(x, 2.0f) / (4.0f * lift);
+}
+
 __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
 { 
     float3 input = make_float3(p_R, p_G, p_B);
@@ -568,19 +572,27 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
         float3 JMh_test = JMh;
         float3 XYZ_test;
         float3 RGB_test;
-        float bound = -1.0f;
+        
+        float maxM = 0.0f;
+        float minRGB;
+        float maxRGB;
         for( int i = 0; i < 128; ++i)
         {
             JMh_test.y = (float)i + 1.0f;
             XYZ_test = ZCAM_JMh_to_XYZ(JMh_test, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
-            RGB_test = vector_dot(limit, XYZ_test);
-            if ((RGB_test.x < 0.0f || RGB_test.y < 0.0f || RGB_test.z < 0.0f) && bound < 0.0f)
+            RGB_test = vector_dot(limit, XYZ_test) / refLum;
+            minRGB = _fminf(RGB_test.x, _fminf(RGB_test.y, RGB_test.z));
+            maxRGB = _fmaxf(RGB_test.x, _fmaxf(RGB_test.y, RGB_test.z));
+            
+            if( minRGB >= 0.0f && maxRGB <= (Y_MAX / refLum) )
             {
-                bound = JMh_test.y;
+                maxM = _fmaxf(maxM, JMh_test.y);
             }
         }
-
-        JMh.y = bound * compress(JMh.y / bound, gmLimit, gmThresh, 0, gmPower);
+        
+        maxM = toe(maxM, gmLowCut);
+        
+        JMh.y = maxM * compress(JMh.y / maxM, gmLimit, gmThresh, 0, gmPower);
 
         XYZ = ZCAM_JMh_to_XYZ(JMh, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
         if (outPrimaries == rec709)
@@ -644,19 +656,26 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
         float3 JMh_test = JMh;
         float3 XYZ_test;
         float3 RGB_test;
-        float bound = -1.0f;
+        float maxM = 0.0f;
+        float minRGB;
+        float maxRGB;
         for( int i = 0; i < 128; ++i)
         {
             JMh_test.y = (float)i + 1.0f;
             XYZ_test = ZCAM_JMh_to_XYZ(JMh_test, outputRefWhite, inputD65White, refLum, adaptDegree, F_b, F_L, F_s);
-            RGB_test = vector_dot(limit, XYZ_test);
-            if ((RGB_test.x < 0.0f || RGB_test.y < 0.0f || RGB_test.z < 0.0f) && bound < 0.0f)
+            RGB_test = vector_dot(limit, XYZ_test) / refLum;
+            minRGB = _fminf(RGB_test.x, _fminf(RGB_test.y, RGB_test.z));
+            maxRGB = _fmaxf(RGB_test.x, _fmaxf(RGB_test.y, RGB_test.z));
+            
+            if( minRGB >= 0.0f && maxRGB <= (Y_MAX / refLum) )
             {
-                bound = JMh_test.y;
+                maxM = _fmaxf(maxM, JMh_test.y);
             }
         }
-
-        JMh.y = bound * compress(JMh.y / bound, gmLimit, gmThresh, 1, gmPower);
+        
+        maxM = toe(maxM, gmLowCut);
+        
+            JMh.y = maxM * compress(JMh.y / maxM, gmLimit, gmThresh, 1, gmPower);
 
         float lum;
         float3 refWhiteIzazbz = XYZ_to_Izazbz(inputRefWhite * refLum / inputRefWhite.y);
