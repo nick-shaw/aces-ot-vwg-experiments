@@ -167,7 +167,7 @@ __DEVICE__ float3 Izazbz_to_IzMh( float3 Izazbz, float refWhiteIz, float F_b, fl
     IzMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
     IzMh.x = Izazbz.x;
-    IzMh.y = 100.0f * _powf ((_powf (Izazbz.y, 2.0f) + _powf (Izazbz.z, 2.0f)), 0.37f) * ((_powf (ez, 0.068f) * _powf (F_L, 0.2f)) / (_powf (F_b, 0.1f) * _powf (refWhiteIz, 0.78f)));
+    IzMh.y = 100.0f * _powf ((_powf (_fabs(Izazbz.y), 2.0f) + _powf (_fabs(Izazbz.z), 2.0f)), 0.37f) * ((_powf (_fabs(ez), 0.068f) * _powf (F_L, 0.2f)) / (_powf (F_b, 0.1f) * _powf (refWhiteIz, 0.78f)));
 
     return IzMh;
 }
@@ -473,7 +473,7 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
 { 
     float3 input = make_float3(p_R, p_G, p_B);
 
-    float3 inputD65White = make_float3(0.9504559270516716, 1.0, 1.0890577507598784);
+    float3 inputD65White = make_float3(0.9504559270516716f, 1.0f, 1.0890577507598784f);
     float3 inputRefWhite;
     float3 outputRefWhite;
     
@@ -489,19 +489,19 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
     
     if (inRefWhiteSelect == ACESin)
     {
-        inputRefWhite = make_float3(0.9526460745698463, 1.0, 1.0088251843515859);
+        inputRefWhite = make_float3(0.9526460745698463f, 1.0f, 1.0088251843515859f);
     }
     else
     {
-        inputRefWhite = make_float3(0.9504559270516716, 1.0, 1.0890577507598784);
+        inputRefWhite = make_float3(0.9504559270516716f, 1.0f, 1.0890577507598784f);
     }
     if (outRefWhiteSelect == ACESout)
     {
-        outputRefWhite = make_float3(0.9526460745698463, 1.0, 1.0088251843515859);
+        outputRefWhite = make_float3(0.9526460745698463f, 1.0f, 1.0088251843515859f);
     }
     else
     {
-        outputRefWhite = make_float3(0.9504559270516716, 1.0, 1.0890577507598784);
+        outputRefWhite = make_float3(0.9504559270516716f, 1.0f, 1.0890577507598784f);
     }
     float F;
     float F_s;
