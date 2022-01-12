@@ -9,6 +9,7 @@ DEFINE_UI_PARAMS(gmLimit, GC Limit, DCTLUI_SLIDER_FLOAT, 1.3, 1.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gmPower, GC Power, DCTLUI_SLIDER_FLOAT, 1.2, 1.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gmLowCut, GC M Toe, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.1)
 DEFINE_UI_PARAMS(discountIllum, Discount Illuminant, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(inColorSpace, Input, DCTLUI_COMBO_BOX, 0, {ACES, ACEScg, ACEScct}, {ACES2065-1, ACEScg, ACEScct})
 DEFINE_UI_PARAMS(inRefWhiteSelect, Input Reference White, DCTLUI_COMBO_BOX, 0, {ACESin, D65in}, {ACES, D65})
 DEFINE_UI_PARAMS(outRefWhiteSelect, Output Reference White, DCTLUI_COMBO_BOX, 1, {ACESout, D65out}, {ACES, D65})
 DEFINE_UI_PARAMS(outPrimaries, Output Primaries, DCTLUI_COMBO_BOX, 0, {rec709, rec2020, p3d65}, {Rec.709, Rec.2020, P3-D65})
@@ -57,6 +58,8 @@ __CONSTANT__ float MIN_LUM_RRT = 0.0001f;
 __CONSTANT__ float MAX_LUM_RRT = 10000.0f;
 
 __CONSTANT__ mat3 AP0_to_XYZ = { { 0.95255240f,  0.00000000f,  0.00009368f}, { 0.34396645f,  0.72816610f, -0.07213255f}, { 0.00000000f,  0.00000000f,  1.00882518f} };
+
+__CONSTANT__ mat3 AP1_to_XYZ = { { 0.66245418f,  0.13400421f,  0.15618769f}, { 0.27222872f,  0.67408177f,  0.05368952f}, {-0.00557465f,  0.00406073f,  1.01033910} };
 
 __CONSTANT__ mat3 XYZ_to_709 = { { 3.24096994f, -1.53738318f, -0.49861076f}, {-0.96924364f,  1.87596750f,  0.04155506f}, { 0.05563008f, -0.20397696f,  1.05697151f} };
 
@@ -469,6 +472,23 @@ __DEVICE__ float toe(float x, float lift)
     return x > 2.0f * lift ? x : lift + _powf(x, 2.0f) / (4.0f * lift);
 }
 
+__DEVICE__ float ACEScct_to_lin(float in)
+{
+  if (in > 0.155251141552511f) {
+    return _powf( 2.0f, in*17.52f - 9.72f);
+  } else {
+    return (in - 0.0729055341958355f) / 10.5402377416545f;
+  }
+}
+
+__DEVICE__ float lin_to_ACEScct(float in) {
+  if (in <= 0.0078125f) {
+    return 10.5402377416545f * in + 0.0729055341958355f;
+  } else {
+    return (_log2f(in) + 9.72f) / 17.52f;
+  }
+}
+
 __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
 { 
     float3 input = make_float3(p_R, p_G, p_B);
@@ -540,10 +560,23 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
 
     if (direction == forward )
     {
+        if (inColorSpace == ACEScct)
+        {
+            input.x = ACEScct_to_lin(input.x);
+            input.y = ACEScct_to_lin(input.y);
+            input.z = ACEScct_to_lin(input.z);
+        }
         input.x = _clampf(input.x, -65504.0f, 65505.0f);
         input.y = _clampf(input.y, -65504.0f, 65505.0f);
         input.z = _clampf(input.z, -65504.0f, 65505.0f);
-        XYZ = vector_dot(AP0_to_XYZ, input);
+        if (inColorSpace == ACES)
+        {
+            XYZ = vector_dot(AP0_to_XYZ, input);
+        }
+        else
+        {
+            XYZ = vector_dot(AP1_to_XYZ, input);
+        }
         XYZ *= refLum;
         IzMh = XYZ_to_ZCAM_IzMh(XYZ, inputRefWhite, inputD65White, refLum, adaptDegree_in, F_b, F_L);
         float lum;
@@ -705,7 +738,20 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
         XYZ = ZCAM_IzMh_to_XYZ(IzMh, inputRefWhite, inputD65White, refLum, adaptDegree_in, F_b, F_L);
         
         XYZ /= refLum;
-        output = vector_dot(invert(AP0_to_XYZ), XYZ);
+        if (inColorSpace == ACES)
+        {
+            output = vector_dot(invert(AP0_to_XYZ), XYZ);
+        }
+        else
+        {
+            output = vector_dot(invert(AP1_to_XYZ), XYZ);
+        }
+        if (inColorSpace == ACEScct)
+        {
+            output.x = lin_to_ACEScct(output.x);
+            output.y = lin_to_ACEScct(output.y);
+            output.z = lin_to_ACEScct(output.z);
+        }
     }
 
     return output;
