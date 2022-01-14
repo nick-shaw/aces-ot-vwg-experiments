@@ -9,7 +9,7 @@ DEFINE_UI_PARAMS(gmLimit, GC Limit, DCTLUI_SLIDER_FLOAT, 1.3, 1.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gmPower, GC Power, DCTLUI_SLIDER_FLOAT, 1.2, 1.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gmLowCut, GC M Toe, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.1)
 DEFINE_UI_PARAMS(discountIllum, Discount Illuminant, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(inColorSpace, Input, DCTLUI_COMBO_BOX, 0, {ACES, ACEScg, ACEScct}, {ACES2065-1, ACEScg, ACEScct})
+DEFINE_UI_PARAMS(inColorSpace, Input, DCTLUI_COMBO_BOX, 2, {ACES, ACEScg, ACEScct}, {ACES2065-1, ACEScg, ACEScct})
 DEFINE_UI_PARAMS(inRefWhiteSelect, Input Reference White, DCTLUI_COMBO_BOX, 0, {ACESin, D65in}, {ACES, D65})
 DEFINE_UI_PARAMS(outRefWhiteSelect, Output Reference White, DCTLUI_COMBO_BOX, 1, {ACESout, D65out}, {ACES, D65})
 DEFINE_UI_PARAMS(outPrimaries, Output Primaries, DCTLUI_COMBO_BOX, 0, {rec709, rec2020, p3d65}, {Rec.709, Rec.2020, P3-D65})
@@ -82,6 +82,11 @@ __CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - 3.703522621e-11f, 0.0f}, 
 #ifdef DEVICE_IS_METAL
 __CONSTANT__ mat3 ZCAM_LMS_to_Izazbz = { {0.0f, 1.0f - epsilon, 0.0f}, {3.524f, -4.066708f, 0.542708f}, {0.199076f, 1.096799f, -1.295875f} };
 #endif
+
+__DEVICE__  float spow( float x, float e)
+{
+    return _copysignf(1.0f, x) * _powf(_fabs(x), e);
+}
 
 __DEVICE__  mat3 invert( mat3 m)
 {
@@ -170,7 +175,7 @@ __DEVICE__ float3 Izazbz_to_IzMh( float3 Izazbz, float refWhiteIz, float F_b, fl
     IzMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
     IzMh.x = Izazbz.x;
-    IzMh.y = 100.0f * _powf ((_powf (_fabs(Izazbz.y), 2.0f) + _powf (_fabs(Izazbz.z), 2.0f)), 0.37f) * ((_powf (_fabs(ez), 0.068f) * _powf (F_L, 0.2f)) / (_powf (F_b, 0.1f) * _powf (refWhiteIz, 0.78f)));
+    IzMh.y = 100.0f * _powf ((_powf (_fabs(Izazbz.y), 2.0f) + _powf (_fabs(Izazbz.z), 2.0f)), 0.37f) * ((spow (_fabs(ez), 0.068f) * spow (F_L, 0.2f)) / (_powf (F_b, 0.1f) * spow (refWhiteIz, 0.78f)));
 
     return IzMh;
 }
@@ -179,7 +184,7 @@ __DEVICE__ float3 IzMh_to_Izazbz( float3 IzMh, float refWhiteIz, float F_b, floa
 {
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+IzMh.z));
     float hzr = degrees_to_radians(IzMh.z);
-    float Czp = _powf ((IzMh.y * _powf (refWhiteIz, 0.78f) * _powf (F_b, 0.1f)) / (100.0f * _powf (ez, 0.068f) * _powf (F_L, 0.2f)), 50.0f / 37.0f);
+    float Czp = spow ((IzMh.y * spow (refWhiteIz, 0.78f) * _powf (F_b, 0.1f)) / (100.0f * spow (ez, 0.068f) * spow (F_L, 0.2f)), 50.0f / 37.0f);
 
     return make_float3( IzMh.x, Czp * _cosf(hzr), Czp * _sinf(hzr));
 }
@@ -213,45 +218,45 @@ __DEVICE__ float3 Izazbz_to_JMh( float3 Izazbz, float refWhiteIz, float F_b, flo
     float3 JMh;
     JMh.z = _fmod(radians_to_degrees(_atan2f(Izazbz.z,Izazbz.y))+360.0f,360.0f);
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
-    float Qz = 2700.0f * _powf(Izazbz.x, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
-    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
+    float Qz = 2700.0f * spow(Izazbz.x, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * spow(F_L, 0.2f);
+    float Qzw = 2700.0f * spow(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * spow(F_L, 0.2f);
     JMh.x = 100.0f * (Qz / Qzw);
-    JMh.y = 100.0f * _powf((_powf(Izazbz.y, 2.0f) + _powf(Izazbz.z, 2.0f)), 0.37f) * ((_powf(ez, 0.068f) * _powf(F_L, 0.2f)) / (_powf(F_b, 0.1f) * _powf(refWhiteIz, 0.78f)));
+    JMh.y = 100.0f * _powf((_powf(_fabs(Izazbz.y), 2.0f) + _powf(_fabs(Izazbz.z), 2.0f)), 0.37f) * ((spow(ez, 0.068f) * spow(F_L, 0.2f)) / (_powf(F_b, 0.1f) * spow(refWhiteIz, 0.78f)));
 
     return JMh;
 }
 
 __DEVICE__ float3 JMh_to_Izazbz( float3 JMh, float refWhiteIz, float F_b, float F_L, float F_s )
 {
-    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
-    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * spow(F_L, 0.2f);
+    float Qzw = 2700.0f * spow(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
     float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
     float Izd = 2700.0f * 100.0f * Qzm;
     float ez = 1.015f + _cosf(degrees_to_radians(89.038f+JMh.z));
     float hzr = degrees_to_radians(JMh.z);
-    float Czp = _powf((JMh.y * _powf(refWhiteIz, 0.78f) * _powf(F_b, 0.1f)) / (100.0f * _powf(ez, 0.068f) * _powf(F_L, 0.2f)), 50.0f / 37.0f);
+    float Czp = spow((JMh.y * spow(refWhiteIz, 0.78f) * _powf(F_b, 0.1f)) / (100.0f * spow(ez, 0.068f) * spow(F_L, 0.2f)), 50.0f / 37.0f);
 
-    return make_float3( _powf((JMh.x * Qzw) / Izd, Izp), Czp * _cosf(hzr), Czp * _sinf(hzr));
+    return make_float3( spow((JMh.x * Qzw) / Izd, Izp), Czp * _cosf(hzr), Czp * _sinf(hzr));
 }
 
 __DEVICE__ float3 IzMh_to_JMh( float3 IzMh, float refWhiteIz, float F_b, float F_L, float F_s )
 {
     float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
-    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Qzw = 2700.0f * spow(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
     float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
     float Izd = 2700.0f * 100.0f * Qzm;
 
-    return make_float3( Izd * _powf(IzMh.x, 1.0f / Izp) / Qzw , IzMh.y, IzMh.z );
+    return make_float3( Izd * spow(IzMh.x, 1.0f / Izp) / Qzw , IzMh.y, IzMh.z );
 }
 
 __DEVICE__ float3 JMh_to_IzMh( float3 JMh, float refWhiteIz, float F_b, float F_L, float F_s )
 {
     float Qzm = _powf(F_s, 2.2f) * _powf(F_b, 0.5f) * _powf(F_L, 0.2f);
-    float Qzw = 2700.0f * _powf(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
+    float Qzw = 2700.0f * spow(refWhiteIz, (1.6f * F_s) / _powf(F_b, 0.12f)) * Qzm;
     float Izp = _powf(F_b, 0.12f) / (1.6f * F_s);
     float Izd = 2700.0f * 100.0f * Qzm;
 
-    return make_float3( _powf((JMh.x * Qzw) / Izd, Izp), JMh.y, JMh.z );
+    return make_float3( spow((JMh.x * Qzw) / Izd, Izp), JMh.y, JMh.z );
 }
 
 __DEVICE__ float3 XYZ_to_ZCAM_IzMh( float3 XYZ, float3 refWhite, float3 d65White, float referenceLuminance, float adaptDegree, float F_b, float F_L )
@@ -551,7 +556,7 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
         adaptDegree = 1.0f;
     }
     float F_b = _sqrtf(bgLum / refLum);
-    float F_L = 0.171f * _powf(L_A, 1.0f/3.0f) * (1.0f - _expf(-48.0f/9.0f * L_A));
+    float F_L = 0.171f * spow(L_A, 1.0f/3.0f) * (1.0f - _expf(-48.0f/9.0f * L_A));
 
     float3 output;
     float3 IzMh;
@@ -643,15 +648,15 @@ __DEVICE__ float3 transform( int p_Width, int p_Height, int p_X, int p_Y, float 
         if (outEOTF == BT1886)
         {
             output /= 100.0f;
-            output.x = _powf(output.x, 1.0f / 2.4f);
-            output.y = _powf(output.y, 1.0f / 2.4f);
-            output.z = _powf(output.z, 1.0f / 2.4f);
+            output.x = spow(output.x, 1.0f / 2.4f);
+            output.y = spow(output.y, 1.0f / 2.4f);
+            output.z = spow(output.z, 1.0f / 2.4f);
         }
         else if (outEOTF == PQ)
         {
-            output.x = lin_to_PQ(output.x);
-            output.y = lin_to_PQ(output.y);
-            output.z = lin_to_PQ(output.z);
+            output.x = lin_to_PQ(_fmaxf(0.0f, output.x));
+            output.y = lin_to_PQ(_fmaxf(0.0f, output.y));
+            output.z = lin_to_PQ(_fmaxf(0.0f, output.z));
         }
     }
     else if (direction == inverse )
