@@ -24,6 +24,10 @@ This repo contains various experiments related to the ACES 2.0 [Output Transform
 
 * `ZCAM_DRT.dctl` - A more complete version of [Matthias Scharfenberg](https://github.com/Tristimulus/aces_vwg_output_transform/blob/master/DRT_ZCAM_IzMh_v07_Blink.nk)'s ZCAM based DRT. The inverse transform is implemented, but is not quite right, and needs further work.
 
+* `tonecurves.dctl` - A DCTL for comparing the results of the SSTS and "Daniele Curve" on luminance only
+
+* `ssts_lib.h` - A cutdown of the functions from `ACES_LIB_MOD` including only the SSTS curve, for use in `tonecurves.dctl`
+
 
 To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*, *.cube* and *.h* files must be placed in a folder called `AMPAS` in the root of the Resolve LUT folder. Resolve should be in DaVinci YRGB mode, with the timeline colour space set to whatever the connected monitor is expecting. The first node in the node tree of the DRX is a conversion from LogC to ACEScct. This will obviously need to be modified if your source is not LogC.
 

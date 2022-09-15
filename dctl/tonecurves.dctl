@@ -1,0 +1,109 @@
+DEFINE_UI_PARAMS(Y_MIN, SSTS Min, DCTLUI_VALUE_BOX, 0.0001)
+DEFINE_UI_PARAMS(Y_MID, SSTS Mid, DCTLUI_VALUE_BOX, 10)
+// DEFINE_UI_PARAMS(STRETCH_BLACK, SSTS Stretch Black, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(inColorSpace, Input, DCTLUI_COMBO_BOX, 0, {aces}, {ACES2065-1})
+DEFINE_UI_PARAMS(curve, Curve, DCTLUI_COMBO_BOX, 0, {daniele_curve, ssts_curve}, {Daniele, SSTS})
+DEFINE_UI_PARAMS(outEncoding, Output, DCTLUI_COMBO_BOX, 0, {SDR, PQ_SDR, PQ_250, PQ_500, PQ_1000, PQ_2000, PQ_4000}, {100nits (BT.1886), 100nits (PQ), 250nits (PQ), 500nits (PQ), 1000nits (PQ), 2000nits (PQ), 4000nits (PQ)})
+
+// Daniele curve constants
+__CONSTANT__ float r_hit_min = 128.0f; // scene value hitting the roof at 100 nits
+__CONSTANT__ float r_hit_max = 256.0f; // scene value hitting the roof at 10000 nits
+__CONSTANT__ float g = 1.2f; // surround / contrast
+__CONSTANT__ float c = 0.18f; // scene-referred grey
+__CONSTANT__ float c_d = 10.1058f; // display-referred grey (in nits)
+__CONSTANT__ float w_g = 0.12f; // grey change between different peak luminance
+__CONSTANT__ float t_1 = 0.004f; // shadow toe, flare/glare compensation - how ever you want to call it
+__CONSTANT__ float n_r = 100.0f; // Normalised White in nits (what should 1.0 be)
+
+// ST.2084 constants
+__CONSTANT__ float pq_m1 = 0.1593017578125f;
+__CONSTANT__ float pq_m2 = 78.84375f;
+__CONSTANT__ float pq_c1 = 0.8359375f;
+__CONSTANT__ float pq_c2 = 18.8515625f;
+__CONSTANT__ float pq_c3 = 18.6875f;
+__CONSTANT__ float pq_C = 10000.0f;
+
+__CONSTANT__ bool STRETCH_BLACK = 1;
+
+#include "ssts_lib.h"
+
+__DEVICE__ inline float Y_2_ST2084( float C ) {
+    float L = C / pq_C;
+    float Lm = _powf( L, pq_m1 );
+    float N = ( pq_c1 + pq_c2 * Lm ) / ( 1.0f + pq_c3 * Lm );
+    N = _powf( N, pq_m2 );
+    return N;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) 
+{ 
+    float Y = 0.34396645f * p_R + 0.72816610f * p_G - 0.07213255f * p_B;
+    float n = 100.0f;
+    switch(outEncoding){
+        case PQ_250:
+        {
+            n = 250.0f;
+            break;
+        }
+        case PQ_500:
+        {
+            n = 500.0f;
+            break;
+        }
+        case PQ_1000:
+        {
+            n = 1000.0f;
+            break;
+        }
+        case PQ_2000:
+        {
+            n = 2000.0f;
+            break;
+        }
+        case PQ_4000:
+        {
+            n = 4000.0f;
+            break;
+        }
+    }
+    if (curve == daniele_curve)
+    {
+        float r_hit = r_hit_min + (r_hit_max - r_hit_min) * (_logf(n / n_r) / _logf(10000.0f / 100.0f));
+        float m_0 = n / n_r;
+        float m_1 = 0.5f * (m_0 + _sqrtf(m_0 * (m_0 + 4.0f * t_1)));
+        float u = _powf((r_hit / m_1) / ((r_hit / m_1) + 1.0f), g);
+        float m = m_1 / u;
+        float w_i = _logf(n / 100.0f) / _logf(2.0f);
+        float c_t = c_d * (1.0f + w_i * w_g) / n_r;
+        float g_ip = 0.5f * (c_t + _sqrtf(c_t * (c_t + 4.0f * t_1)));
+        float g_ipp2 = -m_1 * _powf(g_ip / m, 1.0f / g) / (_powf(g_ip / m, 1.0f / g) - 1.0f);
+        float w_2 = c / g_ipp2;
+        float s_2 = w_2 * m_1;
+        float u_2 = _powf((r_hit / m_1) / ((r_hit / m_1) + w_2), g);
+        float m_2 = m_1 / u_2;
+
+        float f = m_2 * _powf(_fmaxf(0.0f, Y) / (Y + s_2), g);
+        float h = _fmaxf(0.0f, f * f / (f + t_1));
+
+        Y = h;
+    }
+    else if (curve == ssts_curve)
+    {
+        Y = sstsTonemap(Y, Y_MIN, Y_MID, n);
+        if (STRETCH_BLACK)
+        {
+            Y = n * (Y - Y_MIN) / (n - Y_MIN);
+        }
+        Y = Y / 100.0f;
+    }
+    if (outEncoding == SDR)
+    {
+        Y = _powf(Y, 1.0f / 2.4f);
+    }
+    else
+    {
+        Y = Y_2_ST2084(Y * 100.0f);
+    }
+    float3 output = make_float3(Y, Y, Y);
+    return output;
+}
