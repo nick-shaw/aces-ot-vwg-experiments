@@ -7,7 +7,7 @@ DEFINE_UI_PARAMS(outEncoding, Output, DCTLUI_COMBO_BOX, 0, {SDR, PQ_SDR, PQ_250,
 
 // Daniele curve constants
 __CONSTANT__ float r_hit_min = 128.0f; // scene value hitting the roof at 100 nits
-__CONSTANT__ float r_hit_max = 256.0f; // scene value hitting the roof at 10000 nits
+__CONSTANT__ float r_hit_max = 384.0f; // scene value hitting the roof at 10000 nits
 __CONSTANT__ float g = 1.2f; // surround / contrast
 __CONSTANT__ float c = 0.18f; // scene-referred grey
 __CONSTANT__ float c_d = 10.1058f; // display-referred grey (in nits)
