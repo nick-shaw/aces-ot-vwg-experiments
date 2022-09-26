@@ -2,7 +2,7 @@ DEFINE_UI_PARAMS(Y_MIN, SSTS Min, DCTLUI_VALUE_BOX, 0.0001)
 DEFINE_UI_PARAMS(Y_MID, SSTS Mid, DCTLUI_VALUE_BOX, 10)
 // DEFINE_UI_PARAMS(STRETCH_BLACK, SSTS Stretch Black, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(inColorSpace, Input, DCTLUI_COMBO_BOX, 0, {aces}, {ACES2065-1})
-DEFINE_UI_PARAMS(curve, Curve, DCTLUI_COMBO_BOX, 0, {daniele_curve, ssts_curve}, {Daniele, SSTS})
+DEFINE_UI_PARAMS(curve, Curve, DCTLUI_COMBO_BOX, 0, {daniele_curve, mmsdc_curve, ssts_curve}, {Daniele, MMSDC, SSTS})
 DEFINE_UI_PARAMS(outEncoding, Output, DCTLUI_COMBO_BOX, 0, {SDR, PQ_SDR, PQ_250, PQ_500, PQ_1000, PQ_2000, PQ_4000}, {100nits (BT.1886), 100nits (PQ), 250nits (PQ), 500nits (PQ), 1000nits (PQ), 2000nits (PQ), 4000nits (PQ)})
 
 // Daniele curve constants
@@ -14,6 +14,14 @@ __CONSTANT__ float c_d = 10.1f; // display-referred grey (in nits)
 __CONSTANT__ float w_g = 0.14f; // grey change between different peak luminance
 __CONSTANT__ float t_1 = 0.041f; // shadow toe, flare/glare compensation - how ever you want to call it
 __CONSTANT__ float n_r = 100.0f; // Normalised White in nits (what should 1.0 be)
+
+// MM-SDC constants
+__CONSTANT__ float mm_c0 = 1.2f;
+__CONSTANT__ float mm_c1 = 1.1f;
+__CONSTANT__ float mm_su = 1.0f;
+__CONSTANT__ float mm_ex = -0.26f;
+__CONSTANT__ float mm_eb = 0.08f;
+__CONSTANT__ float mm_fl = 0.01f;
 
 // ST.2084 constants
 __CONSTANT__ float pq_m1 = 0.1593017578125f;
@@ -86,6 +94,27 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         float h = _fmaxf(0.0f, f * f / (f + t_1));
 
         Y = h;
+    }
+    else if (curve == mmsdc_curve)
+    {
+        float p = mm_c1 * mm_su;
+        float w1 = _powf(0.595f * n / 10000.0f, 0.931f) + 1.037f;
+        float s1 = w1 * n / n_r;
+        float e0 = _powf(2.0f, mm_ex + mm_eb * (_logf(s1) / _logf(2.0f)));
+        float s0 = _powf(s1 / e0, 1.0f / mm_c1);
+        float c2 = 0.0f;
+        if (Y < c)
+        {
+            c2 = _powf(c, 1.0f - mm_c0) * _powf(Y, mm_c0);
+        }
+        else
+        {
+            c2 = mm_c0 * (Y - c) + c;
+        }
+        float ts = _powf(_fmaxf(0.0f, c2) / (c2 + s0), p) * s1;
+        float tf = _fmaxf(0.0f, ts * ts / (ts + mm_fl));
+
+        Y = tf;
     }
     else if (curve == ssts_curve)
     {
