@@ -1,5 +1,6 @@
 DEFINE_UI_PARAMS(Y_MIN, SSTS Min, DCTLUI_VALUE_BOX, 0.0001)
 DEFINE_UI_PARAMS(Y_MID, SSTS Mid, DCTLUI_VALUE_BOX, 10)
+DEFINE_UI_PARAMS(w_g, Daniele w_g,DCTLUI_SLIDER_FLOAT, 0.14, 0.0, 1.0, 0.1)
 // DEFINE_UI_PARAMS(STRETCH_BLACK, SSTS Stretch Black, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(inColorSpace, Input, DCTLUI_COMBO_BOX, 0, {aces}, {ACES2065-1})
 DEFINE_UI_PARAMS(curve, Curve, DCTLUI_COMBO_BOX, 0, {daniele_curve, mmsdc_curve, ssts_curve}, {Daniele, MMSDC, SSTS})
@@ -11,7 +12,7 @@ __CONSTANT__ float r_hit_max = 896.0f; // scene value hitting the roof at 10000 
 __CONSTANT__ float g = 1.15f; // surround / contrast
 __CONSTANT__ float c = 0.18f; // scene-referred grey
 __CONSTANT__ float c_d = 10.1f; // display-referred grey (in nits)
-__CONSTANT__ float w_g = 0.14f; // grey change between different peak luminance
+// __CONSTANT__ float w_g = 0.14f; // grey change between different peak luminance
 __CONSTANT__ float t_1 = 0.041f; // shadow toe, flare/glare compensation - how ever you want to call it
 __CONSTANT__ float n_r = 100.0f; // Normalised White in nits (what should 1.0 be)
 
