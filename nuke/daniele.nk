@@ -9,7 +9,7 @@ BlinkScript {
  rebuild ""
  DanieleKernel_r_hit_min 128
  DanieleKernel_r_hit_max 896
- DanieleKernel_g 1.14
+ DanieleKernel_g 1.15
  DanieleKernel_c 0.18
  DanieleKernel_c_d 10.1
  DanieleKernel_w_g 0.14
