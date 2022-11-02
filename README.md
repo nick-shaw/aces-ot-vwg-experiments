@@ -34,3 +34,9 @@ To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*
 The DRTs include various presets for targets, based on the SSTS parameters in current ACES, and versions of Jed Smith's presets modified for more consistent black levels.
 
 When a preset is chosen, the numerical values shown are ignored. These are only used when "Custom" is selected. Unfortunately DCTL does not permit display of the actual values used by a given preset (look at the DCTL source code for the values) or greying out of fields which are not currently being used.
+
+## NUKE
+
+* `daniele.nk` -  A blink node implementation of the Daniele curve as used in the Tonecurve DCTL.
+
+* `daniele.blink` - The Blink kernel used in the node above

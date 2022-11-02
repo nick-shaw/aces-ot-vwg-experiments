@@ -1,0 +1,98 @@
+
+kernel DanieleKernel : ImageComputationKernel<ePixelWise>
+{
+  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image
+  Image<eWrite> dst; // the output image
+
+  param:
+    bool invert;
+    float r_hit_min; // scene value hitting the roof at 100 nits
+    float r_hit_max; // scene value hitting the roof at 10000 nits
+    float g; // surround / contrast
+    float c; // scene-referred grey
+    float c_d; // display-referred grey (in nits)
+    float w_g; // grey change between different peak luminance
+    float t_1; // shadow toe, flare/glare compensation - how ever you want to call it
+    float n_r; // Normalised White in nits (what should 1.0 be)
+    float n; // peak white
+
+
+  local:
+    // constants to be pre-calculated
+    float r_hit;
+    float m_0;
+    float m_1;
+    float u;
+    float m;
+    float w_i;
+    float c_t;
+    float g_ip;
+    float g_ipp2;
+    float w_2;
+    float s_2;
+    float u_2;
+    float m_2;
+
+  void define() {
+  }
+
+  float daniele_fwd(float Y)
+  {
+    float f = m_2 * pow(max(0.0f, Y) / (Y + s_2), g);
+    float h = max(0.0f, f * f / (f + t_1));
+
+    return h;
+  }
+
+  float daniele_rev(float Y)
+  {
+    Y = max(0.0f, min(n / (u_2 * n_r), Y));
+    float h = (Y + sqrt(Y * (4.0f * t_1 + Y)))/2.0f;
+    float f = s_2 / (pow((m_2 / h), (1.0f / g)) - 1.0f);
+
+    return f;
+  }
+
+  void init() {
+  // pre-calculate constants
+    r_hit = r_hit_min + (r_hit_max - r_hit_min) * (log(n / n_r) / log(10000.0f / 100.0f));
+    m_0 = n / n_r;
+    m_1 = 0.5f * (m_0 + sqrt(m_0 * (m_0 + 4.0f * t_1)));
+    u = pow((r_hit / m_1) / ((r_hit / m_1) + 1.0f), g);
+    m = m_1 / u;
+    w_i = log(n / 100.0f) / log(2.0f);
+    c_t = c_d * (1.0f + w_i * w_g) / n_r;
+    g_ip = 0.5f * (c_t + sqrt(c_t * (c_t + 4.0f * t_1)));
+    g_ipp2 = -m_1 * pow(g_ip / m, 1.0f / g) / (pow(g_ip / m, 1.0f / g) - 1.0f);
+    w_2 = c / g_ipp2;
+    s_2 = w_2 * m_1;
+    u_2 = pow((r_hit / m_1) / ((r_hit / m_1) + w_2), g);
+    m_2 = m_1 / u_2;
+  }
+
+  void process() {
+    // Read the input image
+    SampleType(src) input = src();
+
+    // Isolate the RGB components
+    float3 srcPixel(input.x, input.y, input.z);
+
+    // Apply curve
+    float3 dstPixel;
+    if (invert)
+    {
+      dstPixel.x = daniele_rev(srcPixel.x);
+      dstPixel.y = daniele_rev(srcPixel.y);
+      dstPixel.z = daniele_rev(srcPixel.z);
+    }
+    else
+    {
+      dstPixel.x = daniele_fwd(srcPixel.x);
+      dstPixel.y = daniele_fwd(srcPixel.y);
+      dstPixel.z = daniele_fwd(srcPixel.z);
+    }
+
+    // Write the result to the output image
+    dst() = float4(dstPixel.x, dstPixel.y, dstPixel.z, input.w);
+  }
+};

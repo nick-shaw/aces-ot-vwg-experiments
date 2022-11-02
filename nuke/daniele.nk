@@ -1,0 +1,22 @@
+set cut_paste_input [stack 0]
+push $cut_paste_input
+BlinkScript {
+ kernelSourceFile /Users/nick/Desktop/daniele.blink
+ recompileCount 27
+ ProgramGroup 1
+ KernelDescription "2 \"DanieleKernel\" iterate pixelWise f629b20a67898cb5184058c75efab62f2ebcf51f52bf6f23230f8767c3b95849 2 \"src\" Read Point \"dst\" Write Point 10 \"invert\" Bool 1 AA== \"r_hit_min\" Float 1 AAAAAA== \"r_hit_max\" Float 1 AAAAAA== \"g\" Float 1 AAAAAA== \"c\" Float 1 AAAAAA== \"c_d\" Float 1 AAAAAA== \"w_g\" Float 1 AAAAAA== \"t_1\" Float 1 AAAAAA== \"n_r\" Float 1 AAAAAA== \"n\" Float 1 AAAAAA== 10 \"invert\" 1 1 \"r_hit_min\" 1 1 \"r_hit_max\" 1 1 \"g\" 1 1 \"c\" 1 1 \"c_d\" 1 1 \"w_g\" 1 1 \"t_1\" 1 1 \"n_r\" 1 1 \"n\" 1 1 13 \"r_hit\" Float 1 1 AAAAAA== \"m_0\" Float 1 1 AAAAAA== \"m_1\" Float 1 1 AAAAAA== \"u\" Float 1 1 AAAAAA== \"m\" Float 1 1 AAAAAA== \"w_i\" Float 1 1 AAAAAA== \"c_t\" Float 1 1 AAAAAA== \"g_ip\" Float 1 1 AAAAAA== \"g_ipp2\" Float 1 1 AAAAAA== \"w_2\" Float 1 1 AAAAAA== \"s_2\" Float 1 1 AAAAAA== \"u_2\" Float 1 1 AAAAAA== \"m_2\" Float 1 1 AAAAAA=="
+ kernelSource "\nkernel DanieleKernel : ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image\n  Image<eWrite> dst; // the output image\n\n  param:\n    bool invert;\n    float r_hit_min; // scene value hitting the roof at 100 nits\n    float r_hit_max; // scene value hitting the roof at 10000 nits\n    float g; // surround / contrast\n    float c; // scene-referred grey\n    float c_d; // display-referred grey (in nits)\n    float w_g; // grey change between different peak luminance\n    float t_1; // shadow toe, flare/glare compensation - how ever you want to call it\n    float n_r; // Normalised White in nits (what should 1.0 be)\n    float n; // peak white\n\n\n  local:\n    // constants to be pre-calculated\n    float r_hit;\n    float m_0;\n    float m_1;\n    float u;\n    float m;\n    float w_i;\n    float c_t;\n    float g_ip;\n    float g_ipp2;\n    float w_2;\n    float s_2;\n    float u_2;\n    float m_2;\n\n  void define() \{\n  \}\n\n  float daniele_fwd(float Y)\n  \{\n    float f = m_2 * pow(max(0.0f, Y) / (Y + s_2), g);\n    float h = max(0.0f, f * f / (f + t_1));\n\n    return h;\n  \}\n\n  float daniele_rev(float Y)\n  \{\n    Y = max(0.0f, min(n / (u_2 * n_r), Y));\n    float h = (Y + sqrt(Y * (4.0f * t_1 + Y)))/2.0f;\n    float f = s_2 / (pow((m_2 / h), (1.0f / g)) - 1.0f);\n\n    return f;\n  \}\n\n  void init() \{\n  // pre-calculate constants\n    r_hit = r_hit_min + (r_hit_max - r_hit_min) * (log(n / n_r) / log(10000.0f / 100.0f));\n    m_0 = n / n_r;\n    m_1 = 0.5f * (m_0 + sqrt(m_0 * (m_0 + 4.0f * t_1)));\n    u = pow((r_hit / m_1) / ((r_hit / m_1) + 1.0f), g);\n    m = m_1 / u;\n    w_i = log(n / 100.0f) / log(2.0f);\n    c_t = c_d * (1.0f + w_i * w_g) / n_r;\n    g_ip = 0.5f * (c_t + sqrt(c_t * (c_t + 4.0f * t_1)));\n    g_ipp2 = -m_1 * pow(g_ip / m, 1.0f / g) / (pow(g_ip / m, 1.0f / g) - 1.0f);\n    w_2 = c / g_ipp2;\n    s_2 = w_2 * m_1;\n    u_2 = pow((r_hit / m_1) / ((r_hit / m_1) + w_2), g);\n    m_2 = m_1 / u_2;\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n\n    // Isolate the RGB components\n    float3 srcPixel(input.x, input.y, input.z);\n\n    // Apply curve\n    float3 dstPixel;\n    if (invert)\n    \{\n      dstPixel.x = daniele_rev(srcPixel.x);\n      dstPixel.y = daniele_rev(srcPixel.y);\n      dstPixel.z = daniele_rev(srcPixel.z);\n    \}\n    else\n    \{\n      dstPixel.x = daniele_fwd(srcPixel.x);\n      dstPixel.y = daniele_fwd(srcPixel.y);\n      dstPixel.z = daniele_fwd(srcPixel.z);\n    \}\n\n    // Write the result to the output image\n    dst() = float4(dstPixel.x, dstPixel.y, dstPixel.z, input.w);\n  \}\n\};\n"
+ rebuild ""
+ DanieleKernel_r_hit_min 128
+ DanieleKernel_r_hit_max 896
+ DanieleKernel_g 1.14
+ DanieleKernel_c 0.18
+ DanieleKernel_c_d 10.1
+ DanieleKernel_w_g 0.14
+ DanieleKernel_t_1 0.041
+ DanieleKernel_n_r 100
+ DanieleKernel_n 100
+ rebuild_finalise ""
+ name daniele_curve
+ selected true
+}
