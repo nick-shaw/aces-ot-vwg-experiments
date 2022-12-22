@@ -40,3 +40,7 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 * `daniele.nk` -  A blink node implementation of the Daniele curve as used in the Tonecurve DCTL.
 
 * `daniele.blink` - The Blink kernel used in the node above
+
+* `JMh_surr_test.nk` - The Hellwig surround test shown in meeting #82
+
+* `XYZ_JMh.blink` - The Blink kernel used in the script above

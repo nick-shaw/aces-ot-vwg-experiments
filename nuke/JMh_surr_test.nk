@@ -1,0 +1,1757 @@
+#! /Applications/Nuke14.0v1/Nuke14.0v1.app/Contents/MacOS/libnuke-14.0.1.dylib -nx
+version 14.0 v1
+define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
+<layout version="1.0">
+    <window x="0" y="25" w="1920" h="1147" maximized="1" screen="0">
+        <splitter orientation="1">
+            <split size="40"/>
+            <dock id="" hideTitles="1" activePageId="Toolbar.1">
+                <page id="Toolbar.1"/>
+            </dock>
+            <split size="1257" stretch="1"/>
+            <splitter orientation="2">
+                <split size="671"/>
+                <dock id="" activePageId="Viewer.1">
+                    <page id="Viewer.1"/>
+                </dock>
+                <split size="472"/>
+                <dock id="" activePageId="DAG.1" focus="true">
+                    <page id="DAG.1"/>
+                    <page id="Curve Editor.1"/>
+                    <page id="DopeSheet.1"/>
+                </dock>
+            </splitter>
+            <split size="615"/>
+            <dock id="" activePageId="Properties.1">
+                <page id="Properties.1"/>
+                <page id="uk.co.thefoundry.backgroundrenderview.1"/>
+                <page id="Scenegraph.1"/>
+            </dock>
+        </splitter>
+    </window>
+</layout>
+}
+Root {
+ inputs 0
+ name /Users/nick/Dropbox/MacPro_Jobs/AMPAS/output_transforms/Nuke/JMh_surr_test.nk
+ format "2048 1556 0 0 2048 1556 1 2K_Super_35(full-ap)"
+ proxy_type scale
+ proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
+ colorManagement Nuke
+ OCIO_config studio-config-v1.0.0_aces-v1.3_ocio-v2.1
+ workingSpaceLUT linear
+ monitorLut sRGB
+ monitorOutLUT rec709
+ int8Lut sRGB
+ int16Lut sRGB
+ logLut Cineon
+ floatLut linear
+}
+StickyNote {
+ inputs 0
+ name StickyNote1
+ label "\ndark = float3(0.8f, 0.525f, 0.8f);\n\ndim = float3(0.9f, 0.59f, 0.9f);\n\naverage = float3(1.0f, 0.69f, 1.0f);\n"
+ note_font_size 24
+ xpos 156
+ ypos -124
+}
+Constant {
+ inputs 0
+ channels rgb
+ format "1920 1080 0 0 1920 1080 1 HD_1080"
+ name Constant1
+ xpos -28
+ ypos -217
+}
+Ramp {
+ p0 {0 0}
+ p1 {1919 0}
+ name Ramp1
+ xpos -28
+ ypos -145
+}
+Read {
+ inputs 0
+ file_type exr
+ file /Volumes/SSD_4TB_01/images1/MISC/IsabellaAsReference_AP0.exr
+ format "1920 1080 0 0 1920 1080 1 HD_1080"
+ origset true
+ name Read1
+ xpos -515
+ ypos -198
+}
+Group {
+ name ACES_OT
+ tile_color 0xa57aaaff
+ label Rec.709
+ xpos -277
+ ypos -174
+ addUserKnob {20 ACES_OutputTransform_tab l "ACES OutputTransform"}
+ addUserKnob {41 gamut l "input gamut" T GamutToXYZ_lite.gamut}
+ addUserKnob {26 ""}
+ addUserKnob {35 presets t "display output presets." M {display/DisplayP3 "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 2 limiting_pri 2 eotf 2 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 1 legal_range 0 label \"DisplayP3\"\}" display/sRGB "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 0 limiting_pri 0 eotf 0 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 1 legal_range 0 label \"sRGB\"\}" "display/sRGB D60 sim." "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 0 limiting_pri 0 eotf 0 stretch_black 0 d60_sim 1 force_d65_cat 0 dark_to_dim 1 legal_range 0 label \"sRGB D60 sim.\"\}" display/Rec.709 "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 0 limiting_pri 0 eotf 1 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 1 legal_range 0 label \"Rec.709\"\}" "display/Rec.709 D60 sim." "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 0 limiting_pri 0 eotf 1 stretch_black 0 d60_sim 1 force_d65_cat 0 dark_to_dim 1 legal_range 0 label \"Rec.709 D60 sim.\"\}" display/Rec.2020 "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 1 limiting_pri 1 eotf 1 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 1 legal_range 0 label \"Rec.2020\"\}" display/P3D60 "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 4 limiting_pri 4 eotf 4 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D60\"\}" display/P3D65 "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 2 limiting_pri 2 eotf 4 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65\"\}" "display/P3D65 D60 sim." "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 2 limiting_pri 2 eotf 4 stretch_black 0 d60_sim 1 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65 D60 sim.\"\}" display/P3DCI "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 3 limiting_pri 3 eotf 4 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3DCI\"\}" "display/P3DCI D60 sim." "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 3 limiting_pri 3 eotf 4 stretch_black 0 d60_sim 1 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3DCI D60 sim.\"\}" "display/P3DCI D65 sim." "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 3 limiting_pri 3 eotf 4 stretch_black 0 d60_sim 0 force_d65_cat 1 dark_to_dim 0 legal_range 0 label \"P3DCI D65 sim.\"\}" display/DCDM "knobs this \{lum \{0.02 4.8 48\} override_ssts_params 0 use_c9 1 display_pri 7 limiting_pri 7 eotf 5 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"DCDM\"\}" "display/P3D65 ST2084 108nits 7.2nits" "knobs this \{lum \{0.0001 7.2 108\} override_ssts_params 0 use_c9 0 display_pri 2 limiting_pri 2 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65 ST2084 108nits 7.2nits\"\}" "display/P3D65 ST2084 1000nits 15nits" "knobs this \{lum \{0.0001 15 1000\} override_ssts_params 0 use_c9 0 display_pri 2 limiting_pri 2 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65 ST2084 1000nits 15nits\"\}" "display/P3D65 ST2084 2000nits 15nits" "knobs this \{lum \{0.0001 15 2000\} override_ssts_params 0 use_c9 0 display_pri 2 limiting_pri 2 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65 ST2084 2000nits 15nits\"\}" "display/P3D65 ST2084 2000nits 15nits" "knobs this \{lum \{0.0001 15 2000\} override_ssts_params 0 use_c9 0 display_pri 2 limiting_pri 2 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65 ST2084 2000nits 15nits\"\}" "display/P3D65 ST2084 4000nits 15nits" "knobs this \{lum \{0.0001 15 4000\} override_ssts_params 0 use_c9 0 display_pri 2 limiting_pri 2 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"P3D65 ST2084 4000nits 15nits\"\}" display/Rec2020_HLG_1000nits_15nits "knobs this \{lum \{0.0001 15 1000\} override_ssts_params 0 use_c9 0 display_pri 1 limiting_pri 1 eotf 7 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"Rec2020_HLG_1000nits_15nits\"\}" display/Rec2020_ST2084_1000nits_15nits "knobs this \{lum \{0.0001 15 1000\} override_ssts_params 0 use_c9 0 display_pri 1 limiting_pri 1 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"Rec2020_ST2084_1000nits_15nits\"\}" display/Rec2020_ST2084_2000nits_15nits "knobs this \{lum \{0.0001 15 2000\} override_ssts_params 0 use_c9 0 display_pri 1 limiting_pri 1 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"Rec2020_ST2084_2000nits_15nits\"\}" display/Rec2020_ST2084_4000nits_15nits "knobs this \{lum \{0.0001 15 4000\} override_ssts_params 0 use_c9 0 display_pri 1 limiting_pri 1 eotf 6 stretch_black 1 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"Rec2020_ST2084_4000nits_15nits\"\}" display/OCES "knobs this \{lum \{0.0001 4.8 10000\} override_ssts_params 0 use_c9 0 display_pri 6 limiting_pri 6 eotf 9 stretch_black 0 d60_sim 0 force_d65_cat 0 dark_to_dim 0 legal_range 0 label \"OCES\"\}" ""}}
+ addUserKnob {26 display_label l " " T "<b>Display Settings</b>"}
+ addUserKnob {78 lum l luminance t "<b>SSTS Display Luminance</b>: \ny_min y_mid y_max\n\nAccording to Zach Lewis's ACES_OT\nhttps://gist.github.com/zachlewis/786c0be941868644c993fde1c3515c2c\n\n<b>Standard Cinema</b>: \n0.02 4.8 48\n<b>Dolby Cinema</b>: \n0.0001 7.2 108\n<b>Dolby Pulsar</b>: \n0.005 15 4000\n<b>Dolby PRR-4220</b>: \n0.005 10 600\n<b>Sony BVM-X300</b>: \n0.0001 10 1000\n<b>ACES OCES</b>: \n0.0001 4.8 10000\n\n" n 3}
+ lum {0.02 4.8 48}
+ addUserKnob {20 ssts_params_grp l "SSTS Parameters" n 1}
+ ssts_params_grp 0
+ addUserKnob {6 override_ssts_params l "override ssts params" t "Enable overrides of SSTS params.\n\nOtherwise the values will be calculated automatically by the algorithm." +STARTLINE}
+ addUserKnob {35 presets_ssts_param l presets t "If you want to override the default SSTS parameters and play around, here are some useful starting points." M {contrast/default "knobs this \{override_ssts_params 0 pctLow 0.35 pctHigh 0.89 slope \{0 1.5 0.\} exposure 0.0 use_c9 0\}" contrast/sdr "knobs this \{override_ssts_params 1 pctLow 0.35 pctHigh 0.89 slope \{0.1 1.6 0.01\} exposure 0.0 use_c9 0\}" contrast/high "knobs this \{override_ssts_params 1 pctLow 0.2 pctHigh 0.89 slope \{0.28 1.75 0.01\} exposure 0.0 use_c9 0\}" contrast/med "knobs this \{override_ssts_params 1 pctLow 0.40 pctHigh 0.89 slope \{0.38 1.3 0.01\} exposure 0.0 use_c9 0\}" contrast/med-low "knobs this \{override_ssts_params 1 pctLow 0.40 pctHigh 0.80 slope \{0.38 1.42 0.01\} exposure 0.0 use_c9 0\}" contrast/low "knobs this \{override_ssts_params 1 pctLow 0.40 pctHigh 0.80 slope \{0.38 1.2 0.01\} exposure 0.0 use_c9 0\}" ""}}
+ addUserKnob {7 exposure R -5 5}
+ addUserKnob {7 pctLow l knee}
+ pctLow 0.35
+ addUserKnob {7 pctHigh l shoulder}
+ pctHigh 0.89
+ addUserKnob {78 slope n 3}
+ slope {0.38 1.501 0.01}
+ addUserKnob {20 endGroup n -1}
+ addUserKnob {6 use_c9 l "use SegmentedSpline_c9" t "In ACES 1.1 the Output Transform was re-written for HDR tonescales. \n\nIn ACES 1.1, HDR transforms use the new SSTS (Single Stage Tone Scale), while SDR transforms continue to use the old SegmentedSpline_c5 -> OCES -> SegmentedSpline_c9 -> ODT transform.\n\nIf this is enabled, the SegmentedSpline_c9 transform is used to maintain compatibility with the ACES SDR output transforms and enable a 1:1 match with the AMPAS CTL.\n\nIf you are curious, turn use_c9 off and play around with the SSTS Parameters." +STARTLINE}
+ use_c9 true
+ addUserKnob {26 ""}
+ addUserKnob {4 display_pri l "display pri" t "Display encoding primaries." M {Rec709 Rec2020 P3D65 P3DCI P3D60 ACEScg ACES XYZ}}
+ addUserKnob {4 limiting_pri l "limiting pri" t "Limiting primaries for the output transform." -STARTLINE M {Rec709 Rec2020 P3D65 P3DCI P3D60 ACEScg ACES XYZ}}
+ addUserKnob {4 eotf l EOTF t "Electrical to Optical Transfer Function of the monitor." M {sRGB BT.1886 "Gamma 2.2" "Gamma 2.4" "Gamma 2.6" DCDM "ST-2084 (PQ)" HLG Linear OCES ""}}
+ eotf Linear
+ addUserKnob {6 stretch_black l "stretch black" t "For hdr outputs: stretch black luminance to a PQ code value of 0" +STARTLINE}
+ addUserKnob {6 d60_sim l "d60 sim" t "d60 whitepoint simulation." +STARTLINE}
+ addUserKnob {6 force_d65_cat l "force d60 to d65 cat" -STARTLINE}
+ addUserKnob {6 dark_to_dim l "dark to dim surround" t "Apply gamma adjustment to compensate for \"Dark to Dim\" surround. For SDR outputs only." +STARTLINE}
+ addUserKnob {6 legal_range l "legal range" t "Output legal range." +STARTLINE}
+ addUserKnob {26 ""}
+ addUserKnob {26 blinkscript_options_label l " " T <b>BlinkScript}
+ addUserKnob {6 use_gpu l "use gpu" t "Enable GPU processing for the blinkscript nodes" +STARTLINE}
+ use_gpu true
+ addUserKnob {6 vectorize t "Vectorize on the CPU for blinkscript nodes" -STARTLINE}
+ vectorize true
+}
+ BackdropNode {
+  inputs 0
+  name Electrical_Optical_Transfer_Function
+  tile_color 0x151515ff
+  label "ACESlib.OutputTransforms.ctl : 185\n// EOTF"
+  note_font_size 12
+  xpos -2025
+  ypos 2294
+  bdwidth 3391
+  bdheight 740
+  z_order -10
+ }
+ BackdropNode {
+  inputs 0
+  name BackdropNode1
+  tile_color 0x272727ff
+  label "HDR EOTFs"
+  note_font_size 42
+  xpos 425
+  ypos 2379
+  bdwidth 910
+  bdheight 617
+  z_order -5
+ }
+ BackdropNode {
+  inputs 0
+  name BackdropNode2
+  tile_color 0x272727ff
+  label "SDR EOTFs"
+  note_font_size 42
+  xpos -1158
+  ypos 2384
+  bdwidth 1436
+  bdheight 608
+  z_order -5
+ }
+ BackdropNode {
+  inputs 0
+  name AP1_to_XYZ
+  tile_color 0x555b5cff
+  label "ACESlib.OutputTransforms.ctl : 90\n// Rendering primaries to XYZ\n"
+  note_font_size 12
+  xpos -1400
+  ypos 906
+  bdwidth 380
+  bdheight 156
+ }
+ BackdropNode {
+  inputs 0
+  name AP1_to_XYZ1
+  tile_color 0x555a5cff
+  label "// Apply desaturation to compensate for luminance difference\nlinearCV = mult_f3_f33( linearCV, ODT_SAT_MAT);\n( SDR only)"
+  note_font_size 12
+  xpos -1412
+  ypos 669
+  bdwidth 439
+  bdheight 186
+ }
+ BackdropNode {
+  inputs 0
+  name D60_whitepoint_simulation
+  tile_color 0x232323ff
+  label "ACESlib.OutputTransforms.ctl : 150\n// Scale to avoid clipping when device calibration is different from D60. \n// To simulate D60, unequal code values are sent to the display.\n"
+  note_font_size 12
+  xpos -1399
+  ypos 176
+  bdwidth 818
+  bdheight 463
+ }
+ BackdropNode {
+  inputs 0
+  name Luminance_to_Linear_Code_Values
+  tile_color 0x272727ff
+  label "ACESlib.OutputTransforms.ctl : 87\n/*  Scale absolute luminance to linear code value  */\n"
+  note_font_size 12
+  xpos -1367
+  ypos -50
+  bdwidth 315
+  bdheight 148
+ }
+ BackdropNode {
+  inputs 0
+  name Output_Color_Encoding_Specification
+  tile_color 0x1d1d1dff
+  label "<font size=12>OCES\n<font size=0.1>\n- ACES Output Output Color Encoding Specification \n- An idealized reference display with 0.0001 / 4.8 / 10000 luma\n w/ ACES AP0 Primaries."
+  note_font_size 27.4
+  xpos -1833
+  ypos 2379
+  bdwidth 367
+  bdheight 377
+ }
+ BackdropNode {
+  inputs 0
+  name Output_Legal_Range
+  tile_color 0x272727ff
+  label "ACESlib.OutputTransforms.ctl : 216\n"
+  note_font_size 12
+  xpos -1369
+  ypos 3128
+  bdwidth 318
+  bdheight 176
+ }
+ BackdropNode {
+  inputs 0
+  name Single_Stage_Tone_Scale
+  tile_color 0x272727ff
+  label "<b>Single Stage Tone Scale : ACESlib.OutputTransforms.ctl : 82</b><pre>// Apply the tonescale independently in rendering-space RGB\nfloat rgbPost\[3] = ssts_f3( rgbPre, PARAMS);\n\nIf output is SDR, output OCES from SSTS and use SegmentedSpline_c9."
+  note_font_size 12
+  xpos -1502
+  ypos -653
+  bdwidth 609
+  bdheight 533
+ }
+ BackdropNode {
+  inputs 0
+  name clamp_negatives
+  tile_color 0x272727ff
+  label "ACESlib.OutputTransforms.ctl : 174\n// Clip values < 0 (i.e. projecting outside the display primaries)\nNote: Also clamping values > 1 here."
+  note_font_size 12
+  xpos -1393
+  ypos 2087
+  bdwidth 386
+  bdheight 120
+ }
+ BackdropNode {
+  inputs 0
+  name dim_surround_gamma_adjustment
+  tile_color 0x272727ff
+  label "ACESlib.OutputTransforms.ctl : 92\n// Apply gamma adjustment to compensate for dim surround\n"
+  note_font_size 12
+  xpos -1407
+  ypos 1063
+  bdwidth 395
+  bdheight 258
+ }
+ BackdropNode {
+  inputs 0
+  name limit_primaries
+  tile_color 0x555a5cff
+  label "ACESlib.OutputTransforms.ctl : 130\n// Gamut limit to limiting primaries\n"
+  note_font_size 12
+  xpos -1408
+  ypos 1655
+  bdwidth 396
+  bdheight 194
+ }
+ BackdropNode {
+  inputs 0
+  name limit_primaries1
+  tile_color 0x555a5cff
+  label "ACESlib.OutputTransforms.ctl : 144\n// CIE XYZ to display encoding primaries\n"
+  note_font_size 12
+  xpos -1402
+  ypos 1892
+  bdwidth 384
+  bdheight 151
+ }
+ BackdropNode {
+  inputs 0
+  name limit_primaries2
+  tile_color 0x555a5cff
+  label "ACESlib.OutputTransforms.ctl : 130\n    // Apply CAT from ACES white point to assumed observer adapted white point\n    // TODO: Needs to expand from just supporting D60 sim to allow for any\n    // observer adapted white point.\n"
+  note_font_size 12
+  xpos -1407
+  ypos 1337
+  bdwidth 467
+  bdheight 301
+ }
+ BackdropNode {
+  inputs 0
+  name rrt_sweeteners_
+  tile_color 0x555a5cff
+  label "<b>RRT Sweeteners : ACESlib.OutputTransforms.ctl : 79</b><pre>// RRT sweeteners\nfloat rgbPre\[3] = rrt_sweeteners( in);\n"
+  note_font_size 18
+  xpos -1469
+  ypos -1234
+  bdwidth 519
+  bdheight 548
+ }
+ Input {
+  inputs 0
+  name Input
+  xpos -1250
+  ypos -1450
+ }
+ AddChannels {
+  channels rgba
+  name AddChannels
+  xpos -1250
+  ypos -1415
+ }
+ Group {
+  name GamutToXYZ_lite
+  xpos -1250
+  ypos -1373
+  addUserKnob {20 GamutToXYZ_lite_tab l GamutToXYZ_lite}
+  addUserKnob {4 gamut t "Choose gamut" M {XYZ ACES ACEScg "Filmlight E-Gamut" "DaVinci WG" Rec709 Rec2020 P3D60 P3D65 P3DCI "Arri AlexaWideGamut" REDDRAGONcolor REDDRAGONcolor2 REDcolor REDcolor2 REDcolor3 REDcolor4 REDWideGamutRGB "GoPro Protune Native" CanonCinemaGamut SonySGamut SonySGamut3Cine PanasonicVGamut "DJI D-Gamut" "Fujifilm F-Gamut" BMDFilmV1 BMD4kFilmV1 BMD4kFilmV3 BMD46kFilmV1 BMD46kFilmV3 BMDWideGamutV4 "AdobeRGB\t" AdobeWideGamutRGB ROMM RIMM ERIMM ProPhotoRGB RusselRGB SharpRGB AppleRGB BestRGB}}
+  gamut ACEScg
+  addUserKnob {6 invert +STARTLINE}
+  addUserKnob {26 ""}
+  addUserKnob {26 chromaticity_coordinates_label l " " T "<b>Chromaticity Coordinates</b>"}
+  addUserKnob {20 chromaticities_grp l "" +STARTLINE n 1}
+  addUserKnob {41 rxy T ColorMatrix.rxy}
+  addUserKnob {41 gxy T ColorMatrix.gxy}
+  addUserKnob {41 bxy T ColorMatrix.bxy}
+  addUserKnob {41 wxy T ColorMatrix.wxy}
+  addUserKnob {41 matrix T ColorMatrix.matrix}
+  addUserKnob {20 endGroup n -1}
+ }
+  Input {
+   inputs 0
+   name Input
+   xpos -40
+   ypos -10
+  }
+  ColorMatrix {
+   matrix {
+       {{curve(which) 1 0.9525524378 0.6624541879 0.7053968906 0.4123907983 0.6369580626 0.5049495697 0.4865709841 0.4451698363 0.6380076408 0.5070186853 0.4462202489 0.4300414324 0.4581649601 0.4878340662 0.4517004192 0.7352752686 0.5022571683 0.7160496712 0.7064827085 0.5990839601 0.6796444654 0.6481720209 0.6369580626 0.6390493512 0.6141571999 0.3724023998 0.60689044 0.4017650783 0.6065810919 0.5766690373 0.7165006995 0.797760427 0.797760427 0.797760427 0.7976718545 0.7015837431 0.8156226277 0.4496616423 0.6318944097} {curve(which) 0 0 0.1340042055 0.1640413404 0.3575843275 0.1446169019 0.2646814585 0.2656676769 0.2771343887 0.2147038579 0.3587769568 0.3157556653 0.3700728714 0.3832037449 0.3432727158 0.3178463876 0.06860940903 0.2929667532 0.1296834797 0.1288010478 0.2489254922 0.1522114277 0.1940581352 0.1446169019 0.1578372866 0.2825684249 0.4324877858 0.2193847299 0.4560420811 0.2203479856 0.1855582297 0.1010205746 0.1351858526 0.1351858526 0.1351858526 0.1351878047 0.1554162204 0.04716260359 0.3162561059 0.2053879201} {curve(which) 0 9.367863095e-05 0.1561876982 0.08101774752 0.180480808 0.1688809693 0.1830150485 0.1982172877 0.1722826511 0.09774444997 0.0868505761 0.190669477 0.152531758 0.1112773567 0.1215386018 0.1830992699 0.1465712637 0.1552320272 0.1047228053 0.1151721701 0.1024464965 0.1186000481 0.108225815 0.1688809693 0.1516760886 0.05183707923 0.1436725408 0.124180764 0.09264881909 0.123526901 0.1882286519 0.1467743814 0.03134934977 0.03134934977 0.03134934977 0.03133957833 0.09979832917 0.1372147948 0.1845382005 0.1270133406}}
+       {{curve(which) 0 0.3439664543 0.2722287476 0.2801307142 0.2126390189 0.2627002299 0.237623319 0.2289745659 0.209491685 0.2919537723 0.2207257152 0.1942579001 0.2022213936 0.1694435924 0.2289056629 0.2119505703 0.2866941094 0.1387997568 0.2612613738 0.2709796727 0.2150758505 0.2606855333 0.2830046713 0.2627002299 0.1743051857 0.2365771234 0.1383759677 0.1973138005 0.1721783578 0.2680045366 0.2973450124 0.258728236 0.2880711257 0.2880711257 0.2880711257 0.2880405784 0.3152042925 0.3790788651 0.2446159422 0.2276017666} {curve(which) 1 0.7281661034 0.6740817428 0.8202066422 0.7151686549 0.6779980659 0.6891706586 0.6917385459 0.7215952873 0.8238410354 0.839184761 0.7385566831 0.7585275769 0.8648257852 0.7808576822 0.7230190039 0.8429791331 0.910841465 0.8696421385 0.786606431 0.8850684762 0.7748944759 0.8131960034 0.6779980659 0.951146543 0.8896810412 0.911518693 0.943950057 0.8553914428 0.8326833844 0.6273635626 0.7246823311 0.7118432522 0.7118432522 0.7118432522 0.7118694782 0.6648360491 0.5769088268 0.6720442176 0.7383946776} {curve(which) 0 -0.07213255018 0.05368951708 -0.1003373638 0.07219231874 0.05930171534 0.07320601493 0.07928691059 0.06891305745 -0.1157948226 -0.05991046131 0.06718540192 0.03925102949 -0.03426937759 -0.009763340466 0.06503042579 -0.1296732277 -0.04964122549 -0.1309035122 -0.05758608505 -0.1001443192 -0.03558001295 -0.09620071948 0.05930171534 -0.1254517138 -0.1262581497 -0.04989464581 -0.1412638426 -0.02756982669 -0.1006879359 0.07529145479 0.01658944227 8.565396274e-05 8.565396274e-05 8.565396274e-05 8.991353388e-05 0.01995966583 0.04401229322 0.08333983272 0.0340035744}}
+       {{curve(which) 0 -3.863927134e-08 -0.005574660841 -0.1037815213 0.01933082007 0 0 0 0 0.0027982709 -0.0544523783 -0.04792318866 -0.0176958181 -0.1061859056 -0.02100777067 -0.01945115253 -0.07968087494 0.07801423222 -0.009676366113 -0.009677864611 -0.03206583485 -0.009310216643 -0.01825834997 0 -0.11669112 -0.02325225808 -0.1602820009 -0.1427432895 -0.10720893 -0.02941203304 0.02703136392 -2.906408625e-08 -3.236030111e-08 -3.236030111e-08 -3.236030111e-08 0 0 -0.01229703799 0.02518104948 0} {curve(which) 0 0 0.004060741514 -0.07290724665 0.1191947311 0.0280726999 0.0449459292 0.04511339962 0.04706057906 -0.06703422964 -0.0003228379355 -0.0002844714036 0.08768811822 0.02554347552 0.01782695204 0.01650637016 -0.3473432064 -0.3148325086 -0.2364816219 0.004600019194 -0.02765839547 -0.004612449091 -0.08316776901 0.0280726999 -0.5518454909 -0.4897170365 -0.171635136 -0.4278847873 0.07809129357 -0.08659287542 0.07068887353 0.05121183768 1.2621717e-08 1.2621717e-08 1.2621717e-08 -1.262213711e-08 0.04317118227 0.01672476344 0.1411857158 0.01001892332} {curve(which) 1 1.008825183 1.010339141 1.265746474 0.950532198 1.060985088 0.9638792276 1.043944359 0.9073553085 1.153293729 1.063571215 1.057001948 0.9388025999 1.089437366 1.01197505 1.011739731 1.51608181 1.325875998 1.335215807 1.094135642 1.148782015 1.102980375 1.190483928 1.060985088 1.745692492 1.590125084 1.409072995 1.65968585 1.118175387 1.205062628 0.9913375378 0.7738927603 0.8251045942 0.8251045942 0.8251045942 0.8248898983 0.8782252669 0.9955722094 0.9226909876 0.8150856495}}
+     }
+   invert {{parent.invert}}
+   name ColorMatrix
+   label "RGB to XYZ"
+   xpos -40
+   ypos 32
+   addUserKnob {20 Gamut}
+   addUserKnob {3 which}
+   which {{parent.gamut}}
+   addUserKnob {12 rxy}
+   rxy {{curve(which) 1 0.7347 0.713 0.8 0.8 0.64 0.708 0.68 0.68 0.68 0.684 0.7530442228 0.7530444911 0.6997470013 0.8786825105 0.7011810359 0.7011805919 0.780308 0.69848046 0.74 0.73 0.766 0.73 0.71 0.708 0.9173 0.7422 1.0625 0.9175 0.8608 0.7177 0.64 0.7347 0.7347 0.7347 0.7347 0.734699 0.69 0.6898 0.625 0.7351916376} {curve(which) 0 0.2653 0.293 0.3177 0.313 0.33 0.292 0.32 0.32 0.32 0.313 0.3278305767 0.3278310295 0.3290469303 0.3249640074 0.3290141556 0.3290136991 0.304253 0.19302645 0.27 0.28 0.275 0.28 0.31 0.292 0.2502 0.2859 0.3948 0.2983 0.3689 0.3171 0.33 0.2653 0.2653 0.2653 0.2653 0.265301 0.31 0.3206 0.34 0.2648083624}}
+   addUserKnob {12 gxy}
+   gxy {{curve(which) 0 0 0.165 0.18 0.1682 0.3 0.17 0.265 0.265 0.265 0.221 0.2995702285 0.2995704905 0.304264039 0.3008887144 0.3006003047 0.3006003955 0.121595 0.32955538 0.17 0.14 0.225 0.165 0.21 0.17 0.2833 0.414 0.3689 0.2983 0.3282 0.228 0.21 0.1152 0.1596 0.1596 0.1596 0.159597 0.18 0.0736 0.28 0.2153361345} {curve(which) 1 1 0.83 0.9 0.9877 0.6 0.797 0.69 0.69 0.69 0.848 0.700699322 0.7006994156 0.6236411451 0.6790547558 0.6837888343 0.6837888243 1.493994 1.02459662 1.14 0.855 0.8 0.84 0.88 0.797 1.7072 1.3035 0.7775 1.2835 0.6156 0.8616 0.71 0.8264 0.8404 0.8404 0.8404 0.840403 0.77 0.9003 0.595 0.7741596639}}
+   addUserKnob {12 bxy}
+   bxy {{curve(which) 0 0.0001 0.128 0.065 0.079 0.15 0.131 0.15 0.15 0.15 0.0861 0.07964206674 0.1450115843 0.1349139613 0.09539869461 0.1081544556 0.1453319462 0.095612 0.10844263 0.08 0.1 0.089 0.1 0.09 0.131 0.0856 0.0342 0.0956 0.0756 0.0783 0.1006 0.15 0.1566 0.0366 0.0366 0.0366 0.036598 0.1 0.1166 0.155 0.1301229508} {curve(which) 0 -0.077 0.044 -0.0805 -0.1155 0.06 0.046 0.06 0.06 0.06 -0.102 -0.05493795109 0.05109712509 0.03471744128 -0.02937932683 -0.008688175787 0.05161680362 -0.084589 -0.03467857 -0.1 -0.05 -0.087 -0.03 -0.08 0.046 -0.0708 -0.0833 -0.0332 -0.086 -0.0233 -0.082 0.06 0.0177 0.0001 0.0001 0.0001 0.000105 0.02 0.0374 0.07 0.03483606557}}
+   addUserKnob {12 wxy}
+   wxy {{curve(which) 0.33333333 0.32168 0.32168 0.3127 0.3127 0.3127 0.3127 0.32168 0.3127 0.314 0.3127 0.3216831877 0.3216832104 0.3216832894 0.3216832894 0.3216832104 0.3216832894 0.3127 0.3127 0.3127 0.3127 0.3127 0.3127 0.3127 0.3127 0.3135 0.3135 0.3135 0.3127 0.3127 0.3127 0.3127 0.3457 0.3457 0.3457 0.3457 0.345704 0.33243 0.33333333 0.3127 0.3457} {curve(which) 0.33333333 0.33767 0.33767 0.329 0.329 0.329 0.329 0.33767 0.329 0.351 0.329 0.337673316 0.3376736101 0.3376734472 0.3376734472 0.3376736101 0.3376734472 0.329 0.329 0.329 0.329 0.329 0.329 0.329 0.329 0.3305 0.3305 0.3305 0.329 0.329 0.329 0.329 0.3585 0.3585 0.3585 0.3585 0.35854 0.34744 0.33333333 0.329 0.3585}}
+  }
+  Output {
+   name Output
+   xpos -40
+   ypos 86
+  }
+ end_group
+ ColorMatrix {
+  matrix {
+      {1.049811006 0 -9.748453158e-05}
+      {-0.4959030151 1.373313069 0.09824004024}
+      {4.020908051e-08 0 0.9912520051}
+    }
+  name ColorMatrix4
+  label "XYZ to ACES"
+  note_font Helvetica
+  xpos -1250
+  ypos -1338
+ }
+ Dot {
+  name Dot7
+  label " ACES 2065-1 IN"
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos -1268
+ }
+ BlinkScript {
+  recompileCount 89
+  ProgramGroup 1
+  KernelDescription "2 \"ACES_rrt_sweetener_glow_module\" iterate pixelWise a356d3aa01a3224b24bac50a46c49bf29e35a0345982a8b37d90ebead9138c0c 2 \"src\" Read Point \"dst\" Write Point 3 \"RRT_GLOW_GAIN\" Float 1 AAAAAA== \"RRT_GLOW_MID\" Float 1 AAAAAA== \"invert\" Bool 1 AA== 3 \"RRT_GLOW_GAIN\" 1 1 \"RRT_GLOW_MID\" 1 1 \"invert\" 1 1 0"
+  kernelSource "kernel ACES_rrt_sweetener_glow_module : public ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src;\n  Image<eWrite> dst;\n\nparam:\n  // User controllable parameters\n  float RRT_GLOW_GAIN;\n  float RRT_GLOW_MID;\n  bool invert;\n  // \"Glow\" module constants\n  // RRT_GLOW_GAIN = 0.05;\n  // RRT_GLOW_MID = 0.08;\n\n\n  float3 mult_f_f3( float x, float3 rgb) \{\n    return float3(rgb.x*x, rgb.y*x, rgb.z*x);\n  \}\n\n  float min_f3(float3 a) \{\n    return min( a.x, min( a.y, a.z));\n  \}\n\n  float max_f3(float3 a) \{\n    return max( a.x, max( a.y, a.z));\n  \}\n\n  float rgb_2_saturation( float3 rgb ) \{\n    return ( max( max_f3(rgb), 1e-10) - max( min_f3(rgb), 1e-10)) / max( max_f3(rgb), 1e-2);\n  \}\n\n  float sigmoid_shaper( float x) \{\n    float t = max( float(1. - fabs( float(x / 2.))), float(0));\n    float y = 1. + sign(float(x)) * (1. - t * t);\n    return y / 2.;\n  \}\n\n  float rgb_2_yc( float3 rgb, float ycRadiusWeight) \{\n    // keyword arguments don't work with blink.. ycRadiusWeight default if not specified was 1.75\n    float r = rgb.x; \n    float g = rgb.y; \n    float b = rgb.z;\n    float chroma = sqrt(float(b*(b-g)+g*(g-r)+r*(r-b)));\n    return ( b + g + r + ycRadiusWeight * chroma) / 3.;\n  \}\n\n  // ------- Glow module functions\n  float glow_fwd( float ycIn, float glowGainIn, float glowMid) \{\n     float glowGainOut;\n     if (ycIn <= 2./3. * glowMid) \{\n       glowGainOut = glowGainIn;\n     \} else if ( ycIn >= 2. * glowMid) \{\n       glowGainOut = 0.;\n     \} else \{\n       glowGainOut = glowGainIn * (glowMid / ycIn - 1./2.);\n     \}\n     return glowGainOut;\n  \}\n\n  float glow_inv( float ycOut, float glowGainIn, float glowMid) \{\n      float glowGainOut;\n      if (ycOut <= ((1 + glowGainIn) * 2./3. * glowMid)) \{\n        glowGainOut = -glowGainIn / (1 + glowGainIn);\n      \} else if ( ycOut >= (2. * glowMid)) \{\n        glowGainOut = 0.;\n      \} else \{\n        glowGainOut = glowGainIn * (glowMid / ycOut - 1./2.) / (glowGainIn / 2. - 1.);\n      \}\n      return glowGainOut;\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n    float3 aces = float3(input.x, input.y, input.z);\n\n    // --- Glow module --- //\n    float saturation = rgb_2_saturation(aces);\n    float s = sigmoid_shaper( (saturation - 0.4) / 0.2);\n    float ycIn = rgb_2_yc( aces, 1.75);\n\n    float glow;\n    if ( invert == 0 ) \{\n      glow = 1. + glow_fwd( ycIn, RRT_GLOW_GAIN * s, RRT_GLOW_MID);\n      aces = mult_f_f3( glow, aces);\n    \}\n    else \{\n      glow = 1. + glow_inv( ycIn, RRT_GLOW_GAIN * s, RRT_GLOW_MID);\n      aces = mult_f_f3( ( glow), aces);\n    \}\n    \n    dst() = float4(aces.x, aces.y, aces.z, input.w);\n  \}\n\};"
+  useGPUIfAvailable {{parent.use_gpu}}
+  vectorize {{parent.vectorize}}
+  rebuild ""
+  ACES_rrt_sweetener_glow_module_RRT_GLOW_GAIN 0.05
+  ACES_rrt_sweetener_glow_module_RRT_GLOW_MID 0.08
+  rebuild_finalise ""
+  name rrt_sweetener_glow_module
+  xpos -1250
+  ypos -1096
+ }
+ BlinkScript {
+  recompileCount 67
+  ProgramGroup 1
+  KernelDescription "2 \"ACES_rrt_sweeteners\" iterate pixelWise 4abd0f7b3bbef1729ac9191ff87dde97d550e9c92bf3ab708b3be82ffe45d6ff 2 \"src\" Read Point \"dst\" Write Point 5 \"RRT_RED_SCALE\" Float 1 AAAAAA== \"RRT_RED_PIVOT\" Float 1 AAAAAA== \"RRT_RED_HUE\" Float 1 AAAAAA== \"RRT_RED_WIDTH\" Float 1 AAAAAA== \"invert\" Bool 1 AA== 5 \"RRT_RED_SCALE\" 1 1 \"RRT_RED_PIVOT\" 1 1 \"RRT_RED_HUE\" 1 1 \"RRT_RED_WIDTH\" 1 1 \"invert\" 1 1 0"
+  kernelSource "kernel ACES_rrt_sweeteners : public ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src;\n  Image<eWrite> dst;\n\nparam:\n  // User controllable parameters\n  float RRT_RED_SCALE;\n  float RRT_RED_PIVOT;\n  float RRT_RED_HUE;\n  float RRT_RED_WIDTH;\n  bool invert;\n\n  // // Red modifier constants\n  // RRT_RED_SCALE = 0.82;\n  // RRT_RED_PIVOT = 0.03;\n  // RRT_RED_HUE = 0.;\n  // RRT_RED_WIDTH = 135.;\n\n\n  float min_f3(float3 a) \{\n    return min( a.x, min( a.y, a.z));\n  \}\n\n  float max_f3(float3 a) \{\n    return max( a.x, max( a.y, a.z));\n  \}\n\n  float rgb_2_saturation( float3 rgb ) \{\n    return ( max( max_f3(rgb), 1e-10) - max( min_f3(rgb), 1e-10)) / max( max_f3(rgb), 1e-2);\n  \}\n\n  float sigmoid_shaper( float x) \{\n    float t = max( float(1. - fabs( float(x / 2.))), float(0));\n    float y = 1. + sign(float(x)) * (1. - t * t);\n    return y / 2.;\n  \}\n\n  float rgb_2_yc( float3 rgb, float ycRadiusWeight) \{\n    // keyword arguments don't work with blink.. ycRadiusWeight default if not specified was 1.75\n    float r = rgb.x; \n    float g = rgb.y; \n    float b = rgb.z;\n    float chroma = sqrt(float(b*(b-g)+g*(g-r)+r*(r-b)));\n    return ( b + g + r + ycRadiusWeight * chroma) / 3.;\n  \}\n\n  // ------- Glow module functions\n  float glow_fwd( float ycIn, float glowGainIn, float glowMid) \{\n     float glowGainOut;\n     if (ycIn <= 2./3. * glowMid) \{\n       glowGainOut = glowGainIn;\n     \} else if ( ycIn >= 2. * glowMid) \{\n       glowGainOut = 0.;\n     \} else \{\n       glowGainOut = glowGainIn * (glowMid / ycIn - 1./2.);\n     \}\n     return glowGainOut;\n  \}\n\n  // Transformations from RGB to other color representations\n  float rgb_2_hue( float3 rgb) \n  \{\n    // Returns a geometric hue angle in degrees (0-360) based on RGB values.\n    // For neutral colors, hue is undefined and the function will return a quiet NaN value.\n    float hue;\n    if (rgb.x == rgb.y && rgb.y == rgb.z) \{\n      hue = 0.0f; // RGB triplets where RGB are equal have an undefined hue\n    \} else \{\n      hue = (180.0f/3.14159265359) * atan2( sqrt(3.0f)*(rgb.y-rgb.z), 2.0f*rgb.x-rgb.y-rgb.z);\n    \}\n    if (hue < 0.) hue = hue + 360.;\n    return hue;\n  \}\n\n  float center_hue( float hue, float centerH) \{\n    float hueCentered = hue - centerH;\n    if (hueCentered < -180.) hueCentered = hueCentered + 360.;\n    else if (hueCentered > 180.) hueCentered = hueCentered - 360.;\n    return hueCentered;\n  \}\n\n  float cubic_basis_shaper( float x, float w) \{\n    float M\[4]\[4] = \{ \{ -1.0f/6,  3.0f/6, -3.0f/6,  1.0f/6 \},\n                      \{  3.0f/6, -6.0f/6,  3.0f/6,  0.0f/6 \},\n                      \{ -3.0f/6,  0.0f/6,  3.0f/6,  0.0f/6 \},\n                      \{  1.0f/6,  4.0f/6,  1.0f/6,  0.0f/6 \} \};\n    \n    float knots\[5] = \{ -w/2.0f,\n                       -w/4.0f,\n                       0.0f,\n                       w/4.0f,\n                       w/2.0f \};\n    float y = 0;\n    if ((x > knots\[0]) && (x < knots\[4])) \{  \n      float knot_coord = (x - knots\[0]) * 4./w;  \n      int j = knot_coord;\n      float t = knot_coord - j;\n      float monomials\[4] = \{ t*t*t, t*t, t, 1. \};\n      // (if/else structure required for compatibility with CTL < v1.5.)\n      if ( j == 3) \{\n        y = monomials\[0] * M\[0]\[0] + monomials\[1] * M\[1]\[0] + \n            monomials\[2] * M\[2]\[0] + monomials\[3] * M\[3]\[0];\n      \} else if ( j == 2) \{\n        y = monomials\[0] * M\[0]\[1] + monomials\[1] * M\[1]\[1] + \n            monomials\[2] * M\[2]\[1] + monomials\[3] * M\[3]\[1];\n      \} else if ( j == 1) \{\n        y = monomials\[0] * M\[0]\[2] + monomials\[1] * M\[1]\[2] + \n            monomials\[2] * M\[2]\[2] + monomials\[3] * M\[3]\[2];\n      \} else if ( j == 0) \{\n        y = monomials\[0] * M\[0]\[3] + monomials\[1] * M\[1]\[3] + \n            monomials\[2] * M\[2]\[3] + monomials\[3] * M\[3]\[3];\n      \} else \{\n        y = 0.0f;\n      \}\n    \}\n    return y * 3.0f/2.0f;\n  \}\n\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n    float3 aces = float3(input.x, input.y, input.z);\n\n    float saturation = rgb_2_saturation(aces);\n\n    // --- Red modifier --- //\n    float hue = rgb_2_hue( aces);\n    float centeredHue = center_hue( hue, RRT_RED_HUE);\n    float hueWeight = cubic_basis_shaper( centeredHue, RRT_RED_WIDTH);\n\n    if ( invert == 0 ) \{\n      aces.x = aces.x + hueWeight * saturation * (RRT_RED_PIVOT - aces.x) * (1.0f - RRT_RED_SCALE);\n    \} \n    else \{ // invert red modifier: note that this is not mathematically perfect\n      float minChan;\n      if (centeredHue < 0) \{ // min_f3(aces) = aces\[1] (i.e. magenta-red)\n        minChan = aces.y;\n      \} else \{ // min_f3(aces) = aces\[2] (i.e. yellow-red)\n        minChan = aces.z;\n      \}\n      float a = hueWeight * (1.0f - RRT_RED_SCALE) - 1.0f;\n      float b = aces.x - hueWeight * (RRT_RED_PIVOT + minChan) * (1.0f - RRT_RED_SCALE);\n      float c = hueWeight * RRT_RED_PIVOT * minChan * (1. - RRT_RED_SCALE);\n      aces.x = ( -b - sqrt( float(b * b - 4.0f * a * c )) ) / ( 2.0f * a);\n    \}\n\n    dst() = float4(aces.x, aces.y, aces.z, input.w);\n  \}\n\};"
+  useGPUIfAvailable {{parent.use_gpu}}
+  vectorize {{parent.vectorize}}
+  rebuild ""
+  ACES_rrt_sweeteners_RRT_RED_SCALE 0.82
+  ACES_rrt_sweeteners_RRT_RED_PIVOT 0.03
+  ACES_rrt_sweeteners_RRT_RED_WIDTH 135
+  rebuild_finalise ""
+  name rrt_sweetener_red_modifier
+  xpos -1250
+  ypos -1048
+ }
+ Clamp {
+  channels rgb
+  maximum_enable false
+  name clamp_f3_min
+  label "Clamp Negative Values"
+  xpos -1250
+  ypos -976
+ }
+ ColorMatrix {
+  matrix {
+      {1.451439381 -0.2365107685 -0.2149285674}
+      {-0.07655383646 1.176229835 -0.09967593104}
+      {0.008316127583 -0.0060324613 0.997716248}
+    }
+  name ColorMatrix15
+  label "ACES to ACEScg"
+  xpos -1250
+  ypos -928
+ }
+ Clamp {
+  channels rgb
+  maximum 65535
+  name clamp_f3_
+  label "clamp to HALF_MAX"
+  xpos -1250
+  ypos -880
+ }
+ ColorMatrix {
+  matrix {
+      {{"(1.0 - sat) * rgb2Y.x + sat"} {"(1.0 - sat) * rgb2Y.y"} {"(1.0 - sat) * rgb2Y.z"}}
+      {{"(1.0 - sat) * rgb2Y.x"} {"(1.0 - sat) * rgb2Y.y + sat"} {"(1.0 - sat) * rgb2Y.z"}}
+      {{"(1.0 - sat) * rgb2Y.x"} {"(1.0 - sat) * rgb2Y.y"} {"(1.0 - sat) * rgb2Y.z + sat"}}
+    }
+  name ColorMatrix
+  label "// --- Global desaturation --- //\nrgbPre = mult_f3_f33( rgbPre, RRT_SAT_MAT);"
+  xpos -1250
+  ypos -790
+  addUserKnob {20 params}
+  addUserKnob {13 rgb2Y}
+  rgb2Y {0.27222875 0.67408174 0.05368952}
+  addUserKnob {7 sat}
+  sat 0.96
+ }
+ BlinkScript {
+  recompileCount 438
+  ProgramGroup 1
+  KernelDescription "2 \"AcesSSTSKernel\" iterate pixelWise 3c6089ed41567710e615012cc96d3af776c364967ed55c7a99c888c38723e55b 2 \"src\" Read Point \"dst\" Write Point 7 \"disp_lum\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"override_curve_params\" Bool 1 AA== \"knee\" Float 1 AAAAAA== \"shoulder\" Float 1 AAAAAA== \"slope\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"exposure\" Float 1 AAAAAA== \"invert\" Bool 1 AA== 7 \"disp_lum\" 3 1 \"override_curve_params\" 1 1 \"knee\" 1 1 \"shoulder\" 1 1 \"slope\" 3 1 \"exposure\" 1 1 \"invert\" 1 1 17 \"MIN_STOP_SDR\" Float 1 1 AAAAAA== \"MAX_STOP_SDR\" Float 1 1 AAAAAA== \"MIN_STOP_RRT\" Float 1 1 AAAAAA== \"MAX_STOP_RRT\" Float 1 1 AAAAAA== \"MIN_LUM_SDR\" Float 1 1 AAAAAA== \"MAX_LUM_SDR\" Float 1 1 AAAAAA== \"MIN_LUM_RRT\" Float 1 1 AAAAAA== \"MAX_LUM_RRT\" Float 1 1 AAAAAA== \"Min\" Float 3 1 AAAAAAAAAAAAAAAAAAAAAA== \"Mid\" Float 3 1 AAAAAAAAAAAAAAAAAAAAAA== \"Max\" Float 3 1 AAAAAAAAAAAAAAAAAAAAAA== \"expShift\" Float 1 1 AAAAAA== \"coefsLow\" Float 1 5 AAAAAAAAAAAAAAAAAAAAAAAAAAA= \"coefsHigh\" Float 1 5 AAAAAAAAAAAAAAAAAAAAAAAAAAA= \"N_KNOTS_LOW\" Int 1 1 AAAAAA== \"N_KNOTS_HIGH\" Int 1 1 AAAAAA== \"M1\" Float 9 1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  kernelSource "kernel AcesSSTSKernel : public ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src;\n  Image<eWrite> dst;\n\nparam:\n  // User controllable parameters\n  float3 disp_lum;\n  bool override_curve_params;\n  float knee;\n  float shoulder;\n  float3 slope;\n  float exposure;\n  bool invert;\n\nlocal:\n  float MIN_STOP_SDR;\n  float MAX_STOP_SDR;\n  float MIN_STOP_RRT;\n  float MAX_STOP_RRT;\n  float MIN_LUM_SDR;\n  float MAX_LUM_SDR;\n  float MIN_LUM_RRT;\n  float MAX_LUM_RRT;\n  float3 Min;\n  float3 Mid;\n  float3 Max;\n  float expShift;\n  float coefsLow\[5];\n  float coefsHigh\[5];\n  int N_KNOTS_LOW;\n  int N_KNOTS_HIGH;\n  float3x3 M1;\n\n  // -------------------------------------------------------\n  // Utility Functions\n  // -------------------------------------------------------\n\n  // 1D interpolate: return y value at some point p in x\n  // This function differs from the interpolate1D CTL implementation.\n  // It is limited to 2 float2 vectors, x and y\n  // given a position p between x.x and x.y, it returns an interpolated\n  // value between y.x and y.y\n  // CTL_table\[2]\[2] = \{ \{ A, B \}, \{ C, D \} \};\n  // = \n  // float2 x = float2(A, C)\n  // float2 y = float2(B, D)\n  float interpolate1D(float2 x, float2 y, float p) \{\n    if (p <= x.x) \{\n      return y.x;\n    \} else if (p >= x.y) \{\n      return y.y;\n    \} else \{\n      float slope = (y.y-y.x) / (x.y-x.x);\n      return y.x + slope * (p-x.x);\n    \}\n  \}\n\n  // multiply a float3 by a matrix3x3\n  float3 mult_f3_f33( float3 src, float3x3 mtx) \{\n    return float3(mtx\[0]\[0] * src.x + mtx\[0]\[1] * src.y + \n    mtx\[0]\[2] * src.z, mtx\[1]\[0] * src.x + mtx\[1]\[1] * src.y + \n    mtx\[1]\[2] * src.z, mtx\[2]\[0] * src.x + mtx\[2]\[1] * src.y + \n    mtx\[2]\[2] * src.z);\n  \}\n\n  // dot product of two 1x3 matrices\n  float dot_f3_f3( float3 A, float3 B) \{\n    return (A.x*B.x)+(A.y*B.y)+(A.z*B.z);\n  \}\n\n  // Return interpolated minimum ACES value given a minimum luminance value.\n  float lookup_ACESmin( float minLum ) \{\n    float2 rangeLum = float2(log10(float(MIN_LUM_RRT)), log10(float(MIN_LUM_SDR)));\n    float2 rangeStops = float2(MIN_STOP_RRT, MIN_STOP_SDR);\n    return 0.18*pow( float(2), float(interpolate1D( rangeLum, rangeStops, log10( float(minLum)))));\n  \}\n  // Return interpolated maximum ACES value given a maximum luminance value.\n  float lookup_ACESmax( float maxLum ) \{\n    float2 rangeLum = float2(log10(float(MAX_LUM_SDR)), log10(float(MAX_LUM_RRT)));\n    float2 rangeStops = float2(MAX_STOP_SDR, MAX_STOP_RRT);\n    return 0.18*pow( float(2), float(interpolate1D( rangeLum, rangeStops, log10( float(maxLum)))));\n  \}\n\n  void init_coefsLow( float3 TsPointLow, float3 TsPointMid ) \{\n    // :145 float cLow\[5] = init_coefsLow( MIN_PT, MID_PT);\n    float knotIncLow = (log10(TsPointMid.x) - log10(TsPointLow.x)) / 3.0;\n    // DeterTsPointLowe two lowest coefficients (straddling TsPointLowPt)\n    coefsLow\[0] = (TsPointLow.z * (log10(float(TsPointLow.x))-0.5*knotIncLow)) + ( log10(float(TsPointLow.y)) - TsPointLow.z * log10(float(TsPointLow.x)));\n    coefsLow\[1] = (TsPointLow.z * (log10(float(TsPointLow.x))+0.5*knotIncLow)) + ( log10(float(TsPointLow.y)) - TsPointLow.z * log10(float(TsPointLow.x)));\n    // DeterTsPointLowe two highest coefficients (straddling TsPointMidPt)\n    coefsLow\[3] = (TsPointMid.z * (log10(float(TsPointMid.x))-0.5*knotIncLow)) + ( log10(float(TsPointMid.y)) - TsPointMid.z * log10(float(TsPointMid.x)));\n    coefsLow\[4] = (TsPointMid.z * (log10(float(TsPointMid.x))+0.5*knotIncLow)) + ( log10(float(TsPointMid.y)) - TsPointMid.z * log10(float(TsPointMid.x)));\n    // TsPointMiddle coefficient (which defines the \"sharpness of the bend\") is linearly interpolated\n    float2 bendsLowA = float2(MIN_STOP_RRT, MIN_STOP_SDR);\n    float2 bendsLowB = float2(0.18, 0.35);\n    float pctLow;\n    if (override_curve_params == 1) \{\n      pctLow = knee;\n    \}\n    else \{\n      pctLow = interpolate1D(bendsLowA, bendsLowB, log2(float(TsPointLow.x/0.18)));\n    \}\n    coefsLow\[2] = log10(float(TsPointLow.y)) + pctLow*(log10(float(TsPointMid.y))-log10(float(TsPointLow.y)));\n  \}\n\n  void init_coefsHigh( float3 TsPointMid, float3 TsPointMax ) \{\n    // :146 float cHigh\[5] = init_coefsHigh( MID_PT, MAX_PT);\n    float knotIncHigh = (log10(TsPointMax.x) - log10(TsPointMid.x)) / 3.;\n    // DeterMine two lowest coefficients (straddling MidPt)\n    coefsHigh\[0] = (TsPointMid.z * (log10(float(TsPointMid.x))-0.5*knotIncHigh)) + ( log10(float(TsPointMid.y)) - TsPointMid.z * log10(float(TsPointMid.x)));\n    coefsHigh\[1] = (TsPointMid.z * (log10(float(TsPointMid.x))+0.5*knotIncHigh)) + ( log10(float(TsPointMid.y)) - TsPointMid.z * log10(float(TsPointMid.x)));\n    // DeterMide two highest coefficients (straddling TsPointMaxPt)\n    coefsHigh\[3] = (TsPointMax.z * (log10(float(TsPointMax.x))-0.5*knotIncHigh)) + ( log10(float(TsPointMax.y)) - TsPointMax.z * log10(float(TsPointMax.x)));\n    coefsHigh\[4] = (TsPointMax.z * (log10(float(TsPointMax.x))+0.5*knotIncHigh)) + ( log10(float(TsPointMax.y)) - TsPointMax.z * log10(float(TsPointMax.x)));\n    // Middle coefficient (which defines the \"sharpness of the bend\") is linearly interpolated\n    float2 bendsHighA = float2(MAX_STOP_SDR, MAX_STOP_RRT);\n    float2 bendsHighB = float2(0.89, 0.90);\n    float pctHigh;\n    if (override_curve_params == 1) \{\n      pctHigh = shoulder;\n    \}\n    else \{\n      pctHigh = interpolate1D(bendsHighA, bendsHighB, log2(float(TsPointMax.x/0.18)));\n    \}\n    coefsHigh\[2] = log10(float(TsPointMid.y)) + pctHigh*(log10(float(TsPointMax.y))-log10(float(TsPointMid.y)));\n  \}\n\n  float shift( float in, float expShift) \{\n    return pow(float(2), (log2(float(in)) - expShift));\n  \}\n\n  void init_TsParams( float minLum, float maxLum, float exp_shift ) \{\n    // ACESlib.SSTS.ctl :136 init_TsParams \n    // Min Mid and Max is a float3 :\n    // x = lum (aces), y = lum (cd/m^2), z = slope\n\n    // override slope with default values used in AMPAS CTL\n    if (override_curve_params == 1) \{\n      Min = float3(lookup_ACESmin(minLum), minLum, float(slope.x));\n      Mid = float3(0.18, 4.8, float(slope.y));\n      Max = float3(lookup_ACESmax(maxLum), maxLum, float(slope.z));   \n    \}\n    else \{\n      Min = float3(lookup_ACESmin(minLum), minLum, float(0.0));\n      Mid = float3(0.18, 4.8, float(1.55));\n      Max = float3(lookup_ACESmax(maxLum), maxLum, float(0.0));\n    \}\n\n    // init coefsLow and coefsHigh (directly sets local variables).\n    init_coefsLow( Min, Mid );\n    init_coefsHigh( Mid, Max );\n\n    // :140 - init_TsParams : Exposure Shift\n    Min.x = shift(lookup_ACESmin(minLum), exp_shift);\n    Mid.x = shift(0.18, exp_shift);\n    Max.x = shift(lookup_ACESmax(maxLum), exp_shift);\n\n    // PARAMS = \n    // float3 Min / float3 Mid / float3 Max \n    // coefsLow\[5]\n    // coefsHigh\[5]\n  \}\n\n  void init() \{\n    // Textbook monomial to basis-function conversion matrix. (Used in tonescale)\n    MIN_STOP_SDR = -6.5;\n    MAX_STOP_SDR = 6.5;\n    MIN_STOP_RRT = -15.;\n    MAX_STOP_RRT = 18.;\n    MIN_LUM_SDR = 0.02;\n    MAX_LUM_SDR = 48.0;\n    MIN_LUM_RRT = 0.0001;\n    MAX_LUM_RRT = 10000.0;\n    // Monomial to basis function\n    float Marray\[] = \{0.5, -1.0, 0.5, \n                      -1.0, 1.0, 0.0, \n                      0.5, 0.5, 0.0\};\n    M1.setArray(Marray);\n\n    N_KNOTS_LOW = 4;\n    N_KNOTS_HIGH = 4;\n\n    // Get min / max lum from user\n    float Y_MIN = disp_lum.x;\n    float Y_MID = disp_lum.y;\n    float Y_MAX = disp_lum.z;\n\n\n    init_TsParams( Y_MIN, Y_MAX, 0.0 );\n\n    // Override expShift\n    if (override_curve_params != 1) \{\n      expShift = 0.0;\n    \} else \{\n      expShift = exposure;\n    \}\n\n    // Define expShift from inv_ssts\n    expShift = (log2(inv_ssts(Y_MID)) - log2(0.18)) + expShift;\n\n    // expShift = log2(inv_ssts(Y_MID)) - log2(0.18);\n\n    init_TsParams( Y_MIN, Y_MAX, expShift );\n  \}\n\n\n  // ACES Single Stage Tone Scale\n  float ssts( float x ) \{\n\n    // Take the log: clamp min to HALF_MIN\n    float logx = log10(max(x, 5.96046448e-08));\n    float logy;\n\n    // Calculate values for linear extension in shadows\n    if (logx <= log10(float(Min.x))) \{\n      logy = logx * Min.z + (log10(float(Min.y))) - \n        Min.z * log10(float(Min.x));\n    \}\n    // Calculate values for lower half of S-curve, shadows \n    else if (( logx > log10(float(Min.x)) ) && ( logx < log10(float(Mid.x)) )) \{\n      float knot_coord = (N_KNOTS_LOW-1) * (logx-log10(float(Min.x)))/\n        (log10(float(Mid.x))-log10(float(Min.x)));\n      int j = knot_coord;\n      float t = knot_coord - j;\n      float3 cf = float3(coefsLow\[j], coefsLow\[j + 1], coefsLow\[j + 2]);\n      float3 monomials = float3(t * t, t, 1.);\n      logy = dot_f3_f3(monomials, mult_f3_f33(cf, M1));\n    \}\n    // Calculate values for upper half of S-curve, highlights\n    else if (( logx >= log10(float(Mid.x)) ) && ( logx < log10(float(Max.x)) )) \{\n      float knot_coord = (N_KNOTS_HIGH-1) * (logx-log10(float(Mid.x)))/\n        (log10(float(Max.x))-log10(float(Mid.x)));\n      int j = knot_coord;\n      float t = knot_coord - j;\n      float3 cf = float3(coefsHigh\[j], coefsHigh\[j + 1], coefsHigh\[j + 2]); \n      float3 monomials = float3(t * t, t, 1.);\n      logy = dot_f3_f3(monomials, mult_f3_f33(cf, M1));\n    \}\n    // Calculate values for linear extension in highlights\n    else \{ // if ( logx >= log10(float(Max.x)) ) \{\n      logy = logx * Max.z + ( log10(float(Max.y)) - Max.z * log10(float(Max.x)) );\n    \}\n    // un-log\n    return  pow(float(10),logy);\n  \}\n\n\n  // ACES Inverse Single Stage Tone Scale\n  float inv_ssts( float y ) \{\n\n    float KNOT_INC_LOW = (log10(float(Mid.x)) - log10(float(Min.x))) / (N_KNOTS_LOW - 1.);\n    float KNOT_INC_HIGH = (log10(float(Max.x)) - log10(float(Mid.x))) / (N_KNOTS_HIGH - 1.);\n\n    // KNOT_Y is luminance of the spline at each knot\n    // Error 1: variable length arrays are not supported in OpenCL\n    // float __KNOT_Y_LOW_38\[N_KNOTS_LOW];\n    // Setting array length to 4 manually as a workaround... :(\n    float KNOT_Y_LOW\[ 4];\n    for (int i = 0; i < N_KNOTS_LOW; i = i+1) \{\n      KNOT_Y_LOW\[ i] = ( coefsLow\[i] + coefsLow\[i+1]) / 2.;\n    \}\n    // Setting array length to 4 manually as a workaround...\n    float KNOT_Y_HIGH\[ 4];\n    for (int i = 0; i < N_KNOTS_HIGH; i = i+1) \{\n      KNOT_Y_HIGH\[ i] = ( coefsHigh\[i] + coefsHigh\[i+1]) / 2.;\n    \};\n\n    float logy = log10( max(y, 1e-10));\n    float logx;\n\n    if (logy <= log10(float(Min.y))) \{\n        logx = log10(float(Min.x));\n\n    \} else if ( (logy > log10(float(Min.y))) && (logy <= log10(float(Mid.y))) ) \{\n        int j;\n        float3 cf;\n        if ( logy > KNOT_Y_LOW\[ 0] && logy <= KNOT_Y_LOW\[ 1]) \{\n            cf.x = coefsLow\[0];  cf.y = coefsLow\[1];  cf.z = coefsLow\[2];  j = 0;\n        \} else if ( logy > KNOT_Y_LOW\[ 1] && logy <= KNOT_Y_LOW\[ 2]) \{\n            cf.x = coefsLow\[1];  cf.y = coefsLow\[2];  cf.z = coefsLow\[3];  j = 1;\n        \} else if ( logy > KNOT_Y_LOW\[ 2] && logy <= KNOT_Y_LOW\[ 3]) \{\n            cf.x = coefsLow\[2];  cf.y = coefsLow\[3];  cf.z = coefsLow\[4];  j = 2;\n        \} \n\n        float3 tmp = mult_f3_f33( cf, M1);\n        float a = tmp.x;\n        float b = tmp.y;\n        float c = tmp.z;\n        c = c - logy;\n\n        const float d = sqrt(float(b * b - 4. * a * c));\n\n        const float t = ( 2. * c) / ( -d - b);\n\n        logx = log10(float(Min.x)) + ( t + j) * KNOT_INC_LOW;\n\n    \} else if ( (logy > log10(float(Mid.y))) && (logy < log10(float(Max.y))) ) \{\n        int j;\n        float3 cf;\n        if ( logy >= KNOT_Y_HIGH\[ 0] && logy <= KNOT_Y_HIGH\[ 1]) \{\n            cf.x = coefsHigh\[0];  cf.y = coefsHigh\[1];  cf.z = coefsHigh\[2];  j = 0;\n        \} else if ( logy > KNOT_Y_HIGH\[ 1] && logy <= KNOT_Y_HIGH\[ 2]) \{\n            cf.x = coefsHigh\[1];  cf.y = coefsHigh\[2];  cf.z = coefsHigh\[3];  j = 1;\n        \} else if ( logy > KNOT_Y_HIGH\[ 2] && logy <= KNOT_Y_HIGH\[ 3]) \{\n            cf.x = coefsHigh\[2];  cf.y = coefsHigh\[3];  cf.z = coefsHigh\[4];  j = 2;\n        \} \n\n        float3 tmp = mult_f3_f33( cf, M1);\n\n        float a = tmp.x;\n        float b = tmp.y;\n        float c = tmp.z;\n        c = c - logy;\n\n        const float d = sqrt( float(b * b - 4. * a * c));\n\n        const float t = ( 2. * c) / ( -d - b);\n\n        logx = log10(float(Mid.x)) + ( t + j) * KNOT_INC_HIGH;\n\n    \} else \{ //if ( logy >= log10(float(Max.y)) ) \{\n\n        logx = log10(float(Max.x));\n\n    \}\n\n    return pow(10, logx);\n\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n    if (invert == 1 ) \{\n      dst() = float4(inv_ssts(input.x), inv_ssts(input.y), inv_ssts(input.z), input.w);\n    \}\n    else \{\n      dst() = float4(ssts(input.x), ssts(input.y), ssts(input.z), input.w);\n    \}\n  \}\n\};"
+  useGPUIfAvailable {{parent.use_gpu}}
+  vectorize {{parent.vectorize}}
+  rebuild ""
+  AcesSSTSKernel_disp_lum {{"use_c9 ? 0.0001 : parent.lum"} {parent.lum} {"use_c9 ? 10000 : parent.lum"}}
+  AcesSSTSKernel_override_curve_params {{parent.override_ssts_params}}
+  AcesSSTSKernel_knee {{parent.pctLow}}
+  AcesSSTSKernel_shoulder {{parent.pctHigh}}
+  AcesSSTSKernel_slope {{parent.slope} {parent.slope} {parent.slope}}
+  AcesSSTSKernel_exposure {{parent.exposure}}
+  rebuild_finalise ""
+  name ACES_SSTS
+  xpos -1250
+  ypos -520
+ }
+ Dot {
+  name Dot23
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos -462
+ }
+set Ne41b3400 [stack 0]
+ Dot {
+  name Dot22
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1656
+  ypos -462
+ }
+ ColorMatrix {
+  matrix {
+      {0.6954522133 0.1406786889 0.163869068}
+      {0.04479461163 0.8596711159 0.09553432465}
+      {-0.005525866989 0.004025223665 1.001500726}
+    }
+  name ColorMatrix7
+  label "ACEScg to ACES"
+  note_font Helvetica
+  xpos -1690
+  ypos -398
+ }
+ Dot {
+  name Dot21
+  label " OCES"
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1656
+  ypos 2658
+ }
+push $Ne41b3400
+ Dot {
+  name Dot28
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos -342
+ }
+set Ne41b7600 [stack 0]
+ BlinkScript {
+  recompileCount 4
+  ProgramGroup 1
+  KernelDescription "2 \"ACES_segmented_spline_c9\" iterate pixelWise a3a4f29de055815686e69c9f4fb12073855650485c0e9e1217450e3a4c8ceaba 2 \"src\" Read Point \"dst\" Write Point 2 \"invert\" Bool 1 AA== \"odt_type\" Int 1 AAAAAA== 2 \"invert\" 1 1 \"odt_type\" 1 1 10 \"Min\" Float 2 1 AAAAAAAAAAA= \"Mid\" Float 2 1 AAAAAAAAAAA= \"Max\" Float 2 1 AAAAAAAAAAA= \"slopeLow\" Float 1 1 AAAAAA== \"slopeHigh\" Float 1 1 AAAAAA== \"coefsLow\" Float 1 10 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA== \"coefsHigh\" Float 1 10 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA== \"N_KNOTS_LOW\" Int 1 1 AAAAAA== \"N_KNOTS_HIGH\" Int 1 1 AAAAAA== \"M\" Float 9 1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  kernelSource "kernel ACES_segmented_spline_c9 : public ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src;\n  Image<eWrite> dst;\n\nparam:\n  // User controllable parameters\n  bool invert;\n  int odt_type;\n\nlocal:\n  float2 Min;\n  float2 Mid;\n  float2 Max;\n  float slopeLow;\n  float slopeHigh;\n  float coefsLow\[10];\n  float coefsHigh\[10];\n  int N_KNOTS_LOW;\n  int N_KNOTS_HIGH;\n\n  float3x3 M;\n\n\n  // multiply a float3 by a matrix3x3\n  float3 mult_f3_f33( float3 src, float3x3 mtx) \{\n    return float3(mtx\[0]\[0] * src.x + mtx\[0]\[1] * src.y + \n    mtx\[0]\[2] * src.z, mtx\[1]\[0] * src.x + mtx\[1]\[1] * src.y + \n    mtx\[1]\[2] * src.z, mtx\[2]\[0] * src.x + mtx\[2]\[1] * src.y + \n    mtx\[2]\[2] * src.z);\n  \}\n\n  // dot product of two 1x3 matrices\n  float dot_f3_f3( float3 A, float3 B) \{\n    return (A.x*B.x)+(A.y*B.y)+(A.z*B.z);\n  \}\n\n  void init() \{\n\n    // Set up ODT prameters : switch with int odt_type\n    // Assigning arrays the normal way with <type> name\[] = \{val, val, val\}; doesn't work in blinkscript :(\n    // odt_type = 0 : ODT_48nits\n    if (odt_type == 0) \{\n      // coefsLow\[10]\n      coefsLow\[0] = -1.6989700043;\n      coefsLow\[1] = -1.6989700043;\n      coefsLow\[2] = -1.4779000000;\n      coefsLow\[3] = -1.2291000000;\n      coefsLow\[4] = -0.8648000000;\n      coefsLow\[5] = -0.4480000000;\n      coefsLow\[6] = 0.0051800000;\n      coefsLow\[7] = 0.4511080334;\n      coefsLow\[8] = 0.9113744414;\n      coefsLow\[9] = 0.9113744414;\n      // coefsHigh\[10]\n      coefsHigh\[0] = 0.5154386965;\n      coefsHigh\[1] = 0.8470437783;\n      coefsHigh\[2] = 1.1358000000;\n      coefsHigh\[3] = 1.3802000000;\n      coefsHigh\[4] = 1.5197000000;\n      coefsHigh\[5] = 1.5985000000;\n      coefsHigh\[6] = 1.6467000000;\n      coefsHigh\[7] = 1.6746091357;\n      coefsHigh\[8] = 1.6878733390;\n      coefsHigh\[9] = 1.6878733390;\n\n      // Explicit casts to float are necessary for log10 calls in function to work :/\n      // Explicitly calculating calls to segmented_spline_c5_fwd() to avoid having to implement this \n      // here as well.\n      Min = float2(float(0.00288), float(0.02));\n      Mid = float2(float(4.8), float(4.8));\n      Max = float2(float(1005.71936), float(48.0));\n      slopeLow = 0.0;\n      slopeHigh = 0.04;\n    \}\n    // odt_type = 1 : ODT_1000nits\n    else if (odt_type == 1) \{\n      // coefsLow\[10]\n      coefsLow\[0] = -4.9706219331;\n      coefsLow\[1] = -3.0293780669;\n      coefsLow\[2] = -2.1262;\n      coefsLow\[3] = -1.5105;\n      coefsLow\[4] = -1.0578;\n      coefsLow\[5] = -0.4668;\n      coefsLow\[6] = 0.11938;\n      coefsLow\[7] = 0.7088134201;\n      coefsLow\[8] = 1.2911865799;\n      coefsLow\[9] = 1.2911865799;\n      // coefsHigh\[10]\n      coefsHigh\[0] = 0.8089132070;\n      coefsHigh\[1] = 1.1910867930;\n      coefsHigh\[2] = 1.5683;\n      coefsHigh\[3] = 1.9483;\n      coefsHigh\[4] = 2.3083;\n      coefsHigh\[5] = 2.6384;\n      coefsHigh\[6] = 2.8595;\n      coefsHigh\[7] = 2.9872608805;\n      coefsHigh\[8] = 3.0127391195;\n      coefsHigh\[9] = 3.0127391195;\n\n      Min = float2(float(0.00014), float(0.0001));\n      Mid = float2(float(4.8), float(10));\n      Max = float2(float(4505.08447), float(1000));\n      slopeLow = 3.0;\n      slopeHigh = 0.06;\n    \}\n    // odt_type = 2 : ODT_2000nits\n    else if (odt_type == 2) \{\n      // coefsLow\[10]\n      coefsLow\[0] = -4.9706219331;\n      coefsLow\[1] = -3.0293780669;\n      coefsLow\[2] = -2.1262;\n      coefsLow\[3] = -1.5105;\n      coefsLow\[4] = -1.0578;\n      coefsLow\[5] = -0.4668;\n      coefsLow\[6] = 0.11938;\n      coefsLow\[7] = 0.7088134201;\n      coefsLow\[8] = 1.2911865799;\n      coefsLow\[9] = 1.2911865799;\n      // coefsHigh\[10]\n      coefsHigh\[0] = 0.8019952042;\n      coefsHigh\[1] = 1.1980047958;\n      coefsHigh\[2] = 1.5943000000;\n      coefsHigh\[3] = 1.9973000000;\n      coefsHigh\[4] = 2.3783000000;\n      coefsHigh\[5] = 2.7684000000;\n      coefsHigh\[6] = 3.0515000000;\n      coefsHigh\[7] = 3.2746293562;\n      coefsHigh\[8] = 3.3274306351;\n      coefsHigh\[9] = 3.3274306351;\n\n      Min = float2(float(0.00014), float(0.0001));\n      Mid = float2(float(4.8), float(10));\n      Max = float2(float(5771.86426), float(2000));\n      slopeLow = 3.0;\n      slopeHigh = 0.12;\n    \}\n    // odt_type = 3 : ODT_4000nits\n    else if (odt_type == 3) \{\n      // coefsLow\[10]\n      coefsLow\[0] = -4.9706219331;\n      coefsLow\[1] = -3.0293780669;\n      coefsLow\[2] = -2.1262;\n      coefsLow\[3] = -1.5105;\n      coefsLow\[4] = -1.0578;\n      coefsLow\[5] = -0.4668;\n      coefsLow\[6] = 0.11938;\n      coefsLow\[7] = 0.7088134201;\n      coefsLow\[8] = 1.2911865799;\n      coefsLow\[9] = 1.2911865799;\n      // coefsHigh\[10]\n      coefsHigh\[0] = 0.7973186613;\n      coefsHigh\[1] = 1.2026813387;\n      coefsHigh\[2] = 1.6093000000;\n      coefsHigh\[3] = 2.0108000000;\n      coefsHigh\[4] = 2.4148000000;\n      coefsHigh\[5] = 2.8179000000;\n      coefsHigh\[6] = 3.1725000000;\n      coefsHigh\[7] = 3.5344995451;\n      coefsHigh\[8] = 3.6696204376;\n      coefsHigh\[9] = 3.6696204376;\n\n      Min = float2(float(0.00014), float(0.0001));\n      Mid = float2(float(4.8), float(10));\n      Max = float2(float(6824.36572), float(2000));\n      slopeLow = 3.0;\n      slopeHigh = 0.3;\n    \}\n\n    // Monomial to basis function (Note: this is transposed compared to the AMPAS CTL)\n    float Marray\[] = \{0.5, -1.0, 0.5, \n                      -1.0, 1.0, 0.0, \n                      0.5, 0.5, 0.0\};\n    M.setArray(Marray);\n\n    // It seems as though if you define an int before an array, the int\n    // could randomly get set to a really really high value :(\n    N_KNOTS_LOW = 8;\n    N_KNOTS_HIGH = 8;\n  \}\n\n\n  float segmented_spline_c9_fwd( float x ) \{\n    // Take the log: clamp min to HALF_MIN\n    float logx = log10(max(x, 5.96046448e-08));\n    float logy;\n\n    if ( logx <= log10(Min.x) ) \{ \n      logy = logx * slopeLow + ( log10(Min.y) - slopeLow * log10(Min.x) );\n    \} \n    else if (( logx > log10(Min.x) ) && ( logx < log10(Mid.x) )) \{\n      float knot_coord = (N_KNOTS_LOW-1) * (logx-log10(Min.x))/(log10(Mid.x)-log10(Min.x));\n      int j = knot_coord;\n      float t = knot_coord - j;\n      float3 cf = float3(coefsLow\[ j], coefsLow\[ j + 1], coefsLow\[ j + 2]);\n      float3 monomials = float3(t * t, t, 1. );\n      logy = dot_f3_f3( monomials, mult_f3_f33( cf, M));\n    \} \n    else if (( logx >= log10(Mid.x) ) && ( logx < log10(Max.x) )) \{\n      float knot_coord = (N_KNOTS_HIGH-1) * (logx-log10(Mid.x))/(log10(Max.x)-log10(Mid.x));\n      int j = knot_coord;\n      float t = knot_coord - j;\n      float3 cf = float3(coefsHigh\[ j], coefsHigh\[ j + 1], coefsHigh\[ j + 2]);\n      float3 monomials = float3(t * t, t, 1.);\n      logy = dot_f3_f3( monomials, mult_f3_f33( cf, M));\n    \} \n    else \{ //if ( logIn >= log10(Max.x) ) \{ \n      logy = logx * slopeHigh + ( log10(Max.y) - slopeHigh * log10(Max.x) );\n    \}\n\n    return pow(10, logy);\n  \}\n\n\n\n  float segmented_spline_c9_rev( float y ) \{  \n\n    const float KNOT_INC_LOW = (log10(Mid.x) - log10(Min.x)) / (N_KNOTS_LOW - 1.);\n    const float KNOT_INC_HIGH = (log10(Max.x) - log10(Mid.x)) / (N_KNOTS_HIGH - 1.);\n    \n    // KNOT_Y is luminance of the spline at each knot\n    // Setting array length to 4 manually to work around \n    // Error 1: variable length arrays are not supported in OpenCL\n\n    float KNOT_Y_LOW\[ 8];\n    for (int i = 0; i < N_KNOTS_LOW; i = i+1) \{\n      KNOT_Y_LOW\[ i] = ( coefsLow\[i] + coefsLow\[i+1]) / 2.;\n    \};\n\n    float KNOT_Y_HIGH\[ 8];\n    for (int i = 0; i < N_KNOTS_HIGH; i = i+1) \{\n      KNOT_Y_HIGH\[ i] = ( coefsHigh\[i] + coefsHigh\[i+1]) / 2.;\n    \};\n\n    float logy = log10( max( y, 1e-10));\n    float logx;\n\n    if (logy <= log10(Min.y)) \{\n      logx = log10(Min.x);\n    \} \n    else if ( (logy > log10(Min.y)) && (logy <= log10(Mid.y)) ) \{\n      int j;\n      float3 cf;\n      if ( logy > KNOT_Y_LOW\[ 0] && logy <= KNOT_Y_LOW\[ 1]) \{\n          cf\[ 0] = coefsLow\[0];  cf\[ 1] = coefsLow\[1];  cf\[ 2] = coefsLow\[2];  j = 0;\n      \} else if ( logy > KNOT_Y_LOW\[ 1] && logy <= KNOT_Y_LOW\[ 2]) \{\n          cf\[ 0] = coefsLow\[1];  cf\[ 1] = coefsLow\[2];  cf\[ 2] = coefsLow\[3];  j = 1;\n      \} else if ( logy > KNOT_Y_LOW\[ 2] && logy <= KNOT_Y_LOW\[ 3]) \{\n          cf\[ 0] = coefsLow\[2];  cf\[ 1] = coefsLow\[3];  cf\[ 2] = coefsLow\[4];  j = 2;\n      \} else if ( logy > KNOT_Y_LOW\[ 3] && logy <= KNOT_Y_LOW\[ 4]) \{\n          cf\[ 0] = coefsLow\[3];  cf\[ 1] = coefsLow\[4];  cf\[ 2] = coefsLow\[5];  j = 3;\n      \} else if ( logy > KNOT_Y_LOW\[ 4] && logy <= KNOT_Y_LOW\[ 5]) \{\n          cf\[ 0] = coefsLow\[4];  cf\[ 1] = coefsLow\[5];  cf\[ 2] = coefsLow\[6];  j = 4;\n      \} else if ( logy > KNOT_Y_LOW\[ 5] && logy <= KNOT_Y_LOW\[ 6]) \{\n          cf\[ 0] = coefsLow\[5];  cf\[ 1] = coefsLow\[6];  cf\[ 2] = coefsLow\[7];  j = 5;\n      \} else if ( logy > KNOT_Y_LOW\[ 6] && logy <= KNOT_Y_LOW\[ 7]) \{\n          cf\[ 0] = coefsLow\[6];  cf\[ 1] = coefsLow\[7];  cf\[ 2] = coefsLow\[8];  j = 6;\n      \}\n      \n      const float3 tmp = mult_f3_f33( cf, M);\n      float a = tmp\[ 0];\n      float b = tmp\[ 1];\n      float c = tmp\[ 2];\n      c = c - logy;\n      const float d = sqrt(float(b * b - 4. * a * c));\n      const float t = ( 2. * c) / ( -d - b);\n      logx = log10(Min.x) + ( t + j) * KNOT_INC_LOW;\n    \} \n    else if ( (logy > log10(Mid.y)) && (logy < log10(Max.y)) ) \{\n      int j;\n      float3 cf;\n      if ( logy > KNOT_Y_HIGH\[ 0] && logy <= KNOT_Y_HIGH\[ 1]) \{\n          cf\[ 0] = coefsHigh\[0];  cf\[ 1] = coefsHigh\[1];  cf\[ 2] = coefsHigh\[2];  j = 0;\n      \} else if ( logy > KNOT_Y_HIGH\[ 1] && logy <= KNOT_Y_HIGH\[ 2]) \{\n          cf\[ 0] = coefsHigh\[1];  cf\[ 1] = coefsHigh\[2];  cf\[ 2] = coefsHigh\[3];  j = 1;\n      \} else if ( logy > KNOT_Y_HIGH\[ 2] && logy <= KNOT_Y_HIGH\[ 3]) \{\n          cf\[ 0] = coefsHigh\[2];  cf\[ 1] = coefsHigh\[3];  cf\[ 2] = coefsHigh\[4];  j = 2;\n      \} else if ( logy > KNOT_Y_HIGH\[ 3] && logy <= KNOT_Y_HIGH\[ 4]) \{\n          cf\[ 0] = coefsHigh\[3];  cf\[ 1] = coefsHigh\[4];  cf\[ 2] = coefsHigh\[5];  j = 3;\n      \} else if ( logy > KNOT_Y_HIGH\[ 4] && logy <= KNOT_Y_HIGH\[ 5]) \{\n          cf\[ 0] = coefsHigh\[4];  cf\[ 1] = coefsHigh\[5];  cf\[ 2] = coefsHigh\[6];  j = 4;\n      \} else if ( logy > KNOT_Y_HIGH\[ 5] && logy <= KNOT_Y_HIGH\[ 6]) \{\n          cf\[ 0] = coefsHigh\[5];  cf\[ 1] = coefsHigh\[6];  cf\[ 2] = coefsHigh\[7];  j = 5;\n      \} else if ( logy > KNOT_Y_HIGH\[ 6] && logy <= KNOT_Y_HIGH\[ 7]) \{\n          cf\[ 0] = coefsHigh\[6];  cf\[ 1] = coefsHigh\[7];  cf\[ 2] = coefsHigh\[8];  j = 6;\n      \}\n      \n      const float3 tmp = mult_f3_f33( cf, M);\n      float a = tmp\[ 0];\n      float b = tmp\[ 1];\n      float c = tmp\[ 2];\n      c = c - logy;\n      const float d = sqrt( float(b * b - 4. * a * c));\n      const float t = ( 2. * c) / ( -d - b);\n      logx = log10(Mid.x) + ( t + j) * KNOT_INC_HIGH;\n    \} \n    else \{ //if ( logy >= log10(Max.y) ) \{\n      logx = log10(Max.x);\n    \}\n    \n    return pow(10, logx);\n\n  \}\n\n\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n    float3 aces = float3(input.x, input.y, input.z);\n\n    if (invert == 0) \{\n      aces = float3(segmented_spline_c9_fwd(aces.x), segmented_spline_c9_fwd(aces.y), segmented_spline_c9_fwd(aces.z));\n    \} else \{\n      aces = float3(segmented_spline_c9_rev(aces.x), segmented_spline_c9_rev(aces.y), segmented_spline_c9_rev(aces.z));\n    \}\n\n    dst() = float4(aces.x, aces.y, aces.z, input.w);\n \n    // dst() = float4(log10(Min.x), log10(Mid.x), N_KNOTS_LOW, N_KNOTS_HIGH);\n\n    \}\n\};"
+  useGPUIfAvailable {{parent.use_gpu}}
+  vectorize {{parent.vectorize}}
+  rebuild ""
+  rebuild_finalise ""
+  name segmented_spline_c9_
+  xpos -1140
+  ypos -352
+ }
+push $Ne41b7600
+ Switch {
+  inputs 2
+  which {{parent.use_c9}}
+  name Switch_c9
+  xpos -1250
+  ypos -298
+ }
+ Expression {
+  expr0 "(r - Ymin) / (Ymax - Ymin)"
+  expr1 "(g - Ymin) / (Ymax - Ymin)"
+  expr2 "(b - Ymin) / (Ymax - Ymin)"
+  expr3 1
+  name Y_2_linCV_f3_
+  xpos -1250
+  ypos 38
+  addUserKnob {20 Luminance}
+  addUserKnob {7 Ymin R 0.0001 0.02}
+  Ymin {{parent.lum.0}}
+  addUserKnob {7 Ymax R 48 10000}
+  Ymax {{parent.lum.2}}
+ }
+ Dot {
+  name Dot12
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos 282
+ }
+set Ne41bce00 [stack 0]
+ Dot {
+  name Dot15
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1106
+  ypos 282
+ }
+set Ne41dde00 [stack 0]
+ Dot {
+  name Dot13
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -886
+  ypos 282
+ }
+ Dot {
+  name Dot16
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -886
+  ypos 354
+ }
+set Ne41de600 [stack 0]
+ Expression {
+  temp_name0 tr
+  temp_expr0 "(-r - c_x_0) / (c_x_1 - c_x_0)"
+  temp_name1 tg
+  temp_expr1 "(-g - c_x_0) / (c_x_1 - c_x_0)"
+  temp_name2 tb
+  temp_expr2 "(-b - c_x_0) / (c_x_1 - c_x_0)"
+  expr0 "tr < 0.0 ? -(tr * c_b + c_c) : tr > 1.0 ? r : -(( tr * c_a + c_b) * tr + c_c)"
+  expr1 "tg < 0.0 ? -(tg * c_b + c_c) : tg > 1.0 ? g : -(( tg * c_a + c_b) * tg + c_c)"
+  expr2 "tb < 0.0 ? -(tb * c_b + c_c) : tb > 1.0 ? b : -(( tb * c_a + c_b) * tb + c_c)"
+  name roll_white_fwd_1
+  xpos -920
+  ypos 398
+  addUserKnob {20 Params}
+  addUserKnob {7 new_wht}
+  new_wht 0.918
+  addUserKnob {7 c_width}
+  c_width 0.5
+  addUserKnob {7 c_x_0 +DISABLED}
+  c_x_0 -1
+  addUserKnob {7 c_x_1 +DISABLED}
+  c_x_1 {{"c_x_0 + c_width"}}
+  addUserKnob {7 c_y0 +DISABLED}
+  c_y0 {{-new_wht}}
+  addUserKnob {7 c_y1 +DISABLED}
+  c_y1 {{c_x_1}}
+  addUserKnob {7 c_m1 +DISABLED}
+  c_m1 {{"(c_x_1 - c_x_0)"}}
+  addUserKnob {7 c_a +DISABLED}
+  c_a {{"c_y0 - c_y1 + c_m1"}}
+  addUserKnob {7 c_b +DISABLED}
+  c_b {{"2 * (c_y1 - c_y0) - c_m1"}}
+  addUserKnob {7 c_c +DISABLED}
+  c_c {{c_y0}}
+ }
+ Expression {
+  temp_name0 SCALE
+  temp_expr0 0.96
+  temp_name1 NEW_WHT
+  temp_expr1 0.918
+  expr0 "min( r, NEW_WHT) * SCALE"
+  expr1 "min( g, NEW_WHT) * SCALE"
+  expr2 "min( b, NEW_WHT) * SCALE"
+  name Expression2
+  label "// Scale and clamp white to avoid casted highlights due to D60 simulation"
+  xpos -920
+  ypos 440
+ }
+ Dot {
+  name Dot11
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -886
+  ypos 498
+ }
+push $Ne41de600
+ Expression {
+  temp_name0 SCALE
+  temp_expr0 0.96362
+  expr0 "r * SCALE"
+  expr1 "g * SCALE"
+  expr2 "b * SCALE"
+  name mult_f_f3_
+  label D65
+  xpos -1030
+  ypos 344
+ }
+push $Ne41dde00
+ Switch {
+  inputs 2
+  which {{"parent.display_pri < 3"}}
+  name switch_wp_is_d65_
+  xpos -1140
+  ypos 350
+ }
+ Dot {
+  name Dot14
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1106
+  ypos 426
+ }
+push $Ne41bce00
+ Switch {
+  inputs 2
+  which {{parent.d60_sim}}
+  name d60_sim_switch1
+  xpos -1250
+  ypos 422
+ }
+ Switch {
+  inputs 2
+  which {{"parent.display_pri == 3"}}
+  name switch_wp_is_dci_
+  xpos -1250
+  ypos 494
+ }
+ Dot {
+  name Dot26
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos 762
+ }
+set Ne41ca000 [stack 0]
+ ColorMatrix {
+  matrix {
+      {{"(1.0 - sat) * rgb2Y.x + sat"} {"(1.0 - sat) * rgb2Y.y"} {"(1.0 - sat) * rgb2Y.z"}}
+      {{"(1.0 - sat) * rgb2Y.x"} {"(1.0 - sat) * rgb2Y.y + sat"} {"(1.0 - sat) * rgb2Y.z"}}
+      {{"(1.0 - sat) * rgb2Y.x"} {"(1.0 - sat) * rgb2Y.y"} {"(1.0 - sat) * rgb2Y.z + sat"}}
+    }
+  name ColorMatrix3
+  label "// Apply desaturation to compensate \nfor luminance difference"
+  xpos -1140
+  ypos 746
+  addUserKnob {20 params}
+  addUserKnob {13 rgb2Y}
+  rgb2Y {0.27222875 0.67408174 0.05368952}
+  addUserKnob {7 sat}
+  sat 0.93
+ }
+push $Ne41ca000
+ Switch {
+  inputs 2
+  which {{"parent.eotf < 5 && display_pri < 2"}}
+  name Switch_eotf
+  label "Use if output is SDR"
+  xpos -1250
+  ypos 800
+ }
+ ColorMatrix {
+  matrix {
+      {0.6624541879 0.1340042055 0.1561876982}
+      {0.2722287476 0.6740817428 0.05368951708}
+      {-0.005574660841 0.004060741514 1.010339141}
+    }
+  name ColorMatrix1
+  label "ACES AP1 to XYZ"
+  xpos -1250
+  ypos 968
+ }
+ Dot {
+  name Dot8
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos 1146
+ }
+set Ne41c0e00 [stack 0]
+ Colorspace {
+  colorspace_in CIE-XYZ
+  colorspace_out CIE-Yxy
+  name Colorspace2
+  label "\[value colorspace_in] -> \[value colorspace_out]"
+  xpos -1140
+  ypos 1136
+ }
+ Clamp {
+  channels {rgba.red -rgba.green -rgba.blue none}
+  maximum_enable false
+  name ClampMin4
+  xpos -1140
+  ypos 1190
+ }
+ Expression {
+  expr0 "pow(r, DIM_SURROUND_GAMMA)"
+  expr1 g
+  expr2 b
+  channel3 none
+  name dark_to_dim3
+  xpos -1140
+  ypos 1214
+  addUserKnob {20 Params}
+  addUserKnob {7 DIM_SURROUND_GAMMA}
+  DIM_SURROUND_GAMMA 0.9811
+ }
+ Colorspace {
+  colorspace_in CIE-Yxy
+  colorspace_out CIE-XYZ
+  name Colorspace4
+  label "\[value colorspace_in] -> \[value colorspace_out]"
+  xpos -1140
+  ypos 1256
+ }
+push $Ne41c0e00
+ Switch {
+  inputs 2
+  which {{parent.dark_to_dim}}
+  name DarkToDim_Switch
+  label "enable if sdr\nand dark_to_dim enabled"
+  selected true
+  xpos -1250
+  ypos 1250
+ }
+ Dot {
+  name Dot19
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos 1434
+ }
+set Ne41d5c00 [stack 0]
+ Dot {
+  name Dot9
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1106
+  ypos 1434
+ }
+set Ne41d7000 [stack 0]
+ ColorMatrix {
+  matrix {
+      {0.9872254133 -0.006114810705 0.01592640579}
+      {-0.007603884675 1.001874804 0.005322027951}
+      {0.003066040576 -0.005084238946 1.081519246}
+    }
+  name ColorMatrix2
+  label "CAT: Bradford\n D60 to D65"
+  xpos -1140
+  ypos 1466
+ }
+set Ne41d7400 [stack 0]
+push $Ne41d7000
+ Dot {
+  name Dot10
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -996
+  ypos 1434
+ }
+push $Ne41d7400
+ Switch {
+  inputs 2
+  which {{parent.d60_sim}}
+  name d60_sim_switch
+  xpos -1140
+  ypos 1550
+ }
+push $Ne41d5c00
+ Switch {
+  inputs 2
+  which {{"parent.display_pri < 3"}}
+  name switch_wp_is_d65_1
+  xpos -1250
+  ypos 1550
+ }
+ Switch {
+  inputs 2
+  which {{parent.force_d65_cat}}
+  name switch_force_d65_cat
+  xpos -1250
+  ypos 1598
+ }
+ Group {
+  name limit_to_primaries
+  label "Only enabled when display_pri != limiting_pri"
+  xpos -1250
+  ypos 1760
+  disable {{"!(parent.display_pri != parent.limiting_pri)" x1 0}}
+  addUserKnob {20 limit_to_primaries}
+  addUserKnob {4 limiting_pri l "limiting pri" M {Rec709 Rec2020 P3D65 P3DCI P3D60 ACEScg ACES XYZ}}
+  limiting_pri {{parent.limiting_pri}}
+ }
+  Input {
+   inputs 0
+   name Input
+   xpos -40
+   ypos -298
+  }
+  Dot {
+   name Dot1
+   label " XYZ to limiting primaries"
+   note_font "Helvetica Bold"
+   note_font_size 24
+   note_font_color 0xa5a5a501
+   xpos -6
+   ypos -198
+  }
+set Ne41e0a00 [stack 0]
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {1.049811006 0 -9.748453158e-05}
+       {-0.4959030151 1.373313069 0.09824004024}
+       {4.020908051e-08 0 0.9912520051}
+     }
+   name ColorMatrix5
+   label "XYZ to ACES"
+   xpos 730
+   ypos -136
+  }
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {1.641023397 -0.3248033226 -0.2364246994}
+       {-0.6636629701 1.615331769 0.01675636508}
+       {0.01172191743 -0.008284457959 0.9883947968}
+     }
+   name ColorMatrix21
+   label "XYZ to ACEScg"
+   xpos 620
+   ypos -136
+  }
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {2.402741432 -0.8974840641 -0.3880533576}
+       {-0.8325796723 1.769231915 0.02371272631}
+       {0.03882339597 -0.08249972761 1.036368608}
+     }
+   name ColorMatrix15
+   label "XYZ to P3D60"
+   xpos 510
+   ypos -136
+  }
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {2.725393534 -1.018002748 -0.4401631057}
+       {-0.795167923 1.689731717 0.02264718339}
+       {0.04124190658 -0.0876390487 1.100929499}
+     }
+   name ColorMatrix19
+   label "XYZ to P3DCI"
+   xpos 400
+   ypos -136
+  }
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {2.493496418 -0.9313833117 -0.4027107358}
+       {-0.8294888139 1.762663841 0.02362467349}
+       {0.03584583849 -0.07617240399 0.9568845034}
+     }
+   name ColorMatrix17
+   label "XYZ to P3D65"
+   xpos 290
+   ypos -136
+  }
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {1.71661 -0.355662 -0.25336}
+       {-0.666683 1.61648 0.0157685}
+       {0.0176422 -0.0427763 0.942229}
+     }
+   name ColorMatrix12
+   label "XYZ to Rec2020"
+   xpos 180
+   ypos -136
+  }
+push $Ne41e0a00
+  ColorMatrix {
+   matrix {
+       {3.240970135 -1.537383318 -0.4986107945}
+       {-0.9692437053 1.875967622 0.04155509174}
+       {0.0556300357 -0.2039768547 1.056971431}
+     }
+   name ColorMatrix2
+   label "XYZ to Rec709"
+   xpos 70
+   ypos -136
+  }
+  Switch {
+   inputs 8
+   which {{parent.limiting_pri}}
+   name limiting_primary_switch
+   xpos -40
+   ypos -34
+  }
+  Clamp {
+   channels rgb
+   name clamp_f3
+   label "Clip any values outside the limiting primaries"
+   xpos -40
+   ypos 56
+  }
+  Dot {
+   name Dot2
+   label " Convert limited RGB to XYZ"
+   note_font "Helvetica Bold"
+   note_font_size 24
+   note_font_color 0xa5a5a501
+   xpos -6
+   ypos 162
+  }
+set Ne41e4c00 [stack 0]
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.9525524378 0 9.367863095e-05}
+       {0.3439664543 0.7281661034 -0.07213255018}
+       {-3.863927134e-08 0 1.008825183}
+     }
+   name ColorMatrix4
+   label "ACES to XYZ"
+   xpos 730
+   ypos 224
+  }
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.6624541879 0.1340042055 0.1561876982}
+       {0.2722287476 0.6740817428 0.05368951708}
+       {-0.005574660841 0.004060741514 1.010339141}
+     }
+   name ColorMatrix20
+   label "ACEScg to XYZ"
+   xpos 620
+   ypos 224
+  }
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.5049495697 0.2646814585 0.1830150485}
+       {0.237623319 0.6891706586 0.07320601493}
+       {0 0.0449459292 0.9638792276}
+     }
+   name ColorMatrix13
+   label "P3D60 to XYZ"
+   xpos 510
+   ypos 224
+  }
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.4451698363 0.2771343887 0.1722826511}
+       {0.209491685 0.7215952873 0.06891305745}
+       {0 0.04706057906 0.9073553085}
+     }
+   name ColorMatrix18
+   label "P3DCI to XYZ"
+   xpos 400
+   ypos 224
+  }
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.4865709841 0.2656676769 0.1982172877}
+       {0.2289745659 0.6917385459 0.07928691059}
+       {0 0.04511339962 1.043944359}
+     }
+   name ColorMatrix16
+   label "P3D65 to XYZ"
+   xpos 290
+   ypos 224
+  }
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.6369580626 0.1446169019 0.1688809693}
+       {0.2627002299 0.6779980659 0.05930171534}
+       {0 0.0280726999 1.060985088}
+     }
+   name ColorMatrix3
+   label "Rec2020 to XYZ"
+   xpos 180
+   ypos 224
+  }
+push $Ne41e4c00
+  ColorMatrix {
+   matrix {
+       {0.4123907983 0.3575843275 0.180480808}
+       {0.2126390189 0.7151686549 0.07219231874}
+       {0.01933082007 0.1191947311 0.950532198}
+     }
+   name ColorMatrix1
+   label "Rec709 to XYZ"
+   xpos 70
+   ypos 224
+  }
+  Switch {
+   inputs 8
+   which {{parent.limiting_pri}}
+   name limiting_primary_switch1
+   xpos -40
+   ypos 326
+  }
+  Output {
+   name Output
+   xpos -40
+   ypos 446
+  }
+  Colorspace {
+   inputs 0
+   colorspace_in CIE-XYZ
+   primary_out Rec.2020
+   name Colorspace1
+   xpos 275
+   ypos 78
+  }
+ end_group
+ Group {
+  name XYZ_2_DISPLAY_PRI
+  label "CIE XYZ to display encoding primaries"
+  xpos -1250
+  ypos 1976
+  addUserKnob {20 XYZ_2_DISPLAY_PRI_tab l XYZ_2_DISPLAY_PRI}
+  addUserKnob {4 display_pri l "display pri" M {Rec709 Rec2020 P3D65 P3DCI P3D60 ACEScg ACES XYZ}}
+  display_pri {{parent.display_pri}}
+ }
+  Input {
+   inputs 0
+   name Input
+   xpos -40
+   ypos -298
+  }
+  Dot {
+   name Dot1
+   label " XYZ to display primaries"
+   note_font "Helvetica Bold"
+   note_font_size 24
+   note_font_color 0xa5a5a501
+   xpos -6
+   ypos -198
+  }
+set Ne41ebc00 [stack 0]
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {1.049811006 0 -9.748453158e-05}
+       {-0.4959030151 1.373313069 0.09824004024}
+       {4.020908051e-08 0 0.9912520051}
+     }
+   name ColorMatrix3
+   label "XYZ to ACES"
+   xpos 730
+   ypos -136
+  }
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {1.641023397 -0.3248033226 -0.2364246994}
+       {-0.6636629701 1.615331769 0.01675636508}
+       {0.01172191743 -0.008284457959 0.9883947968}
+     }
+   name ColorMatrix21
+   label "XYZ to ACEScg"
+   xpos 620
+   ypos -136
+  }
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {2.402741432 -0.8974840641 -0.3880533576}
+       {-0.8325796723 1.769231915 0.02371272631}
+       {0.03882339597 -0.08249972761 1.036368608}
+     }
+   name ColorMatrix15
+   label "XYZ to P3D60"
+   xpos 510
+   ypos -136
+  }
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {2.725393534 -1.018002748 -0.4401631057}
+       {-0.795167923 1.689731717 0.02264718339}
+       {0.04124190658 -0.0876390487 1.100929499}
+     }
+   name ColorMatrix19
+   label "XYZ to P3DCI"
+   xpos 400
+   ypos -136
+  }
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {2.493496418 -0.9313833117 -0.4027107358}
+       {-0.8294888139 1.762663841 0.02362467349}
+       {0.03584583849 -0.07617240399 0.9568845034}
+     }
+   name ColorMatrix17
+   label "XYZ to P3D65"
+   xpos 290
+   ypos -136
+  }
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {1.71665132 -0.3556708097 -0.2533662617}
+       {-0.6666844487 1.616481304 0.01576855592}
+       {0.01763986237 -0.04277062416 0.9421030879}
+     }
+   name ColorMatrix12
+   label "XYZ to Rec2020"
+   xpos 180
+   ypos -136
+  }
+push $Ne41ebc00
+  ColorMatrix {
+   matrix {
+       {3.240970135 -1.537383318 -0.4986107945}
+       {-0.9692437053 1.875967622 0.04155509174}
+       {0.0556300357 -0.2039768547 1.056971431}
+     }
+   name ColorMatrix2
+   label "XYZ to Rec709"
+   xpos 70
+   ypos -136
+  }
+  Switch {
+   inputs 8
+   which {{parent.display_pri}}
+   name limiting_primary_switch
+   xpos -40
+   ypos -34
+  }
+  Output {
+   name Output
+   xpos -40
+   ypos 86
+  }
+ end_group
+ Clamp {
+  channels rgb
+  name clamp_f3_all
+  xpos -1250
+  ypos 2164
+ }
+ Dot {
+  name Dot1
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -1216
+  ypos 2514
+ }
+set Ne41f0600 [stack 0]
+push $Ne41f0600
+ Dot {
+  name Dot3
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -886
+  ypos 2514
+ }
+set Ne41f0a00 [stack 0]
+ Dot {
+  name Dot4
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -666
+  ypos 2514
+ }
+set Ne41f0e00 [stack 0]
+ Dot {
+  name Dot6
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -446
+  ypos 2514
+ }
+set Ne41f1200 [stack 0]
+ Dot {
+  name Dot18
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -226
+  ypos 2514
+ }
+set Ne41f1600 [stack 0]
+ Dot {
+  name Dot20
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos -6
+  ypos 2514
+ }
+set Ne41f1a00 [stack 0]
+ Dot {
+  name Dot25
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos 214
+  ypos 2514
+ }
+set Ne41f1e00 [stack 0]
+ Dot {
+  name Dot24
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos 654
+  ypos 2514
+ }
+ Dot {
+  name Dot2
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos 654
+  ypos 2610
+ }
+set Ne41f2600 [stack 0]
+ Expression {
+  expr0 "r * (Ymax - Ymin) + Ymin"
+  expr1 "g * (Ymax - Ymin) + Ymin"
+  expr2 "b * (Ymax - Ymin) + Ymin"
+  name linCV_2_Y_f3_hdr
+  label "stretch_black = True"
+  xpos 510
+  ypos 2672
+  addUserKnob {20 Luminance}
+  addUserKnob {7 Ymin R 0.0001 0.02}
+  addUserKnob {7 Ymax R 48 10000}
+  Ymax {{parent.lum.2}}
+ }
+push $Ne41f2600
+ Expression {
+  expr0 "r * (Ymax - Ymin) + Ymin"
+  expr1 "g * (Ymax - Ymin) + Ymin"
+  expr2 "b * (Ymax - Ymin) + Ymin"
+  name linCV_2_Y_f3_hdr2
+  label "stretch_black = False"
+  xpos 620
+  ypos 2672
+  addUserKnob {20 Luminance}
+  addUserKnob {7 Ymin R 0.0001 0.02}
+  Ymin {{parent.lum.0}}
+  addUserKnob {7 Ymax R 48 10000}
+  Ymax {{parent.lum.2}}
+ }
+ Switch {
+  inputs 2
+  which {{parent.stretch_black}}
+  name StretchBlacks_Switch
+  xpos 620
+  ypos 2750
+ }
+ Clamp {
+  channels rgb
+  maximum 65535
+  name clamp_f3__
+  xpos 620
+  ypos 2822
+ }
+ Expression {
+  temp_name0 Lm_r
+  temp_expr0 "pow((r / pq_C), pq_m1)"
+  temp_name1 Lm_g
+  temp_expr1 "pow((g / pq_C), pq_m1)"
+  temp_name2 Lm_b
+  temp_expr2 "pow((b / pq_C), pq_m1)"
+  expr0 "pow(( pq_c1 + pq_c2 * Lm_r ) / ( 1.0 + pq_c3 * Lm_r ), pq_m2)"
+  expr1 "pow(( pq_c1 + pq_c2 * Lm_g ) / ( 1.0 + pq_c3 * Lm_g ), pq_m2)"
+  expr2 "pow(( pq_c1 + pq_c2 * Lm_b ) / ( 1.0 + pq_c3 * Lm_b ), pq_m2)"
+  name Y_2_ST2084_
+  label "ACESlib.OutputTransforms.ctl : 243 \nACESlib.Utilities_Color.ctl : 425"
+  xpos 620
+  ypos 2882
+  addUserKnob {20 SMPTE_ST2084-2014_Constants_tab l "Constants from SMPTE ST 2084-2014"}
+  addUserKnob {7 pq_m1 t " ( 2610.0 / 4096.0 ) / 4.0;" +DISABLED R 0 100}
+  pq_m1 0.1593017578
+  addUserKnob {7 pq_m2 t " ( 2523.0 / 4096.0 ) * 128.0;" +DISABLED R 0 100}
+  pq_m2 78.84375
+  addUserKnob {7 pq_c1 t " 3424.0 / 4096.0 or pq_c3 - pq_c2 + 1.0;" +DISABLED R 0 100}
+  pq_c1 0.8359375
+  addUserKnob {7 pq_c2 t " ( 2413.0 / 4096.0 ) * 32.0;" +DISABLED R 0 100}
+  pq_c2 18.8515625
+  addUserKnob {7 pq_c3 t " ( 2392.0 / 4096.0 ) * 32.0;" +DISABLED R 0 100}
+  pq_c3 18.6875
+  addUserKnob {7 pq_C +DISABLED R 0 100}
+  pq_C 10000
+ }
+set Ne41f6000 [stack 0]
+ Dot {
+  name Dot5
+  label " "
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos 984
+  ypos 2514
+ }
+ Expression {
+  temp_name0 Np_r
+  temp_expr0 "pow( r, 1.0 / pq_m2 )"
+  temp_name1 Np_g
+  temp_expr1 "pow( g, 1.0 / pq_m2 )"
+  temp_name2 Np_b
+  temp_expr2 "pow( b, 1.0 / pq_m2 )"
+  expr0 "r < 0 ? 0 : pow((Np_r - pq_c1) / ( pq_c2 - pq_c3 * Np_r ), 1.0/pq_m1) * pq_C"
+  expr1 "g < 0 ? 0 : pow((Np_g - pq_c1) / ( pq_c2 - pq_c3 * Np_g ), 1.0/pq_m1) * pq_C"
+  expr2 "b < 0 ? 0 : pow((Np_b - pq_c1) / ( pq_c2 - pq_c3 * Np_b ), 1.0/pq_m1) * pq_C"
+  name ST2084_2_Y_f3_
+  label "ACESlib.Utilities_Color.ctl : 408\n// Converts from the non-linear perceptually quantized space to linear cd/m^2"
+  xpos 950
+  ypos 2618
+  addUserKnob {20 SMPTE_ST2084-2014_Constants_tab l "Constants from SMPTE ST 2084-2014"}
+  addUserKnob {7 pq_m1 t " ( 2610.0 / 4096.0 ) / 4.0;" +DISABLED R 0 100}
+  pq_m1 0.1593017578
+  addUserKnob {7 pq_m2 t " ( 2523.0 / 4096.0 ) * 128.0;" +DISABLED R 0 100}
+  pq_m2 78.84375
+  addUserKnob {7 pq_c1 t " 3424.0 / 4096.0 or pq_c3 - pq_c2 + 1.0;" +DISABLED R 0 100}
+  pq_c1 0.8359375
+  addUserKnob {7 pq_c2 t " ( 2413.0 / 4096.0 ) * 32.0;" +DISABLED R 0 100}
+  pq_c2 18.8515625
+  addUserKnob {7 pq_c3 t " ( 2392.0 / 4096.0 ) * 32.0;" +DISABLED R 0 100}
+  pq_c3 18.6875
+  addUserKnob {7 pq_C +DISABLED R 0 100}
+  pq_C 10000
+ }
+ Expression {
+  temp_name0 Y_d
+  temp_expr0 "0.2627*r + 0.6780*g + 0.0593*b"
+  expr0 "Y_d == 0 ? 0 : pow( (Y_d-c_beta)/c_alpha, (1-c_gamma)/c_gamma) * ((r-c_beta)/c_alpha)"
+  expr1 "Y_d == 0 ? 0 : pow( (Y_d-c_beta)/c_alpha, (1-c_gamma)/c_gamma) * ((g-c_beta)/c_alpha)"
+  expr2 "Y_d == 0 ? 0 : pow( (Y_d-c_beta)/c_alpha, (1-c_gamma)/c_gamma) * ((b-c_beta)/c_alpha)"
+  name ST2084_2_HLG_1000nits_f3_3
+  label "ACESlib.Utilities_Color.ctl : 469\n// HLG Inverse EOTF (i.e. HLG inverse OOTF followed by the HLG OETF)\n// HLG Inverse OOTF (display linear to scene linear)"
+  xpos 950
+  ypos 2732
+  addUserKnob {20 Constants_tab l Constants}
+  addUserKnob {7 L_w +DISABLED}
+  L_w 1000
+  addUserKnob {7 L_b +DISABLED}
+  addUserKnob {7 c_alpha +DISABLED}
+  c_alpha {{L_w-L_b}}
+  addUserKnob {7 c_beta +DISABLED}
+  c_beta {{L_b}}
+  addUserKnob {7 c_gamma +DISABLED}
+  c_gamma 1.2
+ }
+ Expression {
+  channel0 {rgba.red -rgba.green -rgba.blue none}
+  expr0 "r <= 1.0/12 ? sqrt(3.0*r) : c_a * log(12.0 * r - c_b) + c_c"
+  expr1 "g <= 1.0/12 ? sqrt(3.0*g) : c_a * log(12.0 * g- c_b) + c_c"
+  expr2 "b <= 1.0/12 ? sqrt(3.0*b) : c_a * log(12.0 * b - c_b) + c_c"
+  name ST2084_2_HLG_1000nits_f3_
+  label "ACESlib.Utilities_Color.ctl : 493\n// HLG OETF (scene linear to non-linear signal value)"
+  xpos 950
+  ypos 2834
+  addUserKnob {20 Constants_tab l Constants}
+  addUserKnob {7 c_a +DISABLED}
+  c_a 0.17883277
+  addUserKnob {7 c_b t 1.-4.*a +DISABLED}
+  c_b 0.28466892
+  addUserKnob {7 c_c t 0.5-a*log(4.*a) +DISABLED}
+  c_c 0.55991073
+ }
+ Dot {
+  name Dot17
+  label " HLG"
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos 984
+  ypos 2970
+ }
+push $Ne41f6000
+ Dot {
+  name Dot27
+  label " PQ"
+  note_font "Helvetica Bold"
+  note_font_size 24
+  note_font_color 0xa5a5a501
+  xpos 654
+  ypos 2970
+ }
+push $Ne41f1e00
+ Expression {
+  expr0 "pow( (48./52.37) * r, 1./2.6)"
+  expr1 "pow( (48./52.37) * g, 1./2.6)"
+  expr2 "pow( (48./52.37) * b, 1./2.6)"
+  expr3 1
+  name dcdm_encode
+  xpos 180
+  ypos 2702
+ }
+push $Ne41f1a00
+ Expression {
+  expr0 pow(r,1/gamma)
+  expr1 pow(g,1/gamma)
+  expr2 pow(b,1/gamma)
+  name pow_f3_gamma_26_
+  label "ACESlib.Utilities_Color.ctl : 260\n// Gamma 2.6"
+  xpos -40
+  ypos 2690
+  addUserKnob {20 Gamma_tab l Gamma}
+  addUserKnob {7 gamma R 0 4}
+  gamma 2.6
+ }
+push $Ne41f1600
+ Expression {
+  expr0 pow(r,1/gamma)
+  expr1 pow(g,1/gamma)
+  expr2 pow(b,1/gamma)
+  name pow_f3_gamma_24_
+  label "ACESlib.Utilities_Color.ctl : 260\n// Gamma 2.4"
+  xpos -260
+  ypos 2690
+  addUserKnob {20 Gamma_tab l Gamma}
+  addUserKnob {7 gamma R 0 4}
+  gamma 2.4
+ }
+push $Ne41f1200
+ Expression {
+  expr0 pow(r,1/gamma)
+  expr1 pow(g,1/gamma)
+  expr2 pow(b,1/gamma)
+  name pow_f3_gamma_22_
+  label "ACESlib.Utilities_Color.ctl : 260\n// Gamma 2.2"
+  xpos -480
+  ypos 2690
+  addUserKnob {20 Gamma_tab l Gamma}
+  addUserKnob {7 gamma R 0 4}
+  gamma 2.2
+ }
+push $Ne41f0e00
+ Expression {
+  temp_name0 c_a
+  temp_expr0 "pow( pow( Lw, 1./gamma) - pow( Lb, 1./gamma), gamma)"
+  temp_name1 c_b
+  temp_expr1 "pow( Lb, 1./gamma) / ( pow( Lw, 1./gamma) - pow( Lb, 1./gamma))"
+  expr0 "pow( max( r / c_a, 0.), 1.0/gamma) - c_b"
+  expr1 "pow( max( g / c_a, 0.), 1.0/gamma) - c_b"
+  expr2 "pow( max( b / c_a, 0.), 1.0/gamma) - c_b"
+  name bt1886_r_f3
+  label "ACESlib.Utilities_Color.ctl : 301\n// The reference EOTF specified in Rec. ITU-R BT.1886\n// L = a(max\[(V+b),0])^g"
+  xpos -700
+  ypos 2684
+  addUserKnob {20 Luminance}
+  addUserKnob {7 Lw R 48 10000}
+  Lw 1
+  addUserKnob {7 Lb R 0.0001 0.02}
+  addUserKnob {7 gamma R 1 4}
+  gamma 2.4
+ }
+push $Ne41f0a00
+ Expression {
+  temp_name0 yb
+  temp_expr0 "pow( offs * gamma / ( ( gamma - 1.0) * ( 1.0 + offs)), gamma)"
+  temp_name1 rs
+  temp_expr1 "pow( ( gamma - 1.0) / offs, gamma - 1.0) * pow( ( 1.0 + offs) / gamma, gamma)"
+  expr0 "r >= yb ? ( 1.0 + offs) * pow( r, 1.0 / gamma) - offs : r * rs"
+  expr1 "g >= yb ? ( 1.0 + offs) * pow( g, 1.0 / gamma) - offs : g * rs"
+  expr2 "b >= yb ? ( 1.0 + offs) * pow( b, 1.0 / gamma) - offs : b * rs"
+  name moncurve_r_f3_
+  label "ACESlib.Utilities_Color.ctl : 260\nmoncurve_r with gamma of 2.4 and offset of 0.055 matches the EOTF found in IEC 61966-2-1:1999 (sRGB)"
+  xpos -920
+  ypos 2690
+  addUserKnob {20 Luminance}
+  addUserKnob {7 gamma R 0 4}
+  gamma 2.4
+  addUserKnob {7 offs}
+  offs 0.055
+ }
+ Switch {
+  inputs 10
+  which {{parent.eotf}}
+  name EOTF_Switch
+  xpos -1250
+  ypos 2966
+ }
+ Expression {
+  temp_name0 REFBLACK
+  temp_expr0 "64 / 1023"
+  temp_name1 REFWHITE
+  temp_expr1 "940 / 1023"
+  expr0 "r * ( REFWHITE - REFBLACK) + REFBLACK"
+  expr1 "g * ( REFWHITE - REFBLACK) + REFBLACK"
+  expr2 "b * ( REFWHITE - REFBLACK) + REFBLACK"
+  name fullRange_to_smpteRange_f3_
+  label "ACESlib.OutputTransforms.ctl : 216"
+  xpos -1250
+  ypos 3224
+  disable {{!parent.legal_range}}
+ }
+ Output {
+  name Output
+  xpos -1250
+  ypos 3446
+ }
+ StickyNote {
+  inputs 0
+  name StickyNote1
+  tile_color 0x535a61ff
+  label "\n<b>ACESlib.RRT_Common.ctl : 135</b>\n<pre>\nfloat\[3] rrt_sweeteners( float in\[3])\n\{\n    float aces\[3] = in;\n    \n    // --- Glow module --- //\n    float saturation = rgb_2_saturation( aces);\n    float ycIn = rgb_2_yc( aces);\n    float s = sigmoid_shaper( (saturation - 0.4) / 0.2);\n    float addedGlow = 1. + glow_fwd( ycIn, RRT_GLOW_GAIN * s, RRT_GLOW_MID);\n\n    aces = mult_f_f3( addedGlow, aces);\n\n    // --- Red modifier --- //\n    float hue = rgb_2_hue( aces);\n    float centeredHue = center_hue( hue, RRT_RED_HUE);\n    float hueWeight = cubic_basis_shaper( centeredHue, RRT_RED_WIDTH);\n\n    aces\[0] = aces\[0] + hueWeight * saturation * (RRT_RED_PIVOT - aces\[0]) * (1. - RRT_RED_SCALE);\n\n    // --- ACES to RGB rendering space --- //\n    aces = clamp_f3( aces, 0., HALF_POS_INF);\n    float rgbPre\[3] = mult_f3_f44( aces, AP0_2_AP1_MAT);\n    rgbPre = clamp_f3( rgbPre, 0., HALF_MAX);\n    \n    // --- Global desaturation --- //\n    rgbPre = mult_f3_f33( rgbPre, RRT_SAT_MAT);\n    return rgbPre;\n\}\n\n\n\n"
+  note_font_size 10
+  xpos -825
+  ypos -1204
+ }
+ StickyNote {
+  inputs 0
+  name StickyNote3
+  tile_color 0x535a61ff
+  label "\n\n<b>ACESlib.Tonescales.ctl : 271</b><pre>float segmented_spline_c9_fwd\n  ( \n    varying float x,\n    varying SegmentedSplineParams_c9 C = ODT_48nits\n  )\n\{    \n  const int N_KNOTS_LOW = 8;\n  const int N_KNOTS_HIGH = 8;\n\n  // Check for negatives or zero before taking the log. If negative or zero,\n  // set to HALF_MIN.\n  float logx = log10( max(x, HALF_MIN )); \n\n  float logy;\n\n  if ( logx <= log10(C.minPoint.x) ) \{ \n\n    logy = logx * C.slopeLow + ( log10(C.minPoint.y) - C.slopeLow * log10(C.minPoint.x) );\n\n  \} else if (( logx > log10(C.minPoint.x) ) && ( logx < log10(C.midPoint.x) )) \{\n\n    float knot_coord = (N_KNOTS_LOW-1) * (logx-log10(C.minPoint.x))/(log10(C.midPoint.x)-log10(C.minPoint.x));\n    int j = knot_coord;\n    float t = knot_coord - j;\n\n    float cf\[ 3] = \{ C.coefsLow\[ j], C.coefsLow\[ j + 1], C.coefsLow\[ j + 2]\};\n    \n    float monomials\[ 3] = \{ t * t, t, 1. \};\n    logy = dot_f3_f3( monomials, mult_f3_f33( cf, M));\n\n  \} else if (( logx >= log10(C.midPoint.x) ) && ( logx < log10(C.maxPoint.x) )) \{\n\n    float knot_coord = (N_KNOTS_HIGH-1) * (logx-log10(C.midPoint.x))/(log10(C.maxPoint.x)-log10(C.midPoint.x));\n    int j = knot_coord;\n    float t = knot_coord - j;\n\n    float cf\[ 3] = \{ C.coefsHigh\[ j], C.coefsHigh\[ j + 1], C.coefsHigh\[ j + 2]\}; \n\n    float monomials\[ 3] = \{ t * t, t, 1. \};\n    logy = dot_f3_f3( monomials, mult_f3_f33( cf, M));\n\n  \} else \{ //if ( logIn >= log10(C.maxPoint.x) ) \{ \n\n    logy = logx * C.slopeHigh + ( log10(C.maxPoint.y) - C.slopeHigh * log10(C.maxPoint.x) );\n\n  \}\n\n  return pow10(logy);\n  \n\}"
+  note_font_size 10
+  xpos -200
+  ypos -660
+ }
+ StickyNote {
+  inputs 0
+  name StickyNote2
+  tile_color 0x535a61ff
+  label "\n\n<b>ACESlib.SSTS.ctl : 163</b><pre>float ssts\n( \n    varying float x,\n    varying TsParams C\n)\n\{\n    const int N_KNOTS_LOW = 4;\n    const int N_KNOTS_HIGH = 4;\n\n    // Check for negatives or zero before taking the log. If negative or zero,\n    // set to HALF_MIN.\n    float logx = log10( max(x, HALF_MIN )); \n\n    float logy;\n\n    if ( logx <= log10(C.Min.x) ) \{ \n\n        logy = logx * C.Min.slope + ( log10(C.Min.y) - C.Min.slope * log10(C.Min.x) );\n\n    \} else if (( logx > log10(C.Min.x) ) && ( logx < log10(C.Mid.x) )) \{\n\n        float knot_coord = (N_KNOTS_LOW-1) * (logx-log10(C.Min.x))/(log10(C.Mid.x)-log10(C.Min.x));\n        int j = knot_coord;\n        float t = knot_coord - j;\n\n        float cf\[ 3] = \{ C.coefsLow\[ j], C.coefsLow\[ j + 1], C.coefsLow\[ j + 2]\};\n\n        float monomials\[ 3] = \{ t * t, t, 1. \};\n        logy = dot_f3_f3( monomials, mult_f3_f33( cf, M1));\n\n    \} else if (( logx >= log10(C.Mid.x) ) && ( logx < log10(C.Max.x) )) \{\n\n        float knot_coord = (N_KNOTS_HIGH-1) * (logx-log10(C.Mid.x))/(log10(C.Max.x)-log10(C.Mid.x));\n        int j = knot_coord;\n        float t = knot_coord - j;\n\n        float cf\[ 3] = \{ C.coefsHigh\[ j], C.coefsHigh\[ j + 1], C.coefsHigh\[ j + 2]\}; \n\n        float monomials\[ 3] = \{ t * t, t, 1. \};\n        logy = dot_f3_f3( monomials, mult_f3_f33( cf, M1));\n\n    \} else \{ //if ( logIn >= log10(C.Max.x) ) \{ \n\n        logy = logx * C.Max.slope + ( log10(C.Max.y) - C.Max.slope * log10(C.Max.x) );\n\n    \}\n\n    return pow10(logy);\n\n\}"
+  note_font_size 10
+  xpos -830
+  ypos -664
+ }
+end_group
+Dot {
+ name Dot1
+ xpos 6
+ ypos -96
+}
+set Ne4200a00 [stack 0]
+Gamma {
+ value 1.12
+ name Gamma1
+ xpos -272
+ ypos -103
+}
+Expression {
+ expr0 "y==floor(r(x, pos.y)*height*mult)?1:0"
+ expr1 "y==floor(g(x, pos.y)*height*mult)?1:0"
+ expr2 "y==floor(b(x, pos.y)*height*mult)?1:0"
+ channel3 alpha
+ name PlotScanline1
+ xpos -272
+ ypos 103
+ disable true
+ addUserKnob {20 User}
+ addUserKnob {12 pos}
+ addUserKnob {7 mult R 0 5}
+ mult 1
+}
+set Ne4201800 [stack 0]
+push $Ne4201800
+push $Ne4200a00
+Colorspace {
+ colorspace_out CIE-XYZ
+ name Rec709_to_XYZ
+ xpos -28
+ ypos -65
+}
+BlinkScript {
+ kernelSourceFile "\[file dirname \[value root.name]]/XYZ_JMh.blink"
+ recompileCount 147
+ ProgramGroup 1
+ KernelDescription "2 \"XYZ_JMh\" iterate pixelWise 5bf56d6a98d42634448d8e70295e5c86f43d4b0768dc5e5bf0c5fe49a4f3e529 2 \"src\" Read Point \"dst\" Write Point 12 \"invert\" Bool 1 AA== \"compressMode\" Bool 1 AA== \"linear_extension\" Bool 1 AA== \"XYZ_w_scaler\" Float 1 AAAAAA== \"L_A\" Float 1 AAAAAA== \"L_B\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"inWhite\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"surround\" Int 1 AAAAAA== \"surround_custom\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"Y_b\" Float 1 AAAAAA== \"discountIlluminant\" Bool 1 AA== \"HK_mode\" Bool 1 AA== 12 \"invert\" 1 1 \"compressMode\" 1 1 \"linear_extension\" 1 1 \"XYZ_w_scaler\" 1 1 \"L_A\" 1 1 \"L_B\" 3 1 \"inWhite\" 3 1 \"surround\" 1 1 \"surround_custom\" 3 1 \"Y_b\" 1 1 \"discountIlluminant\" 1 1 \"HK_mode\" 1 1 2 \"CAT_CAT16\" Float 9 1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \"panlrcm\" Float 9 1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+ kernelSource "kernel XYZ_JMh : ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image\n  Image<eWrite> dst; // the output image\n\n  param:\n    bool invert;\n    bool compressMode;\n    bool linear_extension;\n    float XYZ_w_scaler;\n    float L_A;\n    float3 L_B;\n    float3 inWhite;\n    int surround;\n    float3 surround_custom;\n    float Y_b;\n    bool discountIlluminant;\n    bool HK_mode;\n\n  local:\n    float3x3 CAT_CAT16;\n    float3x3 panlrcm;\n\n  void define() \{\n\n  \}\n\n  // multiplies a 3D vector with a 3x3 matrix\n  float3 vector_dot( float3x3 m, float3 v)\n  \{\n    float3 r = 1.0f;\n    for(int c = 0; c<3; c++)\n    \{\n      r\[c] = m\[c]\[0]*v.x + m\[c]\[1]*v.y + m\[c]\[2]*v.z;\n    \}\n\n    return r;\n  \}\n\n  float degree_of_adaptation(float  F, float L_A )\n    \{\n    float D = F * (1.0f - (1.0f / 3.6f) * exp((-L_A - 42.0f) / 92.0f));\n\n    return D;\n    \}\n\n  float clip(float x, float a, float b)\n  \{\n    return max(a, min(x, b));\n  \}\n\n  // \"safe\" power function to avoid NANs or INFs when taking a fractional power of a negative base\n  // this one initially returned -pow(abs(b), e) for negative b\n  // but this ended up producing undesirable results in some cases\n  // so now it just returns 0.0 instead\n  float spow( float base, float exponent )\n  \{\n    float a = base;\n    float b = exponent;\n\n    if(base < 0.0f && exponent != floor(exponent) )\n    \{\n      return 0.0f;\n    \}\n    else\n    \{\n     return pow(base, exponent); \n    \}\n  \}\n\n    // \"safe\" div\n    float sdiv( float a, float b )\n    \{\n        if(b == 0.0f)\n        \{\n        return 0.0f;\n        \}\n        else\n        \{\n        return a / b;\n        \}\n    \}\n\n  float3 float3abs( float3 a )\n  \{\n    return fabs(a);\n  \}\n\n  float3 float3spow( float3 base, float exponent )\n  \{\n      return float3(spow(base.x, exponent), spow(base.y, exponent), spow(base.z, exponent));\n  \}\n\n  float3 float3sign( float3 v )\n  \{\n      return float3(sign(v.x), sign(v.y), sign(v.z));\n  \}\n\n  float3 compress(float3 xyz)\n  \{\n    \n    float x = xyz.x;\n    float y = xyz.y;\n    float z = xyz.z;\n    \n    float C = (x+y+z)/3;\n    if (C == 0.0f)\n      return float3(x,y,z);\n\n    float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2)) ;\n    // np.sqrt(2/3)\n    // 0.816496580927726\n    R = R * 0.816496580927726f;\n    \n    if (R != 0.0f)\n    \{\n      x = (x-C)/R ;\n      y = (y-C)/R ;\n      z = (z-C)/R ;\n    \}\n      \n    float r = R/C ;\n    float s = -min(x, min(y, z));\n    \n    float t = 0.0f;\n    if (r != 0.0f)\n    \{\n      t = (0.5f+spow((spow((s-0.5f),2) + spow((sqrt(4.0f/spow(r,2)+1.0f)-1.0f),2)/4.0f),0.5f));\n      if (t == 0.0f)\n        return float3(xyz.x,xyz.y,xyz.z);\n      t = 1.0f/t;\n    \}\n    \n    x = C*x*t + C ;\n    y = C*y*t + C ;\n    z = C*z*t + C ;\n    \n    return float3(x,y,z);\n  \}\n\nfloat3 uncompress(float3 xyz)\n\{\n\n  \n  float x = xyz.x;\n  float y = xyz.y;\n  float z = xyz.z;\n  \n  float C = (x+y+z)*(1.0f/3.0f) ;\n  if (C == 0.0f)\n    return float3(x,y,z);\n\n  float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2));\n  // np.sqrt(2/3)\n  // 0.816496580927726\n  R = R * 0.816496580927726f;\n  \n  if (R != 0.0f)\n  \{\n    x = (x-C)/R ;\n    y = (y-C)/R ;\n    z = (z-C)/R ;\n  \}\n\n  float t = R/C ;\n  float s = -min(x, min(y, z));\n  \n  float r = 0.0f;\n  if (t != 0.0f)\n  \{\n    r = sqrt(spow((2*sqrt(spow((1.0f/t-0.5f),2)-spow((s-0.5f),2))+1.0f),2)-1.0f);\n    if (r == 0.0f)\n      return float3(xyz.x,xyz.y,xyz.z);\n    r = 2.0f/r;\n  \}\n  \n  x = C*x*r + C ;\n  y = C*y*r + C ;\n  z = C*z*r + C ;\n  \n  return float3(x,y,z);\n\}\n\n  float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)\n  \{\n      float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);\n      float3 RGB_c = (400.0f * sign(RGB) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;\n  \n      return RGB_c;\n  \}\n\n  float3 d_post_adaptation_non_linear_response_compression_forward( float3 RGB, float F_L)\n  \{\n      float3 F_L_RGB = float3spow(F_L * RGB / 100.0f, 0.42f);\n      float F_L_100 = spow(F_L / 100.0f, 0.42f);\n  \n      float3 d_RGB_a = ( 400.0f * ((0.42f * 27.13f) * float3spow(RGB, -0.58f) * F_L_100)/ ( (F_L_RGB + 27.13f) *  (F_L_RGB + 27.13f) ));\n\n\n      return d_RGB_a;\n  \}\n\n  float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB,float F_L)\n  \{\n\n      float3 RGB_p =  (float3sign(RGB - 0.1f) * 100.0f / F_L * float3spow((27.13f * float3abs(RGB - 0.1f)) / (400.0f - float3abs(RGB - 0.1f)), 1.0f / 0.42f) );\n      return RGB_p;\n  \}\n\n  // convert radians to degrees\n  float degrees( float radians )\n  \{\n    return radians * 180.0f / PI;\n  \}\n\n\n  // convert degrees to radians\n  float radians( float degrees )\n  \{\n    return degrees / 180.0f * PI;\n  \}\n\n  float mod(float a, float N)\n  \{\n    return a - N*floor(a/N);\n  \} \n\n  float hue_angle_dependency_Hellwig2022(float h)\n  \{\n    return float(         \\\n     -0.160f * cos(h)      \\\n    + 0.132f * cos(2.0f * h)  \\\n    - 0.405f * sin(h)      \\\n    + 0.080f * sin(2.0f * h)  \\ \n    + 0.792f               \\\n    );\n\n    // return float( -0.160f * cos(h) + 0.132f * cos(2.0f * h)  - 0.405f * sin(h)  + 0.080f * sin(2.0f * h) + 0.792f );\n    \}\n\n\n  float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)\n    \{\n        XYZ_w  = XYZ_w  * XYZ_w_scaler;\n        float _X_w = XYZ_w.x ;\n        float Y_w = XYZ_w.y ;\n        float _Z_w = XYZ_w.z ;\n\n        // # Step 0\n        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.\n        float3x3 MATRIX_16 = CAT_CAT16;\n        float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);\n\n        // # Computing degree of adaptation :math:`D`.\n        float D = clip(degree_of_adaptation(surround.x, L_A), 0.0f, 1.0f);\n        if(discountIlluminant)\n        \{\n            D = 1.0f;\n        \}\n\n\n        // # Viewing conditions dependent parameters\n        float k = 1.0f / (5.0f * L_A + 1.0f);\n        float k4 = pow(k,4);\n        float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;\n        float n = sdiv(Y_b, Y_w);\n        float z = 1.48f + sqrt(n);\n\n        float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;\n        float3 RGB_wc = D_RGB * RGB_w;\n        \n        // # Applying forward post-adaptation non-linear response compression.\n        float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);\n\n        // # Computing achromatic responses for the whitepoint.\n        float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;\n        \n\n        // # Computing achromatic responses for the whitepoint.\n        float R_aw = RGB_aw.x ;\n        float G_aw = RGB_aw.y ;\n        float B_aw = RGB_aw.z ;\n        float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;\n\n        // # Step 1\n        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.\n\n        float3 RGB = vector_dot(MATRIX_16, XYZ);\n        // float3 RGB = XYZ;\n\n        // # Step 2\n        float3 RGB_c = D_RGB * RGB;\n\n        // # Step 3\n        // # Applying forward post-adaptation non-linear response compression.\n\n        if (compressMode)\n        \{\n          RGB_c = compress(RGB_c);\n        \}\n\n        float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);\n\n        if (compressMode)\n        \{\n          RGB_a = uncompress(RGB_a);\n        \}\n\n\n        // # Step 3\n        // # Applying forward post-adaptation non-linear response compression.\n        if (linear_extension)\n        \{\n\n          float3 RGB_a_l = d_post_adaptation_non_linear_response_compression_forward(\n            L_B, F_L\n            ) * (\n              RGB_c - L_B\n              ) + post_adaptation_non_linear_response_compression_forward(\n                L_B, F_L\n                );\n                \n                RGB_a.x = RGB_c.x < L_B.x ? RGB_a_l.x: RGB_a.x;\n                RGB_a.y = RGB_c.y < L_B.y ? RGB_a_l.y: RGB_a.y;\n                RGB_a.z = RGB_c.z < L_B.z ? RGB_a_l.z: RGB_a.z;       \n        \}\n\n        // # Step 4\n        // # Converting to preliminary cartesian coordinates.\n        float R_a = RGB_a.x ;\n        float G_a = RGB_a.y ;\n        float B_a = RGB_a.z ;\n        float a = R_a - 12.0f * G_a / 11.0f + B_a / 11.0f;\n        float b = (R_a + G_a - 2.0f * B_a) / 9.0f;\n\n        // # Computing the *hue* angle :math:`h`.\n        // Unclear why this isnt matching the python version.\n        float h = mod(degrees(atan2(b, a)), 360.0f);\n\n        \n\n        // # Step 5\n        // # Computing eccentricity factor *e_t*.\n        float hr = radians(h);\n\n        float _h = hr;\n        float _2_h = 2.0f * hr;\n        float _3_h = 3.0f * hr;\n        float _4_h = 4.0f * hr;\n\n        float e_t = (\n            -0.0582f * cos(_h)\n            - 0.0258f * cos(_2_h)\n            - 0.1347f * cos(_3_h)\n            + 0.0289f * cos(_4_h)\n            - 0.1475f * sin(_h)\n            - 0.0308f * sin(_2_h)\n            + 0.0385f * sin(_3_h)\n            + 0.0096f * sin(_4_h)\n            + 1.0f\n        );\n\n        // # Step 6\n        // # Computing achromatic responses for the stimulus.\n        float R_a2 = RGB_a.x ;\n        float G_a2 = RGB_a.y ;\n        float B_a2 = RGB_a.z ;\n        float A = 2.0f * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;\n\n        // # Step 7\n        // # Computing the correlate of *Lightness* :math:`J`.\n        // with sdiv_mode():\n\n        float J = 100.0f * spow(sdiv(A, A_w), surround.y * z);\n\n        // # Step 8\n        // # Computing the correlate of *brightness* :math:`Q`.\n        // with sdiv_mode():\n        float Q = (2.0f / float(surround.y)) * (J / 100.0f) * A_w;\n\n        // # Step 9\n        // # Computing the correlate of *colourfulness* :math:`M`.\n        float M = 43.0f * surround.z * e_t * sqrt(a * a + b * b);\n\n        // # Computing the correlate of *chroma* :math:`C`.\n        float C = 35.0f * sdiv(M, A_w);\n\n        float s = 100.0f * sdiv(M, Q);\n\n        // # *Helmholtz–Kohlrausch* Effect Extension.\n        float J_HK = J + hue_angle_dependency_Hellwig2022(hr) * spow(C, 0.587f);\n        float Q_HK = (2.0f / surround.y) * (J_HK / 100.0f) * A_w ;\n    \n        if (HK_mode)\n        \{\n          return \{J_HK,M,h\};\n        \}\n        else\n        \{\n          return \{J,M,h\};\n        \}\n    \}\n\n    float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)\n    \{\n        float J = JMh.x;\n        float M = JMh.y;\n        float h = JMh.z;\n        XYZ_w  = XYZ_w  * XYZ_w_scaler;\n\n        float _X_w = XYZ_w.x;\n        float Y_w = XYZ_w.y;\n        float _Z_w = XYZ_w.z;\n\n        // # Step 0\n        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.\n        float3x3 MATRIX_16 = CAT_CAT16;\n        float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);\n\n\n        // # Computing degree of adaptation :math:`D`.\n        float D = clip(degree_of_adaptation(surround.x, L_A), 0.0f, 1.0f);\n        if(discountIlluminant)\n        \{\n            D = 1.0f;\n        \}\n\n\n\n        // # Viewing conditions dependent parameters\n        float k = 1.0f / (5.0f * L_A + 1.0f);\n        float k4 = pow(k,4);\n        float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;\n        float n = sdiv(Y_b, Y_w);\n        float z = 1.48f + sqrt(n);\n\n        float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;\n        float3 RGB_wc = D_RGB * RGB_w;\n        \n        float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);\n\n        float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;\n\n        float R_aw = RGB_aw.x ;\n        float G_aw = RGB_aw.y ;\n        float B_aw = RGB_aw.z ;\n        float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;\n\n        float hr = radians(h);\n\n        float C = (M * 35.0f) / A_w;\n         \n        if (HK_mode)\n        \{\n          J = J - hue_angle_dependency_Hellwig2022(hr) * spow(C, 0.587f);\n        \}\n\n        float _h = hr;\n        float _2_h = 2.0f * hr;\n        float _3_h = 3.0f * hr;\n        float _4_h = 4.0f * hr;\n    \n        float e_t = (\n            -0.0582f * cos(_h)\n            - 0.0258f * cos(_2_h)\n            - 0.1347f * cos(_3_h)\n            + 0.0289f * cos(_4_h)\n            - 0.1475f * sin(_h)\n            - 0.0308f * sin(_2_h)\n            + 0.0385f * sin(_3_h)\n            + 0.0096f * sin(_4_h)\n            + 1.0f\n        );\n\n        float A = A_w * spow(J / 100.0f, 1.0f / (surround.y * z));\n\n\n        float P_p_1 = 43.0f * surround.z * e_t;\n        float P_p_2 = A;\n\n        float gamma = M / P_p_1;\n    \n        float a = gamma * cos(hr);\n\n        float b = gamma * sin(hr);\n\n        float3 RGB_a = vector_dot(panlrcm, float3(P_p_2, a, b)) / 1403.0f;\n\n        if (compressMode)\n        \{\n          RGB_a = compress(RGB_a);\n        \}\n\n        float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1f, F_L);\n\n        if (compressMode)\n        \{\n          RGB_c = uncompress(RGB_c);\n        \}\n\n        if (linear_extension)\n        \{\n          float3 RGB_c_l = ( RGB_a + 0.1f - post_adaptation_non_linear_response_compression_forward( L_B, F_L)) / (d_post_adaptation_non_linear_response_compression_forward( L_B, F_L)) + L_B;\n          \n          RGB_c.x = RGB_c.x < L_B.x ? RGB_c_l.x : RGB_c.x;\n          RGB_c.y = RGB_c.y < L_B.y ? RGB_c_l.y : RGB_c.y;\n          RGB_c.z = RGB_c.z < L_B.z ? RGB_c_l.z : RGB_c.z;\n        \}\n\n        float3 RGB = RGB_c / D_RGB;\n        \n        float3x3 MATRIX_INVERSE_16 = CAT_CAT16.invert();\n        float3 XYZ = vector_dot(MATRIX_INVERSE_16, RGB);\n\n\n        // return XYZ;\n        return XYZ;\n\n    \}\n\n\n  // The init() function is run before any calls to process().\n  // Local variables can be initialized here.\n  void init() \{\n    float CAT_CAT16_data\[9]=\n    \{\n      0.401288f, 0.650173f, -0.051461f,\n      -0.250268f, 1.204414f, 0.045854f,\n      -0.002079f, 0.048952f, 0.953127f,\n    \};\n    CAT_CAT16.setArray(CAT_CAT16_data);\n    \n    float panlrcm_data\[]=\n    \{\n        460.0f, 451.0f, 288.0f,\n        460.0f, -891.0f, -261.0f,\n        460.0f, -220.0f, -6300.0f,\n    \};\n    panlrcm.setArray(panlrcm_data);\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n\n    // Isolate the RGB components\n    float3 srcPixel(input.x, input.y, input.z);\n\n    float3 out = srcPixel;\n    float3 surrounds = surround_custom;\n    if (surround == 0)\n    \{\n       surrounds = float3(0.8f, 0.525f, 0.8f);\n    \}\n    else if (surround == 1)\n    \{\n       surrounds = float3(0.9f, 0.59f, 0.9f);\n    \}\n    else if (surround == 2)\n    \{\n       surrounds = float3(1.0f, 0.69f, 1.0f);\n    \}\n    \n    if (invert)\n    \{\n      out = Hellwig2022_JMh_to_XYZ(srcPixel, inWhite, L_A, Y_b, surrounds, discountIlluminant, HK_mode);\n    \}\n    else\n    \{\n      out = XYZ_to_Hellwig2022_JMh(srcPixel, inWhite, L_A, Y_b, surrounds, discountIlluminant, HK_mode);\n    \}\n\n    // Write the result to the output image\n    dst() = float4(out.x, out.y, out.z, input.w);\n  \}\n\};\n"
+ rebuild ""
+ XYZ_JMh_compressMode true
+ XYZ_JMh_XYZ_w_scaler 1
+ XYZ_JMh_L_A 100
+ XYZ_JMh_inWhite {95.05 100 108.88}
+ XYZ_JMh_surround -1
+ XYZ_JMh_surround_custom {0.8 0.57 0.9}
+ XYZ_JMh_Y_b 20
+ XYZ_JMh_discountIlluminant true
+ rebuild_finalise ""
+ name XYZ_to_JMh
+ xpos -28
+ ypos -41
+}
+BlinkScript {
+ kernelSourceFile "\[file dirname \[value root.name]]/XYZ_JMh.blink"
+ recompileCount 145
+ ProgramGroup 1
+ KernelDescription "2 \"XYZ_JMh\" iterate pixelWise 5bf56d6a98d42634448d8e70295e5c86f43d4b0768dc5e5bf0c5fe49a4f3e529 2 \"src\" Read Point \"dst\" Write Point 12 \"invert\" Bool 1 AA== \"compressMode\" Bool 1 AA== \"linear_extension\" Bool 1 AA== \"XYZ_w_scaler\" Float 1 AAAAAA== \"L_A\" Float 1 AAAAAA== \"L_B\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"inWhite\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"surround\" Int 1 AAAAAA== \"surround_custom\" Float 3 AAAAAAAAAAAAAAAAAAAAAA== \"Y_b\" Float 1 AAAAAA== \"discountIlluminant\" Bool 1 AA== \"HK_mode\" Bool 1 AA== 12 \"invert\" 1 1 \"compressMode\" 1 1 \"linear_extension\" 1 1 \"XYZ_w_scaler\" 1 1 \"L_A\" 1 1 \"L_B\" 3 1 \"inWhite\" 3 1 \"surround\" 1 1 \"surround_custom\" 3 1 \"Y_b\" 1 1 \"discountIlluminant\" 1 1 \"HK_mode\" 1 1 2 \"CAT_CAT16\" Float 9 1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \"panlrcm\" Float 9 1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+ kernelSource "kernel XYZ_JMh : ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image\n  Image<eWrite> dst; // the output image\n\n  param:\n    bool invert;\n    bool compressMode;\n    bool linear_extension;\n    float XYZ_w_scaler;\n    float L_A;\n    float3 L_B;\n    float3 inWhite;\n    int surround;\n    float3 surround_custom;\n    float Y_b;\n    bool discountIlluminant;\n    bool HK_mode;\n\n  local:\n    float3x3 CAT_CAT16;\n    float3x3 panlrcm;\n\n  void define() \{\n\n  \}\n\n  // multiplies a 3D vector with a 3x3 matrix\n  float3 vector_dot( float3x3 m, float3 v)\n  \{\n    float3 r = 1.0f;\n    for(int c = 0; c<3; c++)\n    \{\n      r\[c] = m\[c]\[0]*v.x + m\[c]\[1]*v.y + m\[c]\[2]*v.z;\n    \}\n\n    return r;\n  \}\n\n  float degree_of_adaptation(float  F, float L_A )\n    \{\n    float D = F * (1.0f - (1.0f / 3.6f) * exp((-L_A - 42.0f) / 92.0f));\n\n    return D;\n    \}\n\n  float clip(float x, float a, float b)\n  \{\n    return max(a, min(x, b));\n  \}\n\n  // \"safe\" power function to avoid NANs or INFs when taking a fractional power of a negative base\n  // this one initially returned -pow(abs(b), e) for negative b\n  // but this ended up producing undesirable results in some cases\n  // so now it just returns 0.0 instead\n  float spow( float base, float exponent )\n  \{\n    float a = base;\n    float b = exponent;\n\n    if(base < 0.0f && exponent != floor(exponent) )\n    \{\n      return 0.0f;\n    \}\n    else\n    \{\n     return pow(base, exponent); \n    \}\n  \}\n\n    // \"safe\" div\n    float sdiv( float a, float b )\n    \{\n        if(b == 0.0f)\n        \{\n        return 0.0f;\n        \}\n        else\n        \{\n        return a / b;\n        \}\n    \}\n\n  float3 float3abs( float3 a )\n  \{\n    return fabs(a);\n  \}\n\n  float3 float3spow( float3 base, float exponent )\n  \{\n      return float3(spow(base.x, exponent), spow(base.y, exponent), spow(base.z, exponent));\n  \}\n\n  float3 float3sign( float3 v )\n  \{\n      return float3(sign(v.x), sign(v.y), sign(v.z));\n  \}\n\n  float3 compress(float3 xyz)\n  \{\n    \n    float x = xyz.x;\n    float y = xyz.y;\n    float z = xyz.z;\n    \n    float C = (x+y+z)/3;\n    if (C == 0.0f)\n      return float3(x,y,z);\n\n    float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2)) ;\n    // np.sqrt(2/3)\n    // 0.816496580927726\n    R = R * 0.816496580927726f;\n    \n    if (R != 0.0f)\n    \{\n      x = (x-C)/R ;\n      y = (y-C)/R ;\n      z = (z-C)/R ;\n    \}\n      \n    float r = R/C ;\n    float s = -min(x, min(y, z));\n    \n    float t = 0.0f;\n    if (r != 0.0f)\n    \{\n      t = (0.5f+spow((spow((s-0.5f),2) + spow((sqrt(4.0f/spow(r,2)+1.0f)-1.0f),2)/4.0f),0.5f));\n      if (t == 0.0f)\n        return float3(xyz.x,xyz.y,xyz.z);\n      t = 1.0f/t;\n    \}\n    \n    x = C*x*t + C ;\n    y = C*y*t + C ;\n    z = C*z*t + C ;\n    \n    return float3(x,y,z);\n  \}\n\nfloat3 uncompress(float3 xyz)\n\{\n\n  \n  float x = xyz.x;\n  float y = xyz.y;\n  float z = xyz.z;\n  \n  float C = (x+y+z)*(1.0f/3.0f) ;\n  if (C == 0.0f)\n    return float3(x,y,z);\n\n  float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2));\n  // np.sqrt(2/3)\n  // 0.816496580927726\n  R = R * 0.816496580927726f;\n  \n  if (R != 0.0f)\n  \{\n    x = (x-C)/R ;\n    y = (y-C)/R ;\n    z = (z-C)/R ;\n  \}\n\n  float t = R/C ;\n  float s = -min(x, min(y, z));\n  \n  float r = 0.0f;\n  if (t != 0.0f)\n  \{\n    r = sqrt(spow((2*sqrt(spow((1.0f/t-0.5f),2)-spow((s-0.5f),2))+1.0f),2)-1.0f);\n    if (r == 0.0f)\n      return float3(xyz.x,xyz.y,xyz.z);\n    r = 2.0f/r;\n  \}\n  \n  x = C*x*r + C ;\n  y = C*y*r + C ;\n  z = C*z*r + C ;\n  \n  return float3(x,y,z);\n\}\n\n  float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)\n  \{\n      float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);\n      float3 RGB_c = (400.0f * sign(RGB) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;\n  \n      return RGB_c;\n  \}\n\n  float3 d_post_adaptation_non_linear_response_compression_forward( float3 RGB, float F_L)\n  \{\n      float3 F_L_RGB = float3spow(F_L * RGB / 100.0f, 0.42f);\n      float F_L_100 = spow(F_L / 100.0f, 0.42f);\n  \n      float3 d_RGB_a = ( 400.0f * ((0.42f * 27.13f) * float3spow(RGB, -0.58f) * F_L_100)/ ( (F_L_RGB + 27.13f) *  (F_L_RGB + 27.13f) ));\n\n\n      return d_RGB_a;\n  \}\n\n  float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB,float F_L)\n  \{\n\n      float3 RGB_p =  (float3sign(RGB - 0.1f) * 100.0f / F_L * float3spow((27.13f * float3abs(RGB - 0.1f)) / (400.0f - float3abs(RGB - 0.1f)), 1.0f / 0.42f) );\n      return RGB_p;\n  \}\n\n  // convert radians to degrees\n  float degrees( float radians )\n  \{\n    return radians * 180.0f / PI;\n  \}\n\n\n  // convert degrees to radians\n  float radians( float degrees )\n  \{\n    return degrees / 180.0f * PI;\n  \}\n\n  float mod(float a, float N)\n  \{\n    return a - N*floor(a/N);\n  \} \n\n  float hue_angle_dependency_Hellwig2022(float h)\n  \{\n    return float(         \\\n     -0.160f * cos(h)      \\\n    + 0.132f * cos(2.0f * h)  \\\n    - 0.405f * sin(h)      \\\n    + 0.080f * sin(2.0f * h)  \\ \n    + 0.792f               \\\n    );\n\n    // return float( -0.160f * cos(h) + 0.132f * cos(2.0f * h)  - 0.405f * sin(h)  + 0.080f * sin(2.0f * h) + 0.792f );\n    \}\n\n\n  float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)\n    \{\n        XYZ_w  = XYZ_w  * XYZ_w_scaler;\n        float _X_w = XYZ_w.x ;\n        float Y_w = XYZ_w.y ;\n        float _Z_w = XYZ_w.z ;\n\n        // # Step 0\n        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.\n        float3x3 MATRIX_16 = CAT_CAT16;\n        float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);\n\n        // # Computing degree of adaptation :math:`D`.\n        float D = clip(degree_of_adaptation(surround.x, L_A), 0.0f, 1.0f);\n        if(discountIlluminant)\n        \{\n            D = 1.0f;\n        \}\n\n\n        // # Viewing conditions dependent parameters\n        float k = 1.0f / (5.0f * L_A + 1.0f);\n        float k4 = pow(k,4);\n        float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;\n        float n = sdiv(Y_b, Y_w);\n        float z = 1.48f + sqrt(n);\n\n        float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;\n        float3 RGB_wc = D_RGB * RGB_w;\n        \n        // # Applying forward post-adaptation non-linear response compression.\n        float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);\n\n        // # Computing achromatic responses for the whitepoint.\n        float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;\n        \n\n        // # Computing achromatic responses for the whitepoint.\n        float R_aw = RGB_aw.x ;\n        float G_aw = RGB_aw.y ;\n        float B_aw = RGB_aw.z ;\n        float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;\n\n        // # Step 1\n        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.\n\n        float3 RGB = vector_dot(MATRIX_16, XYZ);\n        // float3 RGB = XYZ;\n\n        // # Step 2\n        float3 RGB_c = D_RGB * RGB;\n\n        // # Step 3\n        // # Applying forward post-adaptation non-linear response compression.\n\n        if (compressMode)\n        \{\n          RGB_c = compress(RGB_c);\n        \}\n\n        float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);\n\n        if (compressMode)\n        \{\n          RGB_a = uncompress(RGB_a);\n        \}\n\n\n        // # Step 3\n        // # Applying forward post-adaptation non-linear response compression.\n        if (linear_extension)\n        \{\n\n          float3 RGB_a_l = d_post_adaptation_non_linear_response_compression_forward(\n            L_B, F_L\n            ) * (\n              RGB_c - L_B\n              ) + post_adaptation_non_linear_response_compression_forward(\n                L_B, F_L\n                );\n                \n                RGB_a.x = RGB_c.x < L_B.x ? RGB_a_l.x: RGB_a.x;\n                RGB_a.y = RGB_c.y < L_B.y ? RGB_a_l.y: RGB_a.y;\n                RGB_a.z = RGB_c.z < L_B.z ? RGB_a_l.z: RGB_a.z;       \n        \}\n\n        // # Step 4\n        // # Converting to preliminary cartesian coordinates.\n        float R_a = RGB_a.x ;\n        float G_a = RGB_a.y ;\n        float B_a = RGB_a.z ;\n        float a = R_a - 12.0f * G_a / 11.0f + B_a / 11.0f;\n        float b = (R_a + G_a - 2.0f * B_a) / 9.0f;\n\n        // # Computing the *hue* angle :math:`h`.\n        // Unclear why this isnt matching the python version.\n        float h = mod(degrees(atan2(b, a)), 360.0f);\n\n        \n\n        // # Step 5\n        // # Computing eccentricity factor *e_t*.\n        float hr = radians(h);\n\n        float _h = hr;\n        float _2_h = 2.0f * hr;\n        float _3_h = 3.0f * hr;\n        float _4_h = 4.0f * hr;\n\n        float e_t = (\n            -0.0582f * cos(_h)\n            - 0.0258f * cos(_2_h)\n            - 0.1347f * cos(_3_h)\n            + 0.0289f * cos(_4_h)\n            - 0.1475f * sin(_h)\n            - 0.0308f * sin(_2_h)\n            + 0.0385f * sin(_3_h)\n            + 0.0096f * sin(_4_h)\n            + 1.0f\n        );\n\n        // # Step 6\n        // # Computing achromatic responses for the stimulus.\n        float R_a2 = RGB_a.x ;\n        float G_a2 = RGB_a.y ;\n        float B_a2 = RGB_a.z ;\n        float A = 2.0f * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;\n\n        // # Step 7\n        // # Computing the correlate of *Lightness* :math:`J`.\n        // with sdiv_mode():\n\n        float J = 100.0f * spow(sdiv(A, A_w), surround.y * z);\n\n        // # Step 8\n        // # Computing the correlate of *brightness* :math:`Q`.\n        // with sdiv_mode():\n        float Q = (2.0f / float(surround.y)) * (J / 100.0f) * A_w;\n\n        // # Step 9\n        // # Computing the correlate of *colourfulness* :math:`M`.\n        float M = 43.0f * surround.z * e_t * sqrt(a * a + b * b);\n\n        // # Computing the correlate of *chroma* :math:`C`.\n        float C = 35.0f * sdiv(M, A_w);\n\n        float s = 100.0f * sdiv(M, Q);\n\n        // # *Helmholtz–Kohlrausch* Effect Extension.\n        float J_HK = J + hue_angle_dependency_Hellwig2022(hr) * spow(C, 0.587f);\n        float Q_HK = (2.0f / surround.y) * (J_HK / 100.0f) * A_w ;\n    \n        if (HK_mode)\n        \{\n          return \{J_HK,M,h\};\n        \}\n        else\n        \{\n          return \{J,M,h\};\n        \}\n    \}\n\n    float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)\n    \{\n        float J = JMh.x;\n        float M = JMh.y;\n        float h = JMh.z;\n        XYZ_w  = XYZ_w  * XYZ_w_scaler;\n\n        float _X_w = XYZ_w.x;\n        float Y_w = XYZ_w.y;\n        float _Z_w = XYZ_w.z;\n\n        // # Step 0\n        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.\n        float3x3 MATRIX_16 = CAT_CAT16;\n        float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);\n\n\n        // # Computing degree of adaptation :math:`D`.\n        float D = clip(degree_of_adaptation(surround.x, L_A), 0.0f, 1.0f);\n        if(discountIlluminant)\n        \{\n            D = 1.0f;\n        \}\n\n\n\n        // # Viewing conditions dependent parameters\n        float k = 1.0f / (5.0f * L_A + 1.0f);\n        float k4 = pow(k,4);\n        float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;\n        float n = sdiv(Y_b, Y_w);\n        float z = 1.48f + sqrt(n);\n\n        float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;\n        float3 RGB_wc = D_RGB * RGB_w;\n        \n        float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);\n\n        float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;\n\n        float R_aw = RGB_aw.x ;\n        float G_aw = RGB_aw.y ;\n        float B_aw = RGB_aw.z ;\n        float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;\n\n        float hr = radians(h);\n\n        float C = (M * 35.0f) / A_w;\n         \n        if (HK_mode)\n        \{\n          J = J - hue_angle_dependency_Hellwig2022(hr) * spow(C, 0.587f);\n        \}\n\n        float _h = hr;\n        float _2_h = 2.0f * hr;\n        float _3_h = 3.0f * hr;\n        float _4_h = 4.0f * hr;\n    \n        float e_t = (\n            -0.0582f * cos(_h)\n            - 0.0258f * cos(_2_h)\n            - 0.1347f * cos(_3_h)\n            + 0.0289f * cos(_4_h)\n            - 0.1475f * sin(_h)\n            - 0.0308f * sin(_2_h)\n            + 0.0385f * sin(_3_h)\n            + 0.0096f * sin(_4_h)\n            + 1.0f\n        );\n\n        float A = A_w * spow(J / 100.0f, 1.0f / (surround.y * z));\n\n\n        float P_p_1 = 43.0f * surround.z * e_t;\n        float P_p_2 = A;\n\n        float gamma = M / P_p_1;\n    \n        float a = gamma * cos(hr);\n\n        float b = gamma * sin(hr);\n\n        float3 RGB_a = vector_dot(panlrcm, float3(P_p_2, a, b)) / 1403.0f;\n\n        if (compressMode)\n        \{\n          RGB_a = compress(RGB_a);\n        \}\n\n        float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1f, F_L);\n\n        if (compressMode)\n        \{\n          RGB_c = uncompress(RGB_c);\n        \}\n\n        if (linear_extension)\n        \{\n          float3 RGB_c_l = ( RGB_a + 0.1f - post_adaptation_non_linear_response_compression_forward( L_B, F_L)) / (d_post_adaptation_non_linear_response_compression_forward( L_B, F_L)) + L_B;\n          \n          RGB_c.x = RGB_c.x < L_B.x ? RGB_c_l.x : RGB_c.x;\n          RGB_c.y = RGB_c.y < L_B.y ? RGB_c_l.y : RGB_c.y;\n          RGB_c.z = RGB_c.z < L_B.z ? RGB_c_l.z : RGB_c.z;\n        \}\n\n        float3 RGB = RGB_c / D_RGB;\n        \n        float3x3 MATRIX_INVERSE_16 = CAT_CAT16.invert();\n        float3 XYZ = vector_dot(MATRIX_INVERSE_16, RGB);\n\n\n        // return XYZ;\n        return XYZ;\n\n    \}\n\n\n  // The init() function is run before any calls to process().\n  // Local variables can be initialized here.\n  void init() \{\n    float CAT_CAT16_data\[9]=\n    \{\n      0.401288f, 0.650173f, -0.051461f,\n      -0.250268f, 1.204414f, 0.045854f,\n      -0.002079f, 0.048952f, 0.953127f,\n    \};\n    CAT_CAT16.setArray(CAT_CAT16_data);\n    \n    float panlrcm_data\[]=\n    \{\n        460.0f, 451.0f, 288.0f,\n        460.0f, -891.0f, -261.0f,\n        460.0f, -220.0f, -6300.0f,\n    \};\n    panlrcm.setArray(panlrcm_data);\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n\n    // Isolate the RGB components\n    float3 srcPixel(input.x, input.y, input.z);\n\n    float3 out = srcPixel;\n    float3 surrounds = surround_custom;\n    if (surround == 0)\n    \{\n       surrounds = float3(0.8f, 0.525f, 0.8f);\n    \}\n    else if (surround == 1)\n    \{\n       surrounds = float3(0.9f, 0.59f, 0.9f);\n    \}\n    else if (surround == 2)\n    \{\n       surrounds = float3(1.0f, 0.69f, 1.0f);\n    \}\n    \n    if (invert)\n    \{\n      out = Hellwig2022_JMh_to_XYZ(srcPixel, inWhite, L_A, Y_b, surrounds, discountIlluminant, HK_mode);\n    \}\n    else\n    \{\n      out = XYZ_to_Hellwig2022_JMh(srcPixel, inWhite, L_A, Y_b, surrounds, discountIlluminant, HK_mode);\n    \}\n\n    // Write the result to the output image\n    dst() = float4(out.x, out.y, out.z, input.w);\n  \}\n\};\n"
+ rebuild ""
+ XYZ_JMh_invert true
+ XYZ_JMh_compressMode true
+ XYZ_JMh_XYZ_w_scaler 1
+ XYZ_JMh_L_A 100
+ XYZ_JMh_inWhite {95.05 100 108.88}
+ XYZ_JMh_surround 1
+ XYZ_JMh_Y_b 20
+ XYZ_JMh_discountIlluminant true
+ rebuild_finalise ""
+ name JMh_to_XYZ
+ xpos -28
+ ypos -9
+}
+Multiply {
+ value 0.855
+ name Multiply1
+ xpos -28
+ ypos 23
+}
+Colorspace {
+ colorspace_in CIE-XYZ
+ name XYZ_to_Rec709
+ xpos -28
+ ypos 55
+}
+Expression {
+ expr0 "y==floor(r(x, pos.y)*height*mult)?1:0"
+ expr1 "y==floor(g(x, pos.y)*height*mult)?1:0"
+ expr2 "y==floor(b(x, pos.y)*height*mult)?1:0"
+ channel3 alpha
+ name PlotScanline
+ xpos -28
+ ypos 79
+ disable true
+ addUserKnob {20 User}
+ addUserKnob {12 pos}
+ addUserKnob {7 mult R 0 5}
+ mult 1
+}
+Merge2 {
+ inputs 2
+ name Merge1
+ xpos -28
+ ypos 103
+ disable true
+}
+Viewer {
+ inputs 2
+ frame_range 1-100
+ gl_buffer_depth half-float
+ monitorOutOutputTransform rec709
+ name Viewer1
+ xpos -28
+ ypos 127
+}
