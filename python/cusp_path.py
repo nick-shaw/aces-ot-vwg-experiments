@@ -531,7 +531,7 @@ def find_threshold(J, h, iterations=10, debug=False):
     XYZ_w = colour.xy_to_XYZ(RGB_COLOURSPACE_sRGB.whitepoint) * 100
     L_A = 100
     Y_b = 20
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Average"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
     M = np.array([0, J+10])
     i = iterations
     while i >= 0:
