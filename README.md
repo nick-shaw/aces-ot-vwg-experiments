@@ -44,3 +44,9 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 * `JMh_surr_test.nk` - The Hellwig surround test shown in meeting #82
 
 * `XYZ_JMh.blink` - The Blink kernel used in the script above
+
+## PYTHON
+
+* `cusp_path.py` - Code taken from [Thomas Mansencal's Colab](https://colab.research.google.com/drive/1OerRYxnKOYGhiZEZda1QS93JWBfN_WI0) with additional functions for gamut boundary finding. Also generates a plot of the cusp path and saves the source data for that plot in the `data` folder.
+
+* `cusp_plot.py` - Creates a png sequence of plots of the gamut boundary at different hue angles. Uses functions from `cusp_path.py`.
