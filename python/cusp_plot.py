@@ -13,7 +13,7 @@ if not os.path.exists('./png'):
 J = np.linspace(0, 100, 256)
 for h in range(360):
 	fig, ax = plt.subplots()
-	M = find_boundary(h)
+	M = find_boundary(h, 10)
 	ax.plot(M, J, label='h={}'.format(h))
 	plt.xlim(0, 100)
 	plt.ylim(0, 100)

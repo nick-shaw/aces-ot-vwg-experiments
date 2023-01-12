@@ -342,6 +342,7 @@ def XYZ_to_Hellwig2022(
         + 0.0096 * np.sin(_4_h)
         + 1
     )
+#     e_t = 1.0
 
     # Computing hue :math:`h` quadrature :math:`H`.
     H = hue_quadrature(h)
@@ -466,6 +467,7 @@ def Hellwig2022_to_XYZ(
         + 0.0096 * np.sin(_4_h)
         + 1
     )
+#     e_t = 1.0
 
     # Computing achromatic response :math:`A` for the stimulus.
     A = A = A_w * spow(J / 100, 1 / (surround.c * z))
@@ -532,7 +534,7 @@ def find_threshold(J, h, iterations=10, debug=False):
     L_A = 100
     Y_b = 20
     surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
-    M = np.array([0, J+10])
+    M = np.array([0, min(J*1.25+25, 100.0)])
     i = iterations
     while i >= 0:
         if debug:
@@ -542,16 +544,18 @@ def find_threshold(J, h, iterations=10, debug=False):
         RGB = vector_dot(RGB_COLOURSPACE_sRGB.matrix_XYZ_to_RGB, XYZ) / 100
         if debug:
             print('JMh_to_RGB([{}, {}, {}]) = [{}, {}, {}]'.format(JMh.J, JMh.M, JMh.h, RGB[0], RGB[1], RGB[2]))
-        if RGB.min() < 0 or RGB.max() > 1:
+        if RGB.min() < 0 or RGB.max() > 1 or np.isnan(XYZ.min()):
             M[1] = M.mean()
         else:
             M[0] = M.mean()
         i -= 1
     return M.mean()
 
+J_resolution = 256
+
 def find_boundary(h, iterations=10):
-    J_range = np.linspace(0, 100, 256)
-    M_boundary = np.zeros(256)
+    J_range = np.linspace(0, 100, J_resolution)
+    M_boundary = np.zeros(J_resolution)
     j = 0
     for J in J_range: 
         M_boundary[j] = find_threshold(J, h, iterations)
@@ -569,16 +573,70 @@ if __name__ == "__main__":
     for h in range(360):
         if h % 10 == 0:
             print(h)
-        M_boundary = find_boundary(h)
-        M_cusp[h] = M_boundary.max()
-        J_cusp[h] = 100 * M_boundary.argmax() / 256
+        M_boundary = find_boundary(h*1.0)
+        M_cusp[h] = M_boundary[50:].max()
+        J_cusp[h] = 100.0 * (M_boundary[50:].argmax()+50.0) / (J_resolution - 1)
 
     np.savetxt('./data/M_cusp.txt', M_cusp)
     np.savetxt('./data/J_cusp.txt', J_cusp)
     plt.plot(np.linspace(0, 359, 360), M_cusp, label='M cusp')
     plt.plot(np.linspace(0, 359, 360), J_cusp, label='J cusp')
+    plt.ylim(0, 100)
+    XYZ_w = colour.xy_to_XYZ(RGB_COLOURSPACE_sRGB.whitepoint) * 100
+    L_A = 100.0
+    Y_b = 20.0
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    RGB = np.array([100, 0, 0])
+    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
+    J = hellwig.J
+    M = hellwig.M
+    h = hellwig.h
+    plt.scatter(h, J, c='red')
+    plt.scatter(h, M, c='red')
+    RGB = np.array([0, 100, 0])
+    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
+    J = hellwig.J
+    M = hellwig.M
+    h = hellwig.h
+    plt.scatter(h, J, c='green')
+    plt.scatter(h, M, c='green')
+    RGB = np.array([0, 0, 100])
+    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
+    J = hellwig.J
+    M = hellwig.M
+    h = hellwig.h
+    plt.scatter(h, J, c='blue')
+    plt.scatter(h, M, c='blue')
+    RGB = np.array([0, 100, 100])
+    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
+    J = hellwig.J
+    M = hellwig.M
+    h = hellwig.h
+    plt.scatter(h, J, c='cyan')
+    plt.scatter(h, M, c='cyan')
+    RGB = np.array([100, 0, 100])
+    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
+    J = hellwig.J
+    M = hellwig.M
+    h = hellwig.h
+    plt.scatter(h, J, c='magenta')
+    plt.scatter(h, M, c='magenta')
+    RGB = np.array([100, 100, 0])
+    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
+    J = hellwig.J
+    M = hellwig.M
+    h = hellwig.h
+    plt.scatter(h, J, c='yellow')
+    plt.scatter(h, M, c='yellow')
     plt.xlabel('Hellwig h')
     plt.ylabel('Cusp value')
     plt.title('Cusp Paths')
     plt.legend()
     plt.savefig('cusp_paths.png')
+    plt.show()
