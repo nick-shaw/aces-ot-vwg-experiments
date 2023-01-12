@@ -529,8 +529,10 @@ def Hellwig2022_to_XYZ(
 
     return from_range_100(XYZ)
 
+PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_P3_D65
+
 def find_threshold(J, h, iterations=10, debug=False):
-    XYZ_w = colour.xy_to_XYZ(RGB_COLOURSPACE_sRGB.whitepoint) * 100
+    XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100
     Y_b = 20
     surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
@@ -541,7 +543,7 @@ def find_threshold(J, h, iterations=10, debug=False):
             print(M, M.mean())
         JMh = CAM_Specification_Hellwig2022(J=J, M=M.mean(), h=h)
         XYZ = Hellwig2022_to_XYZ(JMh, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
-        RGB = vector_dot(RGB_COLOURSPACE_sRGB.matrix_XYZ_to_RGB, XYZ) / 100
+        RGB = vector_dot(PLOT_COLOURSPACE.matrix_XYZ_to_RGB, XYZ) / 100
         if debug:
             print('JMh_to_RGB([{}, {}, {}]) = [{}, {}, {}]'.format(JMh.J, JMh.M, JMh.h, RGB[0], RGB[1], RGB[2]))
         if RGB.min() < 0 or RGB.max() > 1 or np.isnan(XYZ.min()):
@@ -577,17 +579,17 @@ if __name__ == "__main__":
         M_cusp[h] = M_boundary[50:].max()
         J_cusp[h] = 100.0 * (M_boundary[50:].argmax()+50.0) / (J_resolution - 1)
 
-    np.savetxt('./data/M_cusp.txt', M_cusp)
-    np.savetxt('./data/J_cusp.txt', J_cusp)
+    np.savetxt('./data/M_cusp_{}.txt'.format(PLOT_COLOURSPACE.name), M_cusp)
+    np.savetxt('./data/J_cusp_{}.txt'.format(PLOT_COLOURSPACE.name), J_cusp)
     plt.plot(np.linspace(0, 359, 360), M_cusp, label='M cusp')
     plt.plot(np.linspace(0, 359, 360), J_cusp, label='J cusp')
     plt.ylim(0, 100)
-    XYZ_w = colour.xy_to_XYZ(RGB_COLOURSPACE_sRGB.whitepoint) * 100
+    XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100.0
     Y_b = 20.0
     surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
     RGB = np.array([100, 0, 0])
-    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, RGB)
     hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
     J = hellwig.J
     M = hellwig.M
@@ -595,7 +597,7 @@ if __name__ == "__main__":
     plt.scatter(h, J, c='red')
     plt.scatter(h, M, c='red')
     RGB = np.array([0, 100, 0])
-    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, RGB)
     hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
     J = hellwig.J
     M = hellwig.M
@@ -603,7 +605,7 @@ if __name__ == "__main__":
     plt.scatter(h, J, c='green')
     plt.scatter(h, M, c='green')
     RGB = np.array([0, 0, 100])
-    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, RGB)
     hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
     J = hellwig.J
     M = hellwig.M
@@ -611,7 +613,7 @@ if __name__ == "__main__":
     plt.scatter(h, J, c='blue')
     plt.scatter(h, M, c='blue')
     RGB = np.array([0, 100, 100])
-    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, RGB)
     hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
     J = hellwig.J
     M = hellwig.M
@@ -619,7 +621,7 @@ if __name__ == "__main__":
     plt.scatter(h, J, c='cyan')
     plt.scatter(h, M, c='cyan')
     RGB = np.array([100, 0, 100])
-    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, RGB)
     hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
     J = hellwig.J
     M = hellwig.M
@@ -627,7 +629,7 @@ if __name__ == "__main__":
     plt.scatter(h, J, c='magenta')
     plt.scatter(h, M, c='magenta')
     RGB = np.array([100, 100, 0])
-    XYZ = vector_dot(RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ, RGB)
+    XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, RGB)
     hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
     J = hellwig.J
     M = hellwig.M
@@ -636,7 +638,7 @@ if __name__ == "__main__":
     plt.scatter(h, M, c='yellow')
     plt.xlabel('Hellwig h')
     plt.ylabel('Cusp value')
-    plt.title('Cusp Paths')
+    plt.title('Cusp Paths {}'.format(PLOT_COLOURSPACE.name))
     plt.legend()
-    plt.savefig('cusp_paths.png')
+    plt.savefig('cusp_paths_{}.png'.format(PLOT_COLOURSPACE.name))
     plt.show()
