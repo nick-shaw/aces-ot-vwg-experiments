@@ -33,7 +33,7 @@ from collections import namedtuple
 from dataclasses import astuple, dataclass, field
 
 from colour.algebra import sdiv, sdiv_mode, spow, vector_dot
-from colour.appearance.cam16 import MATRIX_16, MATRIX_INVERSE_16
+# from colour.appearance.cam16 import MATRIX_16, MATRIX_INVERSE_16
 from colour.appearance.ciecam02 import (
     InductionFactors_CIECAM02,
     VIEWING_CONDITIONS_CIECAM02,
@@ -79,7 +79,6 @@ __all__ = [
     "XYZ_to_Hellwig2022",
     "Hellwig2022_to_XYZ",
 ]
-
 
 class InductionFactors_Hellwig2022(
     namedtuple("InductionFactors_Hellwig2022", ("F", "c", "N_c"))
@@ -241,8 +240,9 @@ def uncompress(xyz):
     return np.where(RRR==0.0, xyz, np.array([x,y,z]).T)
 
 
-LINEAR_VS_COMPRESS = False
-
+# LINEAR_VS_COMPRESS = False
+# DO_COMPRESS = False
+# DO_ECCENTRICITY = False
 
 def XYZ_to_Hellwig2022(
     XYZ: ArrayLike,
@@ -308,10 +308,12 @@ def XYZ_to_Hellwig2022(
         # RGB_a = np.where(np.logical_or(RGB_c < L_B, RGB_c > H_B), RGB_a_l, RGB_a)
         RGB_a = np.where(RGB_c < L_B, RGB_a_l, RGB_a)
     else:
-        RGB_c = compress(RGB_c)
+        if DO_COMPRESS:
+            RGB_c = compress(RGB_c)
         F_L_RGB = spow(F_L[..., np.newaxis] * np.absolute(RGB_c) / 100, 0.42)
         RGB_a = (400 * np.sign(RGB_c) * F_L_RGB) / (27.13 + F_L_RGB) + 0.1
-        RGB_a = uncompress(RGB_a)
+        if DO_COMPRESS:
+            RGB_a = uncompress(RGB_a)
 
     # Step 4
     # Converting to preliminary cartesian coordinates.
@@ -342,7 +344,8 @@ def XYZ_to_Hellwig2022(
         + 0.0096 * np.sin(_4_h)
         + 1
     )
-#     e_t = 1.0
+    if not DO_ECCENTRICITY:
+        e_t = 1.0
 
     # Computing hue :math:`h` quadrature :math:`H`.
     H = hue_quadrature(h)
@@ -467,7 +470,8 @@ def Hellwig2022_to_XYZ(
         + 0.0096 * np.sin(_4_h)
         + 1
     )
-#     e_t = 1.0
+    if not DO_ECCENTRICITY:
+        e_t = 1.0
 
     # Computing achromatic response :math:`A` for the stimulus.
     A = A = A_w * spow(J / 100, 1 / (surround.c * z))
@@ -529,8 +533,6 @@ def Hellwig2022_to_XYZ(
 
     return from_range_100(XYZ)
 
-PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_sRGB
-
 def find_threshold(J, h, iterations=10, debug=False):
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100
@@ -553,8 +555,6 @@ def find_threshold(J, h, iterations=10, debug=False):
         i -= 1
     return M.mean()
 
-J_resolution = 256
-
 def find_boundary(h, iterations=10):
     J_range = np.linspace(0, 100, J_resolution)
     M_boundary = np.zeros(J_resolution)
@@ -564,6 +564,33 @@ def find_boundary(h, iterations=10):
         j += 1
         
     return M_boundary
+
+
+PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_BT709
+space_name = "BT709" # filename friendly name
+
+J_resolution = 256 # samples along J axis
+iterations = 10 # number of iterations for boundary solve
+
+# Custom LMS Primaries from DRT v28
+RGB_COLOURSPACE_MATRIX_16 = colour.RGB_Colourspace(
+    "MATRIX 16",
+    np.array(
+        [
+            [0.84, 0.175],
+            [-1.3, 1.75],
+            [0.05, -0.15],
+        ]
+    ),
+    [4200, -1050],
+)
+
+MATRIX_16 = RGB_COLOURSPACE_MATRIX_16.matrix_XYZ_to_RGB
+MATRIX_INVERSE_16 = np.linalg.inv(MATRIX_16)
+
+LINEAR_VS_COMPRESS = False
+DO_COMPRESS = False
+DO_ECCENTRICITY = False
 
 if __name__ == "__main__":
     import os
@@ -575,12 +602,12 @@ if __name__ == "__main__":
     for h in range(360):
         if h % 10 == 0:
             print(h)
-        M_boundary = find_boundary(h*1.0)
+        M_boundary = find_boundary(h*1.0, iterations=iterations)
         M_cusp[h] = M_boundary.max()
         J_cusp[h] = 100.0 * (M_boundary.argmax()) / (J_resolution - 1)
 
-    np.savetxt('./data/M_cusp_{}.txt'.format(PLOT_COLOURSPACE.name), M_cusp)
-    np.savetxt('./data/J_cusp_{}.txt'.format(PLOT_COLOURSPACE.name), J_cusp)
+    np.savetxt('./data/M_cusp_{}.txt'.format(space_name), M_cusp)
+    np.savetxt('./data/J_cusp_{}.txt'.format(space_name), J_cusp)
     plt.plot(np.linspace(0, 359, 360), M_cusp, label='M cusp')
     plt.plot(np.linspace(0, 359, 360), J_cusp, label='J cusp')
     plt.ylim(0, 100)
@@ -606,5 +633,5 @@ if __name__ == "__main__":
     plt.ylabel('Cusp value')
     plt.title('Cusp Paths {}'.format(PLOT_COLOURSPACE.name))
     plt.legend()
-    plt.savefig('cusp_paths_{}.png'.format(PLOT_COLOURSPACE.name))
+    plt.savefig('cusp_paths_{}.png'.format(space_name))
     plt.show()
