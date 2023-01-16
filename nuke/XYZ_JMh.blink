@@ -16,6 +16,16 @@ kernel XYZ_JMh : ImageComputationKernel<ePixelWise>
     float Y_b;
     bool discountIlluminant;
     bool HK_mode;
+    
+    // 0 = Stock CAT16
+    // 1 = Thomas's custom primaries
+    // 2 = live from params below
+    int catDataSelection; // original vs modified CAT16 matrix
+    // xy coordintes for custom CAT matrix
+    float2 rxy;
+    float2 gxy;
+    float2 bxy;
+    float2 wxy;
 
   local:
     float3x3 CAT_CAT16;
@@ -60,7 +70,8 @@ kernel XYZ_JMh : ImageComputationKernel<ePixelWise>
 
     if(base < 0.0f && exponent != floor(exponent) )
     {
-      return 0.0f;
+//       return 0.0f;
+      -pow(-base, exponent); 
     }
     else
     {
@@ -238,6 +249,73 @@ float3 uncompress(float3 xyz)
     // return float( -0.160f * cos(h) + 0.132f * cos(2.0f * h)  - 0.405f * sin(h)  + 0.080f * sin(2.0f * h) + 0.792f );
     }
 
+  float3x3  RGBPrimsToXYZMatrix(float2 rxy, float2 gxy, float2 bxy, float2 wxy,float Y, bool direction)
+  {
+    // # given r g b chromaticities and whitepoint, convert RGB colors to XYZ
+    // # based on CtlColorSpace.cpp from the CTL source code : 77
+    // # param: xy - dict of chromaticity xy coordinates: rxy: float2(x, y) etc
+    // # param: Y - luminance of "white" - defaults to 1.0
+    // # param: inverse - calculate XYZ to RGB instead
+
+    float2 r = rxy;
+    float2 g = gxy;
+    float2 b = bxy;
+    float2 w = wxy;
+
+    float X = w.x * Y / w.y;
+    float Z = (1 - w.x - w.y) * Y / w.y;
+
+    // # Scale factors for matrix rows
+    float d = r.x * (b.y - g.y) + b.x * (g.y - r.y) + g.x * (r.y - b.y);
+
+    float Sr =    (X * (b.y - g.y) -      \
+            g.x * (Y * (b.y - 1.0f) +  \
+            b.y  * (X + Z)) +       \
+            b.x  * (Y * (g.y - 1.0f) + \
+            g.y * (X + Z))) / d ;
+    
+    float Sg =    (X * (r.y - b.y) +      \
+            r.x * (Y * (b.y - 1.0f) +  \
+            b.y * (X + Z)) -        \
+            b.x * (Y * (r.y - 1.0f) +  \
+            r.y * (X + Z))) / d ;
+
+    float Sb =    (X * (g.y - r.y) -      \
+            r.x * (Y * (g.y - 1.0f) +  \
+            g.y * (X + Z)) +        \
+            g.x * (Y * (r.y - 1.0f) +  \
+            r.y * (X + Z))) / d ;
+
+    // # Assemble the matrix
+    float Mdata[] =
+    {
+            Sr * r.x, Sr * r.y, Sr * (1.0f - r.x - r.y),
+            Sg * g.x, Sg * g.y, Sg * (1.0f - g.x - g.y),
+            Sb * b.x, Sb * b.y, Sb * (1.0f - b.x - b.y),
+    };
+
+    float MdataNukeOrder[] = {
+      Mdata[0], Mdata[3], Mdata[6],
+      Mdata[1], Mdata[4], Mdata[7],
+      Mdata[2], Mdata[5], Mdata[8],
+    };
+
+    float3x3 newMatrix;
+    newMatrix.setArray(MdataNukeOrder);
+
+    // create inverse matrix
+    float3x3 newMatrixInverse = newMatrix.invert();
+
+    // return forward or inverse matrix
+    if (direction == 0)
+    {
+      return newMatrix;
+    }
+    else if (direction == 1)
+    {
+      return newMatrixInverse;
+    }
+  }
 
   float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)
     {
@@ -528,7 +606,26 @@ float3 uncompress(float3 xyz)
       -0.250268f, 1.204414f, 0.045854f,
       -0.002079f, 0.048952f, 0.953127f,
     };
-    CAT_CAT16.setArray(CAT_CAT16_data);
+    
+    float Modified_CAT16_data[]=
+    {
+      0.656619, 0.342071, 0.00131062,
+      -0.222571, 1.10658, 0.115987,
+      -0.000634146, 0.05855, 0.942084,
+    };
+
+    if (catDataSelection == 0)
+    {
+        CAT_CAT16.setArray(CAT_CAT16_data);
+    }
+    else if (catDataSelection == 1)
+    {
+        CAT_CAT16.setArray(Modified_CAT16_data);
+    }
+    else if (catDataSelection == 2)
+    {
+        CAT_CAT16 = RGBPrimsToXYZMatrix(rxy,gxy,bxy,wxy,1.0f,1);
+    }
     
     float panlrcm_data[]=
     {
