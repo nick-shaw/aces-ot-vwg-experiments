@@ -586,7 +586,7 @@ def find_boundary(h, iterations=10):
 PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_BT709
 space_name = "BT709" # filename friendly name
 
-J_resolution = 256 # samples along J axis
+J_resolution = 1024 # samples along J axis
 iterations = 10 # number of iterations for boundary solve
 
 # Custom LMS Primaries from DRT v28
@@ -606,8 +606,8 @@ MATRIX_16 = RGB_COLOURSPACE_MATRIX_16.matrix_XYZ_to_RGB
 MATRIX_INVERSE_16 = np.linalg.inv(MATRIX_16)
 
 LINEAR_VS_COMPRESS = False
-DO_COMPRESS = False
-DO_ECCENTRICITY = False
+DO_COMPRESS = True
+DO_ECCENTRICITY = True
 
 if __name__ == "__main__":
     import os
