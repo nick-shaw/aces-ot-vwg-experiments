@@ -538,30 +538,47 @@ def find_threshold(J, h, iterations=10, debug=False):
     L_A = 100
     Y_b = 20
     surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
-    M = np.array([0, min(J*1.25+25, 100.0)])
+    M_max = np.minimum(J*1.25+25, 100.0)
+    M = tstack((np.zeros(len(J)), M_max))
+#     M = np.array([0, min(J*1.25+25, 100.0)])
     i = iterations
     while i >= 0:
-        if debug:
-            print(M, M.mean())
-        JMh = CAM_Specification_Hellwig2022(J=J, M=M.mean(), h=h)
+        mean = M.mean(axis=1)
+        JMh = CAM_Specification_Hellwig2022(J=J, M=mean, h=h)
         XYZ = Hellwig2022_to_XYZ(JMh, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
         RGB = vector_dot(PLOT_COLOURSPACE.matrix_XYZ_to_RGB, XYZ) / 100
+        M0, M1 = tsplit(M)
+        neg = RGB.min(axis=1) < 0
+        over = RGB.max(axis=1) > 1
+        nan = np.isnan(XYZ.min(axis=1))
+        out_of_gamut = np.logical_or(nan, np.logical_or(neg, over))
         if debug:
-            print('JMh_to_RGB([{}, {}, {}]) = [{}, {}, {}]'.format(JMh.J, JMh.M, JMh.h, RGB[0], RGB[1], RGB[2]))
-        if RGB.min() < 0 or RGB.max() > 1 or np.isnan(XYZ.min()):
-            M[1] = M.mean()
-        else:
-            M[0] = M.mean()
+            print('M:')
+            print(M)
+            print('XYZ:')
+            print(XYZ)
+            print('RGB:')
+            print(RGB)
+            print('Bools:')
+            print(tstack((neg, over, nan)))
+        M1_new = np.where(out_of_gamut, mean, M1)
+        M0_new = np.where(out_of_gamut, M0, mean)
+        M = tstack((M0_new, M1_new))
+#         if RGB.min() < 0 or RGB.max() > 1 or np.isnan(XYZ.min()):
+#             M[1] = M.mean()
+#         else:
+#             M[0] = M.mean()
         i -= 1
-    return M.mean()
+    return M.mean(axis=1)
 
 def find_boundary(h, iterations=10):
     J_range = np.linspace(0, 100, J_resolution)
-    M_boundary = np.zeros(J_resolution)
-    j = 0
-    for J in J_range: 
-        M_boundary[j] = find_threshold(J, h, iterations)
-        j += 1
+#     M_boundary = np.zeros(J_resolution)
+#     j = 0
+    M_boundary = find_threshold(J_range, h, iterations)
+#     for J in J_range: 
+#         M_boundary[j] = find_threshold(J, h, iterations)
+#         j += 1
         
     return M_boundary
 

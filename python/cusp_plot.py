@@ -3,7 +3,7 @@ from colour.models import RGB_COLOURSPACE_BT709 as BT709
 from colour.algebra import spow, vector_dot
 import numpy as np
 import cusp_path
-from cusp_path import Hellwig2022_to_XYZ, CAM_Specification_Hellwig2022, find_boundary, find_threshold, J_resolution
+from cusp_path import Hellwig2022_to_XYZ, CAM_Specification_Hellwig2022, find_boundary, find_threshold, J_resolution, iterations
 import matplotlib.pyplot as plt
 import os
 
@@ -18,7 +18,7 @@ surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
 
 for h in range(360):
     fig, ax = plt.subplots()
-    M_bound = find_boundary(h)
+    M_bound = find_boundary(h, iterations)
     ax.plot(M_bound, J_range, label='h={}'.format(h))
     M = M_bound.max()
     J = 100.0 * M_bound.argmax() / (J_resolution - 1)
