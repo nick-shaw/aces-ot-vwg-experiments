@@ -69,7 +69,7 @@ source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-comp_label = ax.text(80, 80, "Compressed:\n  J = {:.1f}\n  M = {:.1f}".format(CJ, CM))
+comp_label = ax.text(36, 30, "Compressed:\n  J = {:.1f}\n  M = {:.1f}".format(CJ, CM))
 
 if check_boxes.get_status()[0]==1:
     M_cusp = M_bound.max()
@@ -96,6 +96,8 @@ def update(val):
     source.set_ydata(SJ.val)
     source.set_color(RGB)
     comp_label.set_text("Compressed:\n  J = {:.1f}\n  M = {:.1f}".format(CJ, CM))
+    comp_label.set_x(CM)
+    comp_label.set_y(CJ - 20)
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
         cusp.set_xdata(M_cusp)
