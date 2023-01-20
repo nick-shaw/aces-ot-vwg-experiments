@@ -18,7 +18,7 @@ def JMh_to_RGB(J, M, h):
     RGB = np.clip(RGB, 0, 1)**(1/2.2)
     return (RGB[0], RGB[1], RGB[2])
 
-def compress(dist, lim=1.4, thr=0.75, power=1.2, invert=False):
+def compress(dist, lim=1.6, thr=0.75, power=1.2, invert=False):
     # power(p) compression function plot https://www.desmos.com/calculator/54aytu7hek
     s = (lim-thr)/np.power(np.power((1-thr)/(lim-thr),-power)-1,1/power) # calc y=1 intersect
     if not invert:
@@ -44,6 +44,7 @@ fig, ax = plt.subplots(figsize=(10,10) )
 plt.subplots_adjust(left=0.05, top=0.9, bottom=0.3, right=0.97)
 
 plt.axis([0, 100, 0, 100])
+plt.title("Simple M only Gamut Compression")
 
 hue_slider = plt.axes([0.05, 0.1, 0.2, 0.01])
 h = Slider(hue_slider, 'h', 0, 360, valinit=180, valfmt="%1.1f")
@@ -54,19 +55,21 @@ SM = Slider(source_M, 'M', 0, 100, valinit=50, valfmt="%1.1f")
 source_J = plt.axes([0.05, 0.2, 0.2, 0.01])
 SJ = Slider(source_J, 'J', 0, 100, valinit=50, valfmt="%1.1f")
 
+M_bound = cusp_path.find_boundary(h.val)
+CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
+
+RGB = JMh_to_RGB(CJ, CM, h.val)
+compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
+
 check_box = plt.axes([0.85, 0.1, 0.12, 0.12])
 check_boxes = CheckButtons(check_box, ['Show Cusp', 'Show Path'], [1, 1])
 
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
 source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
-M_bound = cusp_path.find_boundary(h.val)
-
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
-RGB = JMh_to_RGB(CJ, CM, h.val)
-compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
+comp_label = ax.text(80, 80, "Compressed:\n  J = {:.1f}\n  M = {:.1f}".format(CJ, CM))
 
 if check_boxes.get_status()[0]==1:
     M_cusp = M_bound.max()
@@ -83,15 +86,16 @@ def update(val):
     J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
     curve.set_xdata( M_bound )
     curve.set_ydata( J_range )
-    RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
-    source.set_xdata(SM.val)
-    source.set_ydata(SJ.val)
-    source.set_color(RGB)
     CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
     RGB = JMh_to_RGB(CJ, CM, h.val)
     compressed.set_xdata(CM)
     compressed.set_ydata(CJ)
     compressed.set_color(RGB)
+    RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
+    source.set_xdata(SM.val)
+    source.set_ydata(SJ.val)
+    source.set_color(RGB)
+    comp_label.set_text("Compressed:\n  J = {:.1f}\n  M = {:.1f}".format(CJ, CM))
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
         cusp.set_xdata(M_cusp)
