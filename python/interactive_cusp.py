@@ -22,9 +22,9 @@ def compress(dist, lim=1.6, thr=0.75, power=1.2, invert=False):
     # power(p) compression function plot https://www.desmos.com/calculator/54aytu7hek
     s = (lim-thr)/np.power(np.power((1-thr)/(lim-thr),-power)-1,1/power) # calc y=1 intersect
     if not invert:
-	    cdist = thr+s*((dist-thr)/s)/(np.power(1+np.power((dist-thr)/s,power),1/power)) # compress
+        cdist = thr+s*((dist-thr)/s)/(np.power(1+np.power((dist-thr)/s,power),1/power)) # compress
     else:
-	    cdist = thr+s*np.power(-(np.power((dist-thr)/s,power)/(np.power((dist-thr)/s,power)-1)),1/power) # uncompress
+        cdist = thr+s*np.power(-(np.power((dist-thr)/s,power)/(np.power((dist-thr)/s,power)-1)),1/power) # uncompress
 
     cdist = np.nan_to_num(cdist)
 
@@ -33,18 +33,24 @@ def compress(dist, lim=1.6, thr=0.75, power=1.2, invert=False):
     return cdist
 
 def gamut_compress(J, M, M_bound):
+    M_cusp = M_bound.max()
     M_thresh = M_bound[int(J_resolution * J / 100.0)]
     M_norm = M / M_thresh
     M_comp = compress(np.array([M_norm]))[0]
-    return J, M_comp * M_thresh
+    J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
+    focus = (J_cusp + J_mid) / 2 # cusp to mid blend of 0.5
+    J_comp = focus + (J - focus) * M_comp / M_norm
+    return J_comp, M_comp * M_thresh
 
 J_range = np.linspace(0, 100, J_resolution)
 
 fig, ax = plt.subplots(figsize=(10,10) )
 plt.subplots_adjust(left=0.05, top=0.9, bottom=0.3, right=0.97)
 
-plt.axis([0, 100, 0, 100])
-plt.title("Simple M only Gamut Compression")
+plt.axis([-10, 100, 0, 100])
+plt.title("Hellwig JMh Gamut Compression")
+
+ax.plot([0, 0], [0, 100], color='black') # J axis
 
 hue_slider = plt.axes([0.05, 0.1, 0.2, 0.01])
 h = Slider(hue_slider, 'h', 0, 360, valinit=180, valfmt="%1.1f")
@@ -56,6 +62,21 @@ source_J = plt.axes([0.05, 0.2, 0.2, 0.01])
 SJ = Slider(source_J, 'J', 0, 100, valinit=50, valfmt="%1.1f")
 
 M_bound = cusp_path.find_boundary(h.val)
+M_cusp = M_bound.max()
+J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
+J_mid = 34.0 # Hellwig J value for 10 nits
+focus = (J_cusp + J_mid) / 2 # cusp to mid blend of 0.5
+
+cusp_J_point, = ax.plot(0, J_cusp, color='black', marker='x')
+cusp_J_label = ax.text(1, J_cusp, "J Cusp")
+
+mid_J_point, = ax.plot(0, J_mid, color='black', marker='x')
+mid_J_line, = ax.plot([0, M_cusp], [J_cusp, J_cusp], color='grey')
+mid_J_label = ax.text(1, J_mid, "J Mid")
+
+focus_point, = ax.plot(0, focus, color='black', marker='x')
+focus_label = ax.text(1, focus, "Focus")
+
 CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
 
 RGB = JMh_to_RGB(CJ, CM, h.val)
@@ -78,12 +99,14 @@ if check_boxes.get_status()[0]==1:
     cusp, = ax.plot(M_cusp, J_cusp, color=RGB, marker='o')
 
 if check_boxes.get_status()[1]==1:
-    path, = ax.plot([SM.val, CM], [SJ.val, CJ], color='black')
+#     path, = ax.plot([SM.val, CM], [SJ.val, CJ], color='black')
+    path, = ax.plot([SM.val, 0], [SJ.val, focus], color='black')
 
 def update(val):
     M_bound = cusp_path.find_boundary(h.val)
     M_cusp = M_bound.max()
     J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
+    focus = (J_cusp + J_mid) / 2 # cusp to mid blend of 0.5
     curve.set_xdata( M_bound )
     curve.set_ydata( J_range )
     CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
@@ -106,12 +129,20 @@ def update(val):
     else:
         cusp.set_xdata(200) # Just a large value outside the plot
     if check_boxes.get_status()[1]==1:
-        path.set_xdata([SM.val, CM])
-        path.set_ydata([SJ.val, CJ])
+#         path.set_xdata([SM.val, CM])
+#         path.set_ydata([SJ.val, CJ])
+        path.set_xdata([SM.val, 0])
+        path.set_ydata([SJ.val, focus])
     else:
         # Large values outside plot
         path.set_xdata([200, 200])
         path.set_ydata([200, 200])
+    focus_point.set_ydata(focus)
+    focus_label.set_y(focus)
+    cusp_J_point.set_ydata(J_cusp)
+    cusp_J_label.set_y(J_cusp)
+    mid_J_line.set_xdata([0, M_cusp])
+    mid_J_line.set_ydata([J_cusp, J_cusp])
 
     fig.canvas.draw_idle()
 
