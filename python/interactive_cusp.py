@@ -35,6 +35,7 @@ def compress(dist, lim=1.6, thr=0.75, power=1.2, invert=False):
 def gamut_compress(J, M, M_bound):
     M_cusp = M_bound.max()
     M_thresh = M_bound[int(J_resolution * J / 100.0)]
+    print(M_bound[500])
     M_norm = M / M_thresh
     M_comp = compress(np.array([M_norm]))[0]
     J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
@@ -71,8 +72,9 @@ cusp_J_point, = ax.plot(0, J_cusp, color='black', marker='x')
 cusp_J_label = ax.text(1, J_cusp, "J Cusp")
 
 mid_J_point, = ax.plot(0, J_mid, color='black', marker='x')
-mid_J_line, = ax.plot([0, M_cusp], [J_cusp, J_cusp], color='grey')
 mid_J_label = ax.text(1, J_mid, "J Mid")
+
+mid_J_line, = ax.plot([0, M_cusp], [J_cusp, J_cusp], color='grey')
 
 focus_point, = ax.plot(0, focus, color='black', marker='x')
 focus_label = ax.text(1, focus, "Focus")
@@ -82,8 +84,8 @@ CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
 RGB = JMh_to_RGB(CJ, CM, h.val)
 compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
 
-check_box = plt.axes([0.85, 0.1, 0.12, 0.12])
-check_boxes = CheckButtons(check_box, ['Show Cusp', 'Show Path'], [1, 1])
+check_box = plt.axes([0.8, 0.075, 0.15, 0.15])
+check_boxes = CheckButtons(check_box, ['Show Cusp', 'Show Path', 'Show Targets'], [1, 1, 1])
 
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
 source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
@@ -99,7 +101,6 @@ if check_boxes.get_status()[0]==1:
     cusp, = ax.plot(M_cusp, J_cusp, color=RGB, marker='o')
 
 if check_boxes.get_status()[1]==1:
-#     path, = ax.plot([SM.val, CM], [SJ.val, CJ], color='black')
     path, = ax.plot([SM.val, 0], [SJ.val, focus], color='black')
 
 def update(val):
@@ -129,8 +130,6 @@ def update(val):
     else:
         cusp.set_xdata(200) # Just a large value outside the plot
     if check_boxes.get_status()[1]==1:
-#         path.set_xdata([SM.val, CM])
-#         path.set_ydata([SJ.val, CJ])
         path.set_xdata([SM.val, 0])
         path.set_ydata([SJ.val, focus])
     else:
@@ -141,8 +140,24 @@ def update(val):
     focus_label.set_y(focus)
     cusp_J_point.set_ydata(J_cusp)
     cusp_J_label.set_y(J_cusp)
-    mid_J_line.set_xdata([0, M_cusp])
     mid_J_line.set_ydata([J_cusp, J_cusp])
+    if check_boxes.get_status()[2]==0:
+        # Large values outside plot
+        focus_point.set_xdata(200)
+        focus_label.set_x(200)
+        cusp_J_point.set_xdata(200)
+        cusp_J_label.set_x(200)
+        mid_J_point.set_xdata(200)
+        mid_J_label.set_x(200)
+        mid_J_line.set_xdata([200, 200])
+    else:
+        focus_point.set_xdata(0)
+        focus_label.set_x(1)
+        cusp_J_point.set_xdata(0)
+        cusp_J_label.set_x(1)
+        mid_J_point.set_xdata(0)
+        mid_J_label.set_x(1)
+        mid_J_line.set_xdata([0, M_cusp])
 
     fig.canvas.draw_idle()
 
