@@ -18,6 +18,28 @@ def JMh_to_RGB(J, M, h):
     RGB = np.clip(RGB, 0, 1)**(1/2.2)
     return (RGB[0], RGB[1], RGB[2])
 
+def compress(dist, lim=1.4, thr=0.75, power=1.2, invert=False):
+    # power(p) compression function plot https://www.desmos.com/calculator/54aytu7hek
+    s = (lim-thr)/np.power(np.power((1-thr)/(lim-thr),-power)-1,1/power) # calc y=1 intersect
+    if not invert:
+	    cdist = thr+s*((dist-thr)/s)/(np.power(1+np.power((dist-thr)/s,power),1/power)) # compress
+    else:
+	    cdist = thr+s*np.power(-(np.power((dist-thr)/s,power)/(np.power((dist-thr)/s,power)-1)),1/power) # uncompress
+
+    cdist = np.nan_to_num(cdist)
+
+    cdist[dist < thr] = dist[dist < thr]
+
+    return cdist
+
+def gamut_compress(J, M, M_bound):
+    M_thresh = M_bound[int(J_resolution * J / 100.0)]
+    M_norm = M / M_thresh
+    M_comp = compress(np.array([M_norm]))[0]
+    return J, M_comp * M_thresh
+
+J_range = np.linspace(0, 100, J_resolution)
+
 fig, ax = plt.subplots(figsize=(10,10) )
 plt.subplots_adjust(left=0.05, top=0.9, bottom=0.3, right=0.97)
 
@@ -33,45 +55,63 @@ source_J = plt.axes([0.05, 0.2, 0.2, 0.01])
 SJ = Slider(source_J, 'J', 0, 100, valinit=50, valfmt="%1.1f")
 
 check_box = plt.axes([0.85, 0.1, 0.12, 0.12])
-SHOW_CUSP_COLOUR = CheckButtons(check_box, ['Show Cusp'], [1])
+check_boxes = CheckButtons(check_box, ['Show Cusp', 'Show Path'], [1, 1])
 
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
 source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
-J = np.linspace(0, 100, J_resolution)
-M = cusp_path.find_boundary(h.val)
+M_bound = cusp_path.find_boundary(h.val)
 
-curve, = ax.plot( M, J, color='blue')
+curve, = ax.plot( M_bound, J_range, color='blue')
 
-if SHOW_CUSP_COLOUR.get_status()==[1]:
-    M_cusp = M.max()
-    J_cusp = 100.0 * M.argmax() / (J_resolution - 1)
+CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
+RGB = JMh_to_RGB(CJ, CM, h.val)
+compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
+
+if check_boxes.get_status()[0]==1:
+    M_cusp = M_bound.max()
+    J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
     RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
     cusp, = ax.plot(M_cusp, J_cusp, color=RGB, marker='o')
 
+if check_boxes.get_status()[1]==1:
+    path, = ax.plot([SM.val, CM], [SJ.val, CJ], color='black')
+
 def update(val):
-    M = cusp_path.find_boundary(h.val)
-    curve.set_xdata( M )
-    curve.set_ydata( J )
+    M_bound = cusp_path.find_boundary(h.val)
+    M_cusp = M_bound.max()
+    J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
+    curve.set_xdata( M_bound )
+    curve.set_ydata( J_range )
     RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
     source.set_xdata(SM.val)
     source.set_ydata(SJ.val)
     source.set_color(RGB)
-    if SHOW_CUSP_COLOUR.get_status()==[1]:
-        M_cusp = M.max()
-        J_cusp = 100.0 * M.argmax() / (J_resolution - 1)
+    CJ, CM = gamut_compress(SJ.val, SM.val, M_bound)
+    RGB = JMh_to_RGB(CJ, CM, h.val)
+    compressed.set_xdata(CM)
+    compressed.set_ydata(CJ)
+    compressed.set_color(RGB)
+    if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
         cusp.set_xdata(M_cusp)
         cusp.set_ydata(J_cusp)
         cusp.set_color(RGB)
     else:
         cusp.set_xdata(200) # Just a large value outside the plot
-        
+    if check_boxes.get_status()[1]==1:
+        path.set_xdata([SM.val, CM])
+        path.set_ydata([SJ.val, CJ])
+    else:
+        # Large values outside plot
+        path.set_xdata([200, 200])
+        path.set_ydata([200, 200])
+
     fig.canvas.draw_idle()
 
 h.on_changed(update)
 SM.on_changed(update)
 SJ.on_changed(update)
-SHOW_CUSP_COLOUR.on_clicked(update)
+check_boxes.on_clicked(update)
 
 plt.show()
