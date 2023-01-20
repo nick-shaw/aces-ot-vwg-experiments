@@ -50,3 +50,5 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 * `cusp_path.py` - Code taken from [Thomas Mansencal's Colab](https://colab.research.google.com/drive/1OerRYxnKOYGhiZEZda1QS93JWBfN_WI0) with additional functions for gamut boundary finding. Also generates a plot of the cusp path and saves the source data for that plot in the `data` folder.
 
 * `cusp_plot.py` - Creates a png sequence of plots of the gamut boundary at different hue angles. Uses functions from `cusp_path.py`.
+
+* `interactive_cusp.py` - An interactive plot of the gamut boundary at a selectable hue value. Includes a skeleton framework for showing the path of gamut compression. The compression currently shown is a simple version, not the full version from the current DRT.
