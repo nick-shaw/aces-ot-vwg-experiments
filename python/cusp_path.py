@@ -617,8 +617,8 @@ if __name__ == "__main__":
     M_cusp = np.zeros(360)
     J_cusp = np.zeros(360)
     for h in range(360):
-        if h % 10 == 0:
-            print(h)
+#         if h % 10 == 0:
+#             print(h)
         M_boundary = find_boundary(h*1.0, iterations=iterations)
         M_cusp[h] = M_boundary.max()
         J_cusp[h] = 100.0 * (M_boundary.argmax()) / (J_resolution - 1)
