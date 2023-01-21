@@ -616,8 +616,8 @@ def forwardGamutMapper(JMh, cusp, approx):
         return JMh
 
     # Calculate where the out of gamut color is projected to
-    # Mid gray assumed to be 10.0
-    focusJ = lerp(0.5, cuspJ, 10.0)
+    # Mid gray assumed to be 10.0 bits (34.0 J)
+    focusJ = lerp(0.5, cuspJ, 34.0)
     Jdiff = J - focusJ
     if Jdiff > 0.0:
         focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, J))
