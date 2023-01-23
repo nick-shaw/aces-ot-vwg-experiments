@@ -61,7 +61,7 @@ compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, 
 CJ, CM, hue, focusJ, ixJ, ixM = tsplit(compr);
 RGB = JMh_to_RGB(CJ, CM, h.val)
 compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
-ix, = ax.plot(ixM, ixJ, color="red", marker='o')
+ix, = ax.plot(ixM, ixJ, color="black", marker='o')
 focus, = ax.plot(0, focusJ, color="gray", marker='o')
 
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
@@ -69,12 +69,13 @@ source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-comp_label = ax.text(75, 10,
+comp_label = ax.text(75, 50,
+    "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Focus J = {:.1f}\n\n"
     "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Normalised ratio = {:.2f}\n\n"
     "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-    .format(focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
+    .format(J_cusp, M_cusp, focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
 )
 
 if check_boxes.get_status()[0]==1:
@@ -116,11 +117,12 @@ def update(val):
     source.set_ydata(SJ.val)
     source.set_color(RGB)
     comp_label.set_text(
+        "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
         "Focus J = {:.1f}\n\n"
         "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
         "Normalised ratio = {:.2f}\n\n"
         "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-        .format(focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
+        .format(J_cusp, M_cusp, focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
     )
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
