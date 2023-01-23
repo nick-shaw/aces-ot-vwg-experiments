@@ -150,6 +150,10 @@ def update(val):
         # Large values outside plot
         path.set_xdata([200, 200])
         path.set_ydata([200, 200])
+        pathix.set_xdata([200, 200])
+        pathix.set_ydata([200, 200])
+        pathix0.set_xdata([200, 200])
+        pathix0.set_ydata([200, 200])
 
     fig.canvas.draw_idle()
 
