@@ -595,18 +595,24 @@ def find_gamut_intersection(pfrom, focus, h, precision = 10, startStepSize = 0.4
 
     return JMtest
 
-# Gamut intersection to triangle (TODO: smoothing triangle cusp and curved shape)
+# Gamut intersection to curved triangle (TODO: smoothing triangle cusp)
 def find_gamut_intersection_tri(cusp, pfrom, pto):
+    bound_gamma = 1.0
     cuspJ, cuspM = tsplit(cusp)
     fromJ, fromM = tsplit(pfrom)
     toJ, toM = tsplit(pto)
 
     if (fromJ - toJ) * cuspM - (cuspJ - toJ) * fromM <= 0.0:
-        t = cuspM * toJ / (fromM * cuspJ + cuspM * (toJ - fromJ))
+        bound_gamma = 1.15
+        toJ_gamma = cuspJ * (toJ / cuspJ)**(1 / bound_gamma)
+        fromJ_gamma = cuspJ * (fromJ / cuspJ)**(1 / bound_gamma)
+        t = cuspM * toJ_gamma / (fromM * cuspJ + cuspM * (toJ_gamma - fromJ_gamma))
+#         t = cuspM * toJ / (fromM * cuspJ + cuspM * (toJ - fromJ))
     else:
         t = cuspM * (toJ - 100) / (fromM * (cuspJ - 100) + cuspM * (toJ - fromJ))
 
-    return np.array([toJ * (1.0 - t) + t * fromJ, t * fromM]).T
+    return np.array([cuspJ * ((toJ * (1.0 - t) + t * fromJ) / cuspJ), t * fromM]).T
+#     return np.array([cuspJ * ((toJ * (1.0 - t) + t * fromJ) / cuspJ)**bound_gamma, t * fromM]).T
 
 def forwardGamutMapper(JMh, cusp, approx):
     J, M, h = tsplit(JMh)
