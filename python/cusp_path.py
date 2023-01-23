@@ -251,7 +251,7 @@ def XYZ_to_Hellwig2022(
     Y_b: FloatingOrArrayLike,
     surround: Union[
         InductionFactors_CIECAM02, InductionFactors_Hellwig2022
-    ] = VIEWING_CONDITIONS_Hellwig2022["Average"],
+    ] = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"],
     L_B=0,
     H_B=1,
     discount_illuminant: Boolean = False,
@@ -397,7 +397,7 @@ def Hellwig2022_to_XYZ(
     Y_b: FloatingOrArrayLike,
     surround: Union[
         InductionFactors_CIECAM02, InductionFactors_Hellwig2022
-    ] = VIEWING_CONDITIONS_Hellwig2022["Average"],
+    ] = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"],
     L_B=0,
     H_B=1,
     discount_illuminant: Boolean = False,
