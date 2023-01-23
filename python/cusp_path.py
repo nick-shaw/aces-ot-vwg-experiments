@@ -603,7 +603,7 @@ def find_gamut_intersection_tri(cusp, pfrom, pto):
     toJ, toM = tsplit(pto)
 
     if (fromJ - toJ) * cuspM - (cuspJ - toJ) * fromM <= 0.0:
-        bound_gamma = 1.15
+        bound_gamma = gamma_approx
         toJ_gamma = cuspJ * (toJ / cuspJ)**(1 / bound_gamma)
         fromJ_gamma = cuspJ * (fromJ / cuspJ)**(1 / bound_gamma)
         t = cuspM * toJ_gamma / (fromM * cuspJ + cuspM * (toJ_gamma - fromJ_gamma))
@@ -728,6 +728,10 @@ MATRIX_INVERSE_16 = np.linalg.inv(MATRIX_16)
 LINEAR_VS_COMPRESS = False
 DO_COMPRESS = True
 DO_ECCENTRICITY = True
+
+
+z = 1.48 + np.sqrt(20.0 / 100.0)
+gamma_approx = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"].c * z
 
 if __name__ == "__main__":
     import os

@@ -88,7 +88,7 @@ if check_boxes.get_status()[1]==1:
     pathix0, = ax.plot([ixM, 0], [ixJ, focusJ], color='black')
     if check_boxes.get_status()[2] == 1:
 #         ixl0, = ax.plot([0, M_cusp], [0, J_cusp], color='red')
-        ixl0, = ax.plot(np.linspace(0, M_cusp), np.linspace(0, 1)**1.15 * J_cusp, color='red')
+        ixl0, = ax.plot(np.linspace(0, M_cusp), np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp, color='red')
         ixl1, = ax.plot([0, M_cusp], [100, J_cusp], color='red')
 
 
@@ -139,7 +139,7 @@ def update(val):
 #             ixl0.set_xdata([0, M_cusp])
 #             ixl0.set_ydata([0, J_cusp])
             ixl0.set_xdata(np.linspace(0, M_cusp))
-            ixl0.set_ydata(np.linspace(0, 1)**1.15 * J_cusp)
+            ixl0.set_ydata(np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp)
             ixl1.set_xdata([0, M_cusp])
             ixl1.set_ydata([100, J_cusp])
         else:
