@@ -69,10 +69,11 @@ source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-comp_label = ax.text(80, 5,
-"Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
-"Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-.format(ixJ, ixM, CJ, CM)
+comp_label = ax.text(80, 10,
+    "Focus J = {:.1f}\n\n"
+    "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
+    "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
+    .format(focusJ, ixJ, ixM, CJ, CM)
 )
 
 if check_boxes.get_status()[0]==1:
@@ -115,10 +116,11 @@ def update(val):
     source.set_ydata(SJ.val)
     source.set_color(RGB)
     comp_label.set_text(
-"Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
-"Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-.format(ixJ, ixM, CJ, CM)
-)
+        "Focus J = {:.1f}\n\n"
+        "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
+        "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
+        .format(focusJ, ixJ, ixM, CJ, CM)
+    )
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
         cusp.set_xdata(M_cusp)
