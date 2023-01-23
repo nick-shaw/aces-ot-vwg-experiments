@@ -69,11 +69,12 @@ source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-comp_label = ax.text(80, 10,
+comp_label = ax.text(75, 10,
     "Focus J = {:.1f}\n\n"
     "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
+    "Normalised ratio = {:.2f}\n\n"
     "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-    .format(focusJ, ixJ, ixM, CJ, CM)
+    .format(focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
 )
 
 if check_boxes.get_status()[0]==1:
@@ -87,7 +88,6 @@ if check_boxes.get_status()[1]==1:
     pathix, = ax.plot([SM.val, ixM], [SJ.val, ixJ], color='black')
     pathix0, = ax.plot([ixM, 0], [ixJ, focusJ], color='black')
     if check_boxes.get_status()[2] == 1:
-#         ixl0, = ax.plot([0, M_cusp], [0, J_cusp], color='red')
         ixl0, = ax.plot(np.linspace(0, M_cusp), np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp, color='red')
         ixl1, = ax.plot([0, M_cusp], [100, J_cusp], color='red')
 
@@ -118,8 +118,9 @@ def update(val):
     comp_label.set_text(
         "Focus J = {:.1f}\n\n"
         "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
+        "Normalised ratio = {:.2f}\n\n"
         "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-        .format(focusJ, ixJ, ixM, CJ, CM)
+        .format(focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
     )
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
@@ -136,8 +137,6 @@ def update(val):
         pathix0.set_xdata([ixM, 0])
         pathix0.set_ydata([ixJ, focusJ])
         if check_boxes.get_status()[2] == 1:
-#             ixl0.set_xdata([0, M_cusp])
-#             ixl0.set_ydata([0, J_cusp])
             ixl0.set_xdata(np.linspace(0, M_cusp))
             ixl0.set_ydata(np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp)
             ixl1.set_xdata([0, M_cusp])

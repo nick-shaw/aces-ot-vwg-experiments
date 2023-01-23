@@ -607,12 +607,10 @@ def find_gamut_intersection_tri(cusp, pfrom, pto):
         toJ_gamma = cuspJ * (toJ / cuspJ)**(1 / bound_gamma)
         fromJ_gamma = cuspJ * (fromJ / cuspJ)**(1 / bound_gamma)
         t = cuspM * toJ_gamma / (fromM * cuspJ + cuspM * (toJ_gamma - fromJ_gamma))
-#         t = cuspM * toJ / (fromM * cuspJ + cuspM * (toJ - fromJ))
     else:
         t = cuspM * (toJ - 100) / (fromM * (cuspJ - 100) + cuspM * (toJ - fromJ))
 
     return np.array([cuspJ * ((toJ * (1.0 - t) + t * fromJ) / cuspJ), t * fromM]).T
-#     return np.array([cuspJ * ((toJ * (1.0 - t) + t * fromJ) / cuspJ)**bound_gamma, t * fromM]).T
 
 def forwardGamutMapper(JMh, cusp, approx):
     J, M, h = tsplit(JMh)
@@ -622,7 +620,7 @@ def forwardGamutMapper(JMh, cusp, approx):
         return JMh
 
     # Calculate where the out of gamut color is projected to
-    # Mid gray assumed to be 10.0 bits (34.0 J)
+    # Mid gray assumed to be 10.0 nits (34.0 J)
     focusJ = lerp(0.5, cuspJ, 34.0)
     Jdiff = J - focusJ
     if Jdiff > 0.0:
@@ -660,7 +658,6 @@ def find_threshold(J, h, iterations=10, debug=False):
     surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
     M_max = np.minimum(J*1.25+25, 100.0)
     M = tstack((np.zeros(len(J)), M_max))
-#     M = np.array([0, min(J*1.25+25, 100.0)])
     i = iterations
     while i >= 0:
         mean = M.mean(axis=1)
@@ -684,21 +681,12 @@ def find_threshold(J, h, iterations=10, debug=False):
         M1_new = np.where(out_of_gamut, mean, M1)
         M0_new = np.where(out_of_gamut, M0, mean)
         M = tstack((M0_new, M1_new))
-#         if RGB.min() < 0 or RGB.max() > 1 or np.isnan(XYZ.min()):
-#             M[1] = M.mean()
-#         else:
-#             M[0] = M.mean()
         i -= 1
     return M.mean(axis=1)
 
 def find_boundary(h, iterations=10):
     J_range = np.linspace(0, 100, J_resolution)
-#     M_boundary = np.zeros(J_resolution)
-#     j = 0
     M_boundary = find_threshold(J_range, h, iterations)
-#     for J in J_range: 
-#         M_boundary[j] = find_threshold(J, h, iterations)
-#         j += 1
         
     return M_boundary
 
@@ -741,8 +729,6 @@ if __name__ == "__main__":
     M_cusp = np.zeros(360)
     J_cusp = np.zeros(360)
     for h in range(360):
-#        if h % 10 == 0:
-#            print(h)
         M_boundary = find_boundary(h*1.0, iterations=iterations)
         M_cusp[h] = M_boundary.max()
         J_cusp[h] = 100.0 * (M_boundary.argmax()) / (J_resolution - 1)
