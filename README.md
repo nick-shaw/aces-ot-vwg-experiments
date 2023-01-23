@@ -51,4 +51,4 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 
 * `cusp_plot.py` - Creates a png sequence of plots of the gamut boundary at different hue angles. Uses functions from `cusp_path.py`.
 
-* `interactive_cusp.py` - An interactive plot of the gamut boundary at a selectable hue value. Includes a skeleton framework for showing the path of gamut compression. The compression currently shown is a simple version, not the full version from the current DRT.
+* `interactive_cusp.py` - An interactive plot of the gamut boundary at a selectable hue value. Includes an optional approximation of the gamut boundary based only on the cusp position, as well as the result of gamut compressing a selectable JMh value. The compression currently shown is a slightly simpler version than that used in recent iterations of the DRT.
