@@ -158,6 +158,10 @@ class CAM_Specification_Hellwig2022(MixinDataclassArithmetic):
     H: Optional[FloatingOrNDArray] = field(default_factory=lambda: None)
     HC: Optional[FloatingOrNDArray] = field(default_factory=lambda: None)
 
+LINEAR_VS_COMPRESS = False
+DO_COMPRESS = True
+DO_ECCENTRICITY = False
+SURROUND_STYLE = "Dim"
 
 def f_RGB_a(RGB: ArrayLike, F_L: FloatingOrArrayLike) -> NDArray:
     F_L_RGB = (F_L[..., np.newaxis] * np.absolute(RGB) / 100) ** 0.42
@@ -240,10 +244,6 @@ def uncompress(xyz):
     return np.where(RRR==0.0, xyz, np.array([x,y,z]).T)
 
 
-# LINEAR_VS_COMPRESS = False
-# DO_COMPRESS = False
-# DO_ECCENTRICITY = False
-
 def XYZ_to_Hellwig2022(
     XYZ: ArrayLike,
     XYZ_w: ArrayLike,
@@ -251,7 +251,7 @@ def XYZ_to_Hellwig2022(
     Y_b: FloatingOrArrayLike,
     surround: Union[
         InductionFactors_CIECAM02, InductionFactors_Hellwig2022
-    ] = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"],
+    ] = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE],
     L_B=0,
     H_B=1,
     discount_illuminant: Boolean = False,
@@ -397,7 +397,7 @@ def Hellwig2022_to_XYZ(
     Y_b: FloatingOrArrayLike,
     surround: Union[
         InductionFactors_CIECAM02, InductionFactors_Hellwig2022
-    ] = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"],
+    ] = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE],
     L_B=0,
     H_B=1,
     discount_illuminant: Boolean = False,
@@ -562,7 +562,7 @@ def find_gamut_intersection(pfrom, focus, h, precision = 10, startStepSize = 0.4
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100
     Y_b = 20
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
 
     stepSize = startStepSize
     unitVector = vec_normalize(np.subtract(project_to, focus));
@@ -655,7 +655,7 @@ def find_threshold(J, h, iterations=10, debug=False):
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100
     Y_b = 20
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
     M_max = np.minimum(J*1.25+25, 100.0)
     M = tstack((np.zeros(len(J)), M_max))
     i = iterations
@@ -713,13 +713,9 @@ RGB_COLOURSPACE_MATRIX_16 = colour.RGB_Colourspace(
 MATRIX_16 = RGB_COLOURSPACE_MATRIX_16.matrix_XYZ_to_RGB
 MATRIX_INVERSE_16 = np.linalg.inv(MATRIX_16)
 
-LINEAR_VS_COMPRESS = False
-DO_COMPRESS = True
-DO_ECCENTRICITY = True
-
 
 z = 1.48 + np.sqrt(20.0 / 100.0)
-gamma_approx = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"].c * z
+gamma_approx = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE].c * z
 
 if __name__ == "__main__":
     import os
@@ -741,7 +737,7 @@ if __name__ == "__main__":
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100.0
     Y_b = 20.0
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
     rgbcmyk = [['red', [1.0, 0.0, 0.0]],
                ['green', [0.0, 1.0, 0.0]],
                ['blue', [0.0, 0.0, 1.0]],

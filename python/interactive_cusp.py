@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, CheckButtons
 import cusp_path
-from cusp_path import J_resolution, PLOT_COLOURSPACE, Hellwig2022_to_XYZ, CAM_Specification_Hellwig2022, forwardGamutMapper
+from cusp_path import J_resolution, PLOT_COLOURSPACE, Hellwig2022_to_XYZ, CAM_Specification_Hellwig2022, forwardGamutMapper, SURROUND_STYLE
 from colour.utilities import (
     CanonicalMapping,
     MixinDataclassArithmetic,
@@ -22,7 +22,7 @@ from colour.utilities import (
 XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
 L_A = 100.0
 Y_b = 20.0
-surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
 
 def JMh_to_RGB(J, M, h):
     JMh = CAM_Specification_Hellwig2022(J=J, M=M, h=h)
