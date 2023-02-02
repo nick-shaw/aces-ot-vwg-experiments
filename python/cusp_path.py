@@ -649,7 +649,7 @@ def forwardGamutMapper(JMh, cusp, approx):
     compressed = np.add(project_to, vec_normalize(np.subtract(project_from, project_to)) * vc / normFact)
 
     J, M = tsplit(compressed)
-    return np.array([J, M, h, projectJ, boundary[...,0], boundary[...,1]]).T
+    return np.array([J, M, h, projectJ, focusJ, focusM, boundary[...,0], boundary[...,1]]).T
 
 def find_threshold(J, h, iterations=10, debug=False):
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100

@@ -37,7 +37,7 @@ J_range = np.linspace(0, 100, J_resolution)
 fig, ax = plt.subplots(figsize=(10,10) )
 plt.subplots_adjust(left=0.05, top=0.9, bottom=0.3, right=0.97)
 
-plt.axis([0, 100, 0, 100])
+plt.axis([-100, 100, 0, 100])
 plt.title("CAM DRT Gamut Mapping")
 
 hue_slider = plt.axes([0.05, 0.1, 0.2, 0.01])
@@ -58,33 +58,32 @@ J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
 compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, M_cusp]),
                            check_boxes.get_status()[2] == 1)
 
-CJ, CM, hue, focusJ, ixJ, ixM = tsplit(compr);
+CJ, CM, hue, projectJ, focusJ, focusM, ixJ, ixM = tsplit(compr);
 RGB = JMh_to_RGB(CJ, CM, h.val)
 compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
 ix, = ax.plot(ixM, ixJ, color="black", marker='o')
-focus, = ax.plot(0, focusJ, color="gray", marker='o')
+focus, = ax.plot(0, projectJ, color="gray", marker='o')
 
-if SJ.val > focusJ:
-    focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, SJ.val))
-else:
-    focusDistanceGain = focusJ / np.maximum(0.0001, SJ.val)
-focusAdjust = 0.5
-focusM = -M_cusp * focusAdjust * focusDistanceGain
+Jaxis = ax.plot([0, 0], [0, 100], color='black')
 
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
 source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-comp_label = ax.text(75, 50,
+comp_label = ax.text(-80, 50,
     "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
-    "Focus J = {:.1f}\n\n"
+    "Project J = {:.1f}\n\n"
+    "Focus J = {:.1f}\n"
     "Focus M = {:.1f}\n\n"
     "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Normalised ratio = {:.2f}\n\n"
     "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-    .format(J_cusp, M_cusp, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
+    .format(J_cusp, M_cusp, projectJ, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
 )
+
+focusLine, = ax.plot([ixM, focusM], [ixJ, focusJ], color='black')
+focusDot, = ax.plot(focusM, focusJ, color='black', marker='o')
 
 if check_boxes.get_status()[0]==1:
     M_cusp = M_bound.max()
@@ -95,7 +94,7 @@ if check_boxes.get_status()[0]==1:
 if check_boxes.get_status()[1]==1:
     path, = ax.plot([SM.val, CM], [SJ.val, CJ], color='black')
     pathix, = ax.plot([SM.val, ixM], [SJ.val, ixJ], color='black')
-    pathix0, = ax.plot([ixM, 0], [ixJ, focusJ], color='black')
+    pathix0, = ax.plot([ixM, 0], [ixJ, projectJ], color='black')
     if check_boxes.get_status()[2] == 1:
         ixl0, = ax.plot(np.linspace(0, M_cusp), np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp, color='red')
         ixl1, = ax.plot([0, M_cusp], [100, J_cusp], color='red')
@@ -110,13 +109,7 @@ def update(val):
 
     compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, M_cusp]),
                                check_boxes.get_status()[2] == 1)
-    CJ, CM, hue, focusJ, ixJ, ixM = tsplit(compr);
-    if SJ.val > focusJ:
-        focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, SJ.val))
-    else:
-        focusDistanceGain = focusJ / np.maximum(0.0001, SJ.val)
-    focusAdjust = 0.5
-    focusM = -M_cusp * focusAdjust * focusDistanceGain
+    CJ, CM, hue, projectJ, focusJ, focusM, ixJ, ixM = tsplit(compr);
     RGB = JMh_to_RGB(CJ, CM, h.val)
     compressed.set_xdata(CM)
     compressed.set_ydata(CJ)
@@ -124,21 +117,26 @@ def update(val):
     ix.set_xdata(ixM)
     ix.set_ydata(ixJ)
     focus.set_xdata(0)
-    focus.set_ydata(focusJ)
+    focus.set_ydata(projectJ)
 
     RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
     source.set_xdata(SM.val)
     source.set_ydata(SJ.val)
     source.set_color(RGB)
     comp_label.set_text(
-        "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
-        "Focus J = {:.1f}\n\n"
-        "Focus M = {:.1f}\n\n"
-        "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
-        "Normalised ratio = {:.2f}\n\n"
-        "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-        .format(J_cusp, M_cusp, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
+      "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
+      "Project J = {:.1f}\n\n"
+      "Focus J = {:.1f}\n"
+      "Focus M = {:.1f}\n\n"
+      "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
+      "Normalised ratio = {:.2f}\n\n"
+      "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
+      .format(J_cusp, M_cusp, projectJ, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
     )
+    focusLine.set_xdata([ixM, focusM])
+    focusLine.set_ydata([ixJ, focusJ])
+    focusDot.set_xdata(focusM)
+    focusDot.set_ydata(focusJ)
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
         cusp.set_xdata(M_cusp)
@@ -152,7 +150,7 @@ def update(val):
         pathix.set_xdata([SM.val, ixM])
         pathix.set_ydata([SJ.val, ixJ])
         pathix0.set_xdata([ixM, 0])
-        pathix0.set_ydata([ixJ, focusJ])
+        pathix0.set_ydata([ixJ, projectJ])
         if check_boxes.get_status()[2] == 1:
             ixl0.set_xdata(np.linspace(0, M_cusp))
             ixl0.set_ydata(np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp)
