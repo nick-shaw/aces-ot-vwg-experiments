@@ -64,6 +64,13 @@ compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
 ix, = ax.plot(ixM, ixJ, color="black", marker='o')
 focus, = ax.plot(0, focusJ, color="gray", marker='o')
 
+if SJ.val > focusJ:
+    focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, SJ.val))
+else:
+    focusDistanceGain = focusJ / np.maximum(0.0001, SJ.val)
+focusAdjust = 0.5
+focusM = -M_cusp * focusAdjust * focusDistanceGain
+
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
 source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
@@ -72,10 +79,11 @@ curve, = ax.plot( M_bound, J_range, color='blue')
 comp_label = ax.text(75, 50,
     "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Focus J = {:.1f}\n\n"
+    "Focus M = {:.1f}\n\n"
     "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Normalised ratio = {:.2f}\n\n"
     "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-    .format(J_cusp, M_cusp, focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
+    .format(J_cusp, M_cusp, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
 )
 
 if check_boxes.get_status()[0]==1:
@@ -103,6 +111,12 @@ def update(val):
     compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, M_cusp]),
                                check_boxes.get_status()[2] == 1)
     CJ, CM, hue, focusJ, ixJ, ixM = tsplit(compr);
+    if SJ.val > focusJ:
+        focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, SJ.val))
+    else:
+        focusDistanceGain = focusJ / np.maximum(0.0001, SJ.val)
+    focusAdjust = 0.5
+    focusM = -M_cusp * focusAdjust * focusDistanceGain
     RGB = JMh_to_RGB(CJ, CM, h.val)
     compressed.set_xdata(CM)
     compressed.set_ydata(CJ)
@@ -119,10 +133,11 @@ def update(val):
     comp_label.set_text(
         "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
         "Focus J = {:.1f}\n\n"
+        "Focus M = {:.1f}\n\n"
         "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
         "Normalised ratio = {:.2f}\n\n"
         "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-        .format(J_cusp, M_cusp, focusJ, ixJ, ixM, SM.val / ixM, CJ, CM)
+        .format(J_cusp, M_cusp, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
     )
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
