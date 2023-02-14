@@ -621,35 +621,40 @@ def forwardGamutMapper(JMh, cusp, approx):
 
     # Calculate where the out of gamut color is projected to
     # Mid gray assumed to be 10.0 nits (34.0 J)
+    g = 2.0 * cuspM
     focusJ = lerp(0.5, cuspJ, 34.0)
-    Jdiff = J - focusJ
-    if Jdiff > 0.0:
-        focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, J))
-    else:
-        focusDistanceGain = focusJ / np.maximum(0.0001, J)
+    focusM = M / g;
 
-    # in v28 this depends on tonescaled lightness so just set it to the old 0.5 value
-    focusAdjust = 0.5
-    focusM = -cuspM * focusAdjust * focusDistanceGain
-    projectJ = focusJ - ((Jdiff / (M - focusM)) * focusM)
+    a = focusM / focusJ
+    b0 = 1.0 - focusM;
+    b1 = -(1.0 + focusM + (a * 100.0))
+    b = b0 if J < focusJ else b1
+    c0 = -J
+    c1 = J + 100.0 * focusM
+    c = c0 if J < focusJ else c1
+
+    J0 = np.sqrt(b * b - 4 * a * c)
+    J1 = (-b - J0) / (2 * a)
+    J0 = (-b + J0) / (2 * a)
+    projectJ = J0 if J < focusJ else J1
 
     # Find gamut intersection
     project_from = np.array([J, M]).T
     project_to = np.array([projectJ, 0]).T
-    if approx:
-        boundary = find_gamut_intersection_tri(cusp, project_from, project_to)
-    else:
-        boundary = find_gamut_intersection(project_from, np.array([focusJ, focusM]).T, h)
+    boundary = find_gamut_intersection_tri(cusp, project_from, project_to)
 
     # Compress
     normFact = 1.0 / np.maximum(0.0001, vec_length(np.subtract(boundary, project_to)))
+    print(normFact)
+    print(M / boundary[1])
     v = vec_length(np.subtract(project_from, project_to)) * normFact
+    print(v)
     # In v28 limit depends on tonescaled lightness so set it to the old 1.2 value
-    vc = compress_powerp(v, 0.75, 1.2, 1.2)
+    vc = compress_powerp(v, 0.75, 1.2, 1.0)
     compressed = np.add(project_to, vec_normalize(np.subtract(project_from, project_to)) * vc / normFact)
 
     J, M = tsplit(compressed)
-    return np.array([J, M, h, projectJ, focusJ, focusM, boundary[...,0], boundary[...,1]]).T
+    return np.array([J, M, h, projectJ, boundary[...,0], boundary[...,1]]).T
 
 def find_threshold(J, h, iterations=10, debug=False):
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100

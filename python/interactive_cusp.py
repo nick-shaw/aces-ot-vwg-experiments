@@ -37,7 +37,7 @@ J_range = np.linspace(0, 100, J_resolution)
 fig, ax = plt.subplots(figsize=(10,10) )
 plt.subplots_adjust(left=0.05, top=0.9, bottom=0.3, right=0.97)
 
-plt.axis([-100, 100, 0, 100])
+plt.axis([-50, 100, 0, 100])
 plt.title("CAM DRT Gamut Mapping")
 
 hue_slider = plt.axes([0.05, 0.1, 0.2, 0.01])
@@ -58,7 +58,7 @@ J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
 compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, M_cusp]),
                            check_boxes.get_status()[2] == 1)
 
-CJ, CM, hue, projectJ, focusJ, focusM, ixJ, ixM = tsplit(compr);
+CJ, CM, hue, projectJ, ixJ, ixM = tsplit(compr);
 RGB = JMh_to_RGB(CJ, CM, h.val)
 compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
 ix, = ax.plot(ixM, ixJ, color="black", marker='o')
@@ -71,19 +71,14 @@ source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
 
 curve, = ax.plot( M_bound, J_range, color='blue')
 
-comp_label = ax.text(-80, 50,
+comp_label = ax.text(-45, 50,
     "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Project J = {:.1f}\n\n"
-    "Focus J = {:.1f}\n"
-    "Focus M = {:.1f}\n\n"
     "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
     "Normalised ratio = {:.2f}\n\n"
     "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-    .format(J_cusp, M_cusp, projectJ, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
+    .format(J_cusp, M_cusp, projectJ, ixJ, ixM, SM.val / ixM, CJ, CM)
 )
-
-focusLine, = ax.plot([ixM, focusM], [ixJ, focusJ], color='black')
-focusDot, = ax.plot(focusM, focusJ, color='black', marker='o')
 
 if check_boxes.get_status()[0]==1:
     M_cusp = M_bound.max()
@@ -109,7 +104,7 @@ def update(val):
 
     compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, M_cusp]),
                                check_boxes.get_status()[2] == 1)
-    CJ, CM, hue, projectJ, focusJ, focusM, ixJ, ixM = tsplit(compr);
+    CJ, CM, hue, projectJ, ixJ, ixM = tsplit(compr);
     RGB = JMh_to_RGB(CJ, CM, h.val)
     compressed.set_xdata(CM)
     compressed.set_ydata(CJ)
@@ -126,17 +121,11 @@ def update(val):
     comp_label.set_text(
       "Cusp:\n  J = {:.1f}\n  M = {:.1f}\n\n"
       "Project J = {:.1f}\n\n"
-      "Focus J = {:.1f}\n"
-      "Focus M = {:.1f}\n\n"
       "Intersection:\n  J = {:.1f}\n  M = {:.1f}\n\n"
       "Normalised ratio = {:.2f}\n\n"
       "Compressed:\n  J = {:.1f}\n  M = {:.1f}"
-      .format(J_cusp, M_cusp, projectJ, focusJ, focusM, ixJ, ixM, SM.val / ixM, CJ, CM)
+      .format(J_cusp, M_cusp, projectJ, ixJ, ixM, SM.val / ixM, CJ, CM)
     )
-    focusLine.set_xdata([ixM, focusM])
-    focusLine.set_ydata([ixJ, focusJ])
-    focusDot.set_xdata(focusM)
-    focusDot.set_ydata(focusJ)
     if check_boxes.get_status()[0]==1:
         RGB = JMh_to_RGB(J_cusp, M_cusp, h.val)
         cusp.set_xdata(M_cusp)
