@@ -560,27 +560,7 @@ __DEVICE__ float radians( float degrees )
 __DEVICE__ float mod(float a, float N)
 {
     return a - N * _floorf(a / N);
-} 
-
-// Don't think this is used
-// __DEVICE__ float hue_angle( float a, float b )
-// {
-//     float h = degrees(_atan2f(b, a)) / 360.0f;
-// 
-//     return h;
-// }
-
-// Don't think this is used
-// __DEVICE__ float achromatic_response_forward(float3 RGB)
-// {
-//     float R = RGB.x;
-//     float G = RGB.y;
-//     float B = RGB.z;
-// 
-//     float A = 2.0f * R + G + 0.05f * B - 0.305f;
-// 
-//     return A;
-// }
+}
 
 __DEVICE__ float3 compress(float3 xyz)
 {
@@ -1078,8 +1058,12 @@ __DEVICE__ float3 forwardTonescale( float3 inputJMh, int compressChroma)
 
 __DEVICE__ float2 cuspFromTable(float h)
 {
-    int lo = (int)_floorf(h);
-    int hi = (int)_ceilf(h);
+    int lo = (int)_floorf(mod(h, 360.0f));
+    int hi = (int)_ceilf(mod(h, 360.0f));
+    if (hi == 360)
+    {
+        hi = 0;
+    }
     float t = _fmod(h, 1.0f);
     
     return _mix(gamutCuspTable[lo], gamutCuspTable[hi], t);
@@ -1165,9 +1149,9 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
     float3 in = make_float3(p_R, p_G, p_B);
-    
-    float3 out = referenceLuminance * in;
-    out = vector_dot(AP0_ACES_to_XYZ_matrix, out);
+
+    float3 out = vector_dot(AP0_ACES_to_XYZ_matrix, in);
+    out *= referenceLuminance;
     out = XYZ_to_Hellwig2022_JMh(out, d65White);
     if (toneCurve)
     {
