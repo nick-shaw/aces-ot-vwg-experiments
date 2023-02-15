@@ -510,12 +510,14 @@ __DEVICE__ float3x3 matrix_dot( float3x3 m1, float3x3 m2)
     float m20 = m1.z.x * m2.x.x + m1.z.y * m2.y.x + m1.z.z * m2.z.x;
     float m21 = m1.z.x * m2.x.y + m1.z.y * m2.y.y + m1.z.z * m2.z.y;
     float m22 = m1.z.x * m2.x.z + m1.z.y * m2.y.z + m1.z.z * m2.z.z;
-    
-    return float3x3{
-        {m00, m01, m02},
-        {m10, m11, m12},
-        {m20, m21, m22}
-    };
+
+    float3x3 result;
+
+    result.x = make_float3(m00, m01, m02);
+    result.y = make_float3(m10, m11, m12);
+    result.z = make_float3(m20, m21, m22);
+
+    return result;
 }
 
 // "safe" power function to avoid NANs or INFs when taking a fractional power of a negative base
@@ -536,7 +538,7 @@ __DEVICE__ float spow( float base, float exponent )
 
 __DEVICE__ float3 float3spow( float3 base, float exponent )
 {
-    return float3(spow(base.x, exponent), spow(base.y, exponent), spow(base.z, exponent));
+    return make_float3(spow(base.x, exponent), spow(base.y, exponent), spow(base.z, exponent));
 }
 
 __DEVICE__ float3 float3sign( float3 v )
@@ -628,7 +630,7 @@ __DEVICE__ float3 compress(float3 xyz)
     {
       t = (0.5f + spow((_powf((s - 0.5f), 2.0f) + _powf((_sqrtf(4.0f / _powf(r, 2.0f) + 1.0f) - 1.0f), 2.0f) / 4.0f), 0.5f));
       if (t == 0.0f)
-        return float3(xyz.x, xyz.y, xyz.z);
+        return make_float3(xyz.x, xyz.y, xyz.z);
       t = 1.0f / t;
     }
 
@@ -897,7 +899,7 @@ __DEVICE__ float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
 	// # Step 4
 	// # Applying post-adaptation non-linear response compression matrix.
 
-	float3 RGB_a = vector_dot(panlrcm, float3(P_p_2, a, b)) / 1403.0f;
+	float3 RGB_a = vector_dot(panlrcm, make_float3(P_p_2, a, b)) / 1403.0f;
 
 	// # Step 5
 	// # Applying inverse post-adaptation non-linear response compression.
@@ -929,7 +931,7 @@ __DEVICE__ float3 JMh_to_luminance_RGB(float3 JMh)
 }
 
 // convert RGB values in the output colorspace to the ZCAM J (lightness), M (colorfulness) and h (hue) correlates
-float3 luminance_RGB_to_JMh(float3 luminanceRGB)
+__DEVICE__ float3 luminance_RGB_to_JMh(float3 luminanceRGB)
 {
     float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
     float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
@@ -1017,7 +1019,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     float M = JMh.y;
     
     // limitJmax (asumed to match limitRGB white)
-    float limitJmax = limit_RGB_to_JMh(float3(1.0f)).x;
+    float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
     // Model specific factors to avoid having to change parameters manually
     int camMode = 1;
@@ -1089,15 +1091,15 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
 __DEVICE__ float3 forwardTonescale( float3 inputJMh, int compressChroma)
 {
     float3 outputJMh;
-    float3 monoJMh = float3(inputJMh.x,0.0f,0.0f);
+    float3 monoJMh = make_float3(inputJMh.x,0.0f,0.0f);
     float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
     float linear = linearJMh.x / referenceLuminance;
 
     // only Daniele Evo tone scale
     float luminanceTS = daniele_evo_fwd(linear) * mmScaleFactor;
 
-    float3 tonemappedmonoJMh = luminance_RGB_to_JMh(float3(luminanceTS,luminanceTS,luminanceTS));
-    float3 tonemappedJMh = float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
+    float3 tonemappedmonoJMh = luminance_RGB_to_JMh(make_float3(luminanceTS,luminanceTS,luminanceTS));
+    float3 tonemappedJMh = make_float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
 
     outputJMh = tonemappedJMh;
 
@@ -1131,7 +1133,7 @@ __DEVICE__ float smin(float a, float b, float s)
 __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, float smoothing)
 {
     // limitJmax (asumed to match limitRGB white)
-    float limitJmax = limit_RGB_to_JMh(float3(1.0f)).x;
+    float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
     float t0, t1;
 
@@ -1152,15 +1154,15 @@ __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, f
     // Smooth minimum to smooth the cusp
     t1 = smin(_fabs(t0), _fabs(t1), s);
 
-    return float2(to.x * (1.0f - t1) + t1 * from.x, t1 * from.y);
+    return make_float2(to.x * (1.0f - t1) + t1 * from.x, t1 * from.y);
 }
 
 __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 {
     // limitJmax (asumed to match limitRGB white)
-    float limitJmax = limit_RGB_to_JMh(float3(1.0f)).x;
+    float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
-    float2 project_from = float2(JMh.x, JMh.y);
+    float2 project_from = make_float2(JMh.x, JMh.y);
     float2 JMcusp = cuspFromTable(JMh.z);
 
     if (project_from.y == 0.0f)
@@ -1179,13 +1181,13 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
     float c1 = project_from.x + limitJmax * Mratio;
     float c = project_from.x < focusJ ? c0 : c1;
 
-    float J0 = sqrt(b * b - 4 * a * c);
+    float J0 = _sqrtf(b * b - 4 * a * c);
     float J1 = (-b - J0) / (2 * a);
           J0 = (-b + J0) / (2 * a);
     float projectJ = project_from.x < focusJ ? J0 : J1;
 
     // Find gamut intersection
-    float2 project_to = float2(projectJ, 0.0f);
+    float2 project_to = make_float2(projectJ, 0.0f);
     float2 JMboundary = find_gamut_intersection(JMcusp, project_from, project_to, smoothCusps);
 
     // Compress the out of gamut color along the projection line
@@ -1193,7 +1195,7 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
     v = compressPowerP(v, compressionFuncParams.x, _mix(compressionFuncParams.z, compressionFuncParams.y, projectJ / limitJmax), compressionFuncParams.w, invert);
     float2 JMcompressed = project_to + v * (JMboundary - project_to);
 
-    return float3(JMcompressed.x, JMcompressed.y, JMh.z);
+    return make_float3(JMcompressed.x, JMcompressed.y, JMh.z);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
