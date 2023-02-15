@@ -119,7 +119,8 @@ __CONSTANT__ float smoothCusps = 0.0f;
 __CONSTANT__ float midJ = 34.08f; // ~10 nits in Hellwig J
 __CONSTANT__ float focusDistance = 2.0f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.2f, 1.45f, 1.0f};
-__CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
+// __CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
+__CONSTANT__ float gamut_gamma = 0.879464f; // reciprocal of above
 __CONSTANT__ float2 gamutCuspTable[360] = {
 {56.9, 69.58267212},
 {56.6, 69.6852417},
