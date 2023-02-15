@@ -533,14 +533,14 @@ __DEVICE__ float3 float3abs( float3 a )
 // "safe" div
 __DEVICE__ float sdiv( float a, float b )
 {
-	if(b == 0.0f)
-	{
-	    return 0.0f;
-	}
-	else
-	{
-	    return a / b;
-	}
+    if(b == 0.0f)
+    {
+        return 0.0f;
+    }
+    else
+    {
+        return a / b;
+    }
 }
 
 // convert radians to degrees
@@ -572,13 +572,13 @@ __DEVICE__ float mod(float a, float N)
 // Don't think this is used
 // __DEVICE__ float achromatic_response_forward(float3 RGB)
 // {
-// 	float R = RGB.x;
-// 	float G = RGB.y;
-// 	float B = RGB.z;
+//     float R = RGB.x;
+//     float G = RGB.y;
+//     float B = RGB.z;
 // 
-// 	float A = 2.0f * R + G + 0.05f * B - 0.305f;
+//     float A = 2.0f * R + G + 0.05f * B - 0.305f;
 // 
-// 	return A;
+//     return A;
 // }
 
 __DEVICE__ float3 compress(float3 xyz)
@@ -635,9 +635,9 @@ __DEVICE__ float3 uncompress(float3 xyz)
     
     if (R != 0.0f)
     {
-		x = (x - C) / R;
-		y = (y - C) / R;
-		z = (z - C) / R;
+        x = (x - C) / R;
+        y = (y - C) / R;
+        z = (z - C) / R;
     }
 
     float t = R / C;
@@ -682,13 +682,13 @@ __DEVICE__ float compressPowerP( float v, float threshold, float limit, float po
 
 __DEVICE__ float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)
 {
-	float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);
-	float3 RGB_c;
-	RGB_c.x = (400.0f * _copysignf(1.0f, RGB.x) * F_L_RGB.x) / (27.13f + F_L_RGB.x) + 0.1f;
-	RGB_c.y = (400.0f * _copysignf(1.0f, RGB.y) * F_L_RGB.y) / (27.13f + F_L_RGB.y) + 0.1f;
-	RGB_c.z = (400.0f * _copysignf(1.0f, RGB.z) * F_L_RGB.z) / (27.13f + F_L_RGB.z) + 0.1f;
+    float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);
+    float3 RGB_c;
+    RGB_c.x = (400.0f * _copysignf(1.0f, RGB.x) * F_L_RGB.x) / (27.13f + F_L_RGB.x) + 0.1f;
+    RGB_c.y = (400.0f * _copysignf(1.0f, RGB.y) * F_L_RGB.y) / (27.13f + F_L_RGB.y) + 0.1f;
+    RGB_c.z = (400.0f * _copysignf(1.0f, RGB.z) * F_L_RGB.z) / (27.13f + F_L_RGB.z) + 0.1f;
 
-	return RGB_c;
+    return RGB_c;
 }
 
 __DEVICE__ float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB,float F_L)
@@ -700,197 +700,197 @@ __DEVICE__ float3 post_adaptation_non_linear_response_compression_inverse(float3
 
 __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
 {
-// 	float _X_w = XYZ_w.x ;
-	float Y_w = XYZ_w.y ;
-// 	float _Z_w = XYZ_w.z ;
+//     float _X_w = XYZ_w.x ;
+    float Y_w = XYZ_w.y ;
+//     float _Z_w = XYZ_w.z ;
 
-	// # Step 0
-	// # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
-	float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);
+    // # Step 0
+    // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+    float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);
 
-	// Ignore degree of adaptation.
-	float D = 1.0f;
+    // Ignore degree of adaptation.
+    float D = 1.0f;
 
-	// # Viewing conditions dependent parameters
-	float k = 1.0f / (5.0f * L_A + 1.0f);
-	float k4 = _powf(k,4);
-	float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * _powf((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
-	float n = sdiv(Y_b, Y_w);
-	float z = 1.48f + _sqrtf(n);
+    // # Viewing conditions dependent parameters
+    float k = 1.0f / (5.0f * L_A + 1.0f);
+    float k4 = _powf(k,4);
+    float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * _powf((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
+    float n = sdiv(Y_b, Y_w);
+    float z = 1.48f + _sqrtf(n);
 
-	// // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
-	float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;
-	float3 RGB_wc = D_RGB * RGB_w;
+    // // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
+    float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;
+    float3 RGB_wc = D_RGB * RGB_w;
 
-	// # Applying forward post-adaptation non-linear response compression.
-	float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
+    // # Applying forward post-adaptation non-linear response compression.
+    float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
 
-	// # Computing achromatic responses for the whitepoint.
-	float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;
+    // # Computing achromatic responses for the whitepoint.
+    float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;
 
-	// # Computing achromatic responses for the whitepoint.
-	float R_aw = RGB_aw.x ;
-	float G_aw = RGB_aw.y ;
-	float B_aw = RGB_aw.z ;
-	float A_w = 2 * R_aw + G_aw + 0.05f * B_aw - 0.305f;
+    // # Computing achromatic responses for the whitepoint.
+    float R_aw = RGB_aw.x ;
+    float G_aw = RGB_aw.y ;
+    float B_aw = RGB_aw.z ;
+    float A_w = 2 * R_aw + G_aw + 0.05f * B_aw - 0.305f;
 
-	// # Step 1
-	// # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+    // # Step 1
+    // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
 
-	float3 RGB = vector_dot(MATRIX_16, XYZ);
+    float3 RGB = vector_dot(MATRIX_16, XYZ);
 
-	// # Step 2
-	float3 RGB_c = D_RGB * RGB;
+    // # Step 2
+    float3 RGB_c = D_RGB * RGB;
 
-	// # Step 3
-	// Always compressMode
-	RGB_c = compress(RGB_c);
+    // # Step 3
+    // Always compressMode
+    RGB_c = compress(RGB_c);
 
-	float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
+    float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
 
-	RGB_a = uncompress(RGB_a);
+    RGB_a = uncompress(RGB_a);
 
-	// # Step 4
-	// # Converting to preliminary cartesian coordinates.
-	float R_a = RGB_a.x ;
-	float G_a = RGB_a.y ;
-	float B_a = RGB_a.z ;
-	float a = R_a - 12.0f * G_a / 11.0f + B_a / 11.0f;
-	float b = (R_a + G_a - 2.0f * B_a) / 9.0f;
+    // # Step 4
+    // # Converting to preliminary cartesian coordinates.
+    float R_a = RGB_a.x ;
+    float G_a = RGB_a.y ;
+    float B_a = RGB_a.z ;
+    float a = R_a - 12.0f * G_a / 11.0f + B_a / 11.0f;
+    float b = (R_a + G_a - 2.0f * B_a) / 9.0f;
 
-	// # Computing the *hue* angle :math:`h`.
-	// Unclear why this isnt matching the python version.
-	float h = mod(degrees(_atan2f(b, a)), 360.0f);
+    // # Computing the *hue* angle :math:`h`.
+    // Unclear why this isnt matching the python version.
+    float h = mod(degrees(_atan2f(b, a)), 360.0f);
 
-	// # Step 6
-	// # Computing achromatic responses for the stimulus.
-	float R_a2 = RGB_a.x ;
-	float G_a2 = RGB_a.y ;
-	float B_a2 = RGB_a.z ;
-	// A = 2 * R_a + G_a + 0.05 * B_a - 0.305
-	float A = 2 * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;
+    // # Step 6
+    // # Computing achromatic responses for the stimulus.
+    float R_a2 = RGB_a.x ;
+    float G_a2 = RGB_a.y ;
+    float B_a2 = RGB_a.z ;
+    // A = 2 * R_a + G_a + 0.05 * B_a - 0.305
+    float A = 2 * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;
 
-	// # Step 7
-	// # Computing the correlate of *Lightness* :math:`J`.
-	// with sdiv_mode():
-	float J = 100.0f * spow(sdiv(A, A_w), surround.y * z);
+    // # Step 7
+    // # Computing the correlate of *Lightness* :math:`J`.
+    // with sdiv_mode():
+    float J = 100.0f * spow(sdiv(A, A_w), surround.y * z);
 
-	// # Step 8
-	// # Computing the correlate of *brightness* :math:`Q`.
-	// with sdiv_mode():
-// 	float Q = (2.0f / float(surround.y)) * (J / 100.0f) * A_w;
+    // # Step 8
+    // # Computing the correlate of *brightness* :math:`Q`.
+    // with sdiv_mode():
+//     float Q = (2.0f / float(surround.y)) * (J / 100.0f) * A_w;
 
-	// # Step 9
-	// # Computing the correlate of *colourfulness* :math:`M`.
-	float M = 43.0f * surround.z * _sqrtf(a * a + b * b);
+    // # Step 9
+    // # Computing the correlate of *colourfulness* :math:`M`.
+    float M = 43.0f * surround.z * _sqrtf(a * a + b * b);
 
-	// # Computing the correlate of *chroma* :math:`C`.
-	// with sdiv_mode():
-// 	float C = 35.0f * sdiv(M, A_w);
+    // # Computing the correlate of *chroma* :math:`C`.
+    // with sdiv_mode():
+//     float C = 35.0f * sdiv(M, A_w);
 
-	// Np *Helmholtz–Kohlrausch* Effect Extension.
+    // Np *Helmholtz–Kohlrausch* Effect Extension.
 
 
-	if (J == 0.0f)
-	{
-		M = 0.0f;
-	}
-	  return make_float3(J, M, h);
+    if (J == 0.0f)
+    {
+        M = 0.0f;
+    }
+      return make_float3(J, M, h);
 }
 
 __DEVICE__ float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
 {
-	float J = JMh.x;
-	float M = JMh.y;
-	float h = JMh.z;
+    float J = JMh.x;
+    float M = JMh.y;
+    float h = JMh.z;
 
 //         float _X_w = XYZ_w.x;
-	float Y_w = XYZ_w.y;
+    float Y_w = XYZ_w.y;
 //         float _Z_w = XYZ_w.z;
 
-	// # Step 0
-	// # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
-	float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);
+    // # Step 0
+    // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+    float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);
 
-	// Ignore degree of adaptation.
-	float D = 1.0f;
+    // Ignore degree of adaptation.
+    float D = 1.0f;
 
-	// # Viewing conditions dependent parameters
-	float k = 1.0f / (5.0f * L_A + 1.0f);
-	float k4 = _powf(k, 4.0f);
-	float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * _powf((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
-	float n = sdiv(Y_b, Y_w);
-	float z = 1.48f + _sqrtf(n);
+    // # Viewing conditions dependent parameters
+    float k = 1.0f / (5.0f * L_A + 1.0f);
+    float k4 = _powf(k, 4.0f);
+    float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * _powf((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
+    float n = sdiv(Y_b, Y_w);
+    float z = 1.48f + _sqrtf(n);
 
-	// // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
-	float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;
-	float3 RGB_wc = D_RGB * RGB_w;
+    // // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
+    float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;
+    float3 RGB_wc = D_RGB * RGB_w;
 
-	// # Applying forward post-adaptation non-linear response compression.
-	float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
+    // # Applying forward post-adaptation non-linear response compression.
+    float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
 
-	// # Computing achromatic responses for the whitepoint.
-	float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;
+    // # Computing achromatic responses for the whitepoint.
+    float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;
 
-	// # Computing achromatic responses for the whitepoint.
-	float R_aw = RGB_aw.x ;
-	float G_aw = RGB_aw.y ;
-	float B_aw = RGB_aw.z ;
-	float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;
+    // # Computing achromatic responses for the whitepoint.
+    float R_aw = RGB_aw.x ;
+    float G_aw = RGB_aw.y ;
+    float B_aw = RGB_aw.z ;
+    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;
 
-	float hr = radians(h);
+    float hr = radians(h);
 
-	// No *Helmholtz–Kohlrausch* Effect.
+    // No *Helmholtz–Kohlrausch* Effect.
 
-	// # Computing achromatic response :math:`A` for the stimulus.
-	float A = A_w * spow(J / 100.0f, 1.0f / (surround.y * z));
+    // # Computing achromatic response :math:`A` for the stimulus.
+    float A = A_w * spow(J / 100.0f, 1.0f / (surround.y * z));
 
-	// # Computing *P_p_1* to *P_p_2*.
-	float P_p_1 = 43.0f * surround.z;
-	float P_p_2 = A;
-
-
-	// # Step 3
-	// # Computing opponent colour dimensions :math:`a` and :math:`b`.
-	// with sdiv_mode():
-	float gamma = M / P_p_1;
-
-	float a = gamma * _cosf(hr);
-	float b = gamma * _sinf(hr);
+    // # Computing *P_p_1* to *P_p_2*.
+    float P_p_1 = 43.0f * surround.z;
+    float P_p_2 = A;
 
 
-	// # Step 4
-	// # Applying post-adaptation non-linear response compression matrix.
+    // # Step 3
+    // # Computing opponent colour dimensions :math:`a` and :math:`b`.
+    // with sdiv_mode():
+    float gamma = M / P_p_1;
 
-	float3 RGB_a = vector_dot(panlrcm, make_float3(P_p_2, a, b)) / 1403.0f;
+    float a = gamma * _cosf(hr);
+    float b = gamma * _sinf(hr);
 
-	// # Step 5
-	// # Applying inverse post-adaptation non-linear response compression.
 
-	// Always compressMode
-	RGB_a = compress(RGB_a);
+    // # Step 4
+    // # Applying post-adaptation non-linear response compression matrix.
 
-	float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1, F_L);
+    float3 RGB_a = vector_dot(panlrcm, make_float3(P_p_2, a, b)) / 1403.0f;
 
-	RGB_c = uncompress(RGB_c);
+    // # Step 5
+    // # Applying inverse post-adaptation non-linear response compression.
 
-	// # Step 6
-	float3 RGB = RGB_c / D_RGB;
-	
+    // Always compressMode
+    RGB_a = compress(RGB_a);
 
-	// # Step 7
-	float3 XYZ = vector_dot(MATRIX_INVERSE_16, RGB);
+    float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1, F_L);
 
-	return XYZ;
+    RGB_c = uncompress(RGB_c);
+
+    // # Step 6
+    float3 RGB = RGB_c / D_RGB;
+    
+
+    // # Step 7
+    float3 XYZ = vector_dot(MATRIX_INVERSE_16, RGB);
+
+    return XYZ;
 }
 
 // convert JMh correlates to  RGB values in the output colorspace
 __DEVICE__ float3 JMh_to_luminance_RGB(float3 JMh)
 {
-	float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( JMh, d65White);
-	float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
+    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( JMh, d65White);
+    float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
 
-	return luminanceRGB;
+    return luminanceRGB;
 }
 
 // convert RGB values in the output colorspace to the ZCAM J (lightness), M (colorfulness) and h (hue) correlates
