@@ -1,6 +1,7 @@
 DEFINE_UI_PARAMS(toneCurve, Tone Curve, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
 
 typedef struct
 {
@@ -498,28 +499,6 @@ __DEVICE__ float3 vector_dot( float3x3 m, float3 v)
     return r;
 }
 
-// multiplies two 3x3 matrices together
-__DEVICE__ float3x3 matrix_dot( float3x3 m1, float3x3 m2)
-{
-    float m00 = m1.x.x * m2.x.x + m1.x.y * m2.y.x + m1.x.z * m2.z.x;
-    float m01 = m1.x.x * m2.x.y + m1.x.y * m2.y.y + m1.x.z * m2.z.y;
-    float m02 = m1.x.x * m2.x.z + m1.x.y * m2.y.z + m1.x.z * m2.z.z;
-    float m10 = m1.y.x * m2.x.x + m1.y.y * m2.y.x + m1.y.z * m2.z.x;
-    float m11 = m1.y.x * m2.x.y + m1.y.y * m2.y.y + m1.y.z * m2.z.y;
-    float m12 = m1.y.x * m2.x.z + m1.y.y * m2.y.z + m1.y.z * m2.z.z;
-    float m20 = m1.z.x * m2.x.x + m1.z.y * m2.y.x + m1.z.z * m2.z.x;
-    float m21 = m1.z.x * m2.x.y + m1.z.y * m2.y.y + m1.z.z * m2.z.y;
-    float m22 = m1.z.x * m2.x.z + m1.z.y * m2.y.z + m1.z.z * m2.z.z;
-
-    float3x3 result;
-
-    result.x = make_float3(m00, m01, m02);
-    result.y = make_float3(m10, m11, m12);
-    result.z = make_float3(m20, m21, m22);
-
-    return result;
-}
-
 // "safe" power function to avoid NANs or INFs when taking a fractional power of a negative base
 // this one initially returned -pow(abs(b), e) for negative b
 // but this ended up producing undesirable results in some cases
@@ -699,22 +678,6 @@ __DEVICE__ float compressPowerP( float v, float threshold, float limit, float po
     }
 
     return vCompressed;
-}
-
-// apply CAT02 chromatic adaptation to 'XYZ' from 'XYZ_ws' to 'XYZ_wd' white points
-__DEVICE__ float3 apply_CAT02( float3 XYZ, float3 XYZ_ws, float3 XYZ_wd )
-{
-    float3 LMS_ws = vector_dot(XYZ_to_LMS_CAT02, XYZ_ws);
-    float3 LMS_wd = vector_dot(XYZ_to_LMS_CAT02, XYZ_wd);
-
-    float3x3 Mscale = identity_matrix;
-    Mscale.x.x = LMS_wd.x / LMS_ws.x;
-    Mscale.y.y = LMS_wd.y / LMS_ws.y;
-    Mscale.z.z = LMS_wd.z / LMS_ws.z;
-
-    float3x3 M = matrix_dot(LMS_to_XYZ_CAT02, matrix_dot(Mscale, XYZ_to_LMS_CAT02));
-
-    return vector_dot(M, XYZ);
 }
 
 __DEVICE__ float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)
@@ -1213,9 +1176,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     {
         out = compressGamut(out, 0);
     }
-    out = Hellwig2022_JMh_to_XYZ(out , d65White) / referenceLuminance;
-    out = vector_dot(XYZ_to_RGB_output, out);
-    out = float3spow(out, 1.0f / 2.4f);
+    if (JMhOut)
+    {
+        out.x /= referenceLuminance;
+        out.y /= referenceLuminance;
+        out.z /= 360.0f;
+    }
+    else
+    {
+        out = Hellwig2022_JMh_to_XYZ(out , d65White) / referenceLuminance;
+        out = vector_dot(XYZ_to_RGB_output, out);
+        out = float3spow(out, 1.0f / 2.4f);
+    }
 
     return out ;
 }
