@@ -884,22 +884,22 @@ __DEVICE__ float3 luminance_RGB_to_JMh(float3 luminanceRGB)
 
 __DEVICE__ float daniele_evo_fwd(float Y)
 {
-    const float daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (log(daniele_n / daniele_n_r) / log(10000.0f / 100.0f));
+    const float daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (_logf(daniele_n / daniele_n_r) / _logf(10000.0f / 100.0f));
     const float daniele_m_0 = daniele_n / daniele_n_r;
-    const float daniele_m_1 = 0.5f * (daniele_m_0 + sqrt(daniele_m_0 * (daniele_m_0 + 4.0f * daniele_t_1)));
-    const float daniele_u = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0f), daniele_g);
+    const float daniele_m_1 = 0.5f * (daniele_m_0 + _sqrtf(daniele_m_0 * (daniele_m_0 + 4.0f * daniele_t_1)));
+    const float daniele_u = _powf((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0f), daniele_g);
     const float daniele_m = daniele_m_1 / daniele_u;
-    const float daniele_w_i = log(daniele_n / 100.0f) / log(2.0f);
+    const float daniele_w_i = _logf(daniele_n / 100.0f) / _logf(2.0f);
     const float daniele_c_t = daniele_c_d * (1.0f + daniele_w_i * daniele_w_g) / daniele_n_r;
-    const float daniele_g_ip = 0.5f * (daniele_c_t + sqrt(daniele_c_t * (daniele_c_t + 4.0f * daniele_t_1)));
-    const float daniele_g_ipp2 = -daniele_m_1 * pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) / (pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) - 1.0f);
+    const float daniele_g_ip = 0.5f * (daniele_c_t + _sqrtf(daniele_c_t * (daniele_c_t + 4.0f * daniele_t_1)));
+    const float daniele_g_ipp2 = -daniele_m_1 * _powf(daniele_g_ip / daniele_m, 1.0f / daniele_g) / (_powf(daniele_g_ip / daniele_m, 1.0f / daniele_g) - 1.0f);
     const float daniele_w_2 = daniele_c / daniele_g_ipp2;
     const float daniele_s_2 = daniele_w_2 * daniele_m_1;
-    const float daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g);
+    const float daniele_u_2 = _powf((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g);
     const float daniele_m_2 = daniele_m_1 / daniele_u_2;
 
-    float f = daniele_m_2 * _powf(max(0.0f, Y) / (Y + daniele_s_2), daniele_g);
-    float h = max(0.0f, f * f / (f + daniele_t_1));
+    float f = daniele_m_2 * _powf(_fmaxf(0.0f, Y) / (Y + daniele_s_2), daniele_g);
+    float h = _fmaxf(0.0f, f * f / (f + daniele_t_1));
 
     return h;
 }
@@ -922,7 +922,7 @@ __DEVICE__ float3 limit_RGB_to_JMh(float3 RGB)
 __DEVICE__ float spowerp(float x, float l, float p)
 {
     x = x / l;
-    x = x != 0.0f ? x / pow(1.0f + spow(x, p), 1.0f / p) : 0.0f;
+    x = x != 0.0f ? x / _powf(1.0f + spow(x, p), 1.0f / p) : 0.0f;
     return x * l;
 }
 
@@ -936,7 +936,7 @@ __DEVICE__ float desat_curve(float x)
   // Hue-dependent curve used in chroma compression
   // https://www.desmos.com/calculator/lmbbu8so4c
 __DEVICE__ float compr_hue_depend(float h)
-  {
+{
     float hr = radians(h);
     float hr2 = hr * 2.0f;
     float hr3 = hr * 3.0f;
@@ -948,7 +948,7 @@ __DEVICE__ float compr_hue_depend(float h)
             b.y * _sinf(hr2) +
             c.y * _sinf(hr3) +
             hoff) * hmul;
-  }
+}
 
   // Chroma compression
   //
@@ -959,7 +959,7 @@ __DEVICE__ float compr_hue_depend(float h)
   //   a range of colorfulness (distance from the achromatic).
   //
 __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
-  {
+{
     float M = JMh.y;
     
     // limitJmax (asumed to match limitRGB white)
@@ -1002,7 +1002,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     // https://www.desmos.com/calculator/nygtri388c
     //
     float R = (JMh.x + 0.01f) * model_factor * compr_hue_depend(JMh.z);
-    float c = max(1.0f - (JMh.x / limitJmax), 0.0001f) * shadow_boost;
+    float c = _fmaxf(1.0f - (JMh.x / limitJmax), 0.0001f) * shadow_boost;
 
     desatcurve = (1.0f - desatcurve) * shadowcurve;
 
@@ -1023,14 +1023,14 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
         float t0 = 3.0f * R * c;
         float p0 = M * M - t0;
         float p1 = 2.0f * M * M + 27.0f * R - 3.0f * t0;
-        float p2 = spow((sqrt(M * M * p1 * p1 - 4.0f * p0 * p0 * p0) / 2.0f) + M * p1 / 2.0f, 1.0f / 3.0f);
+        float p2 = spow((_sqrtf(M * M * p1 * p1 - 4.0f * p0 * p0 * p0) / 2.0f) + M * p1 / 2.0f, 1.0f / 3.0f);
         M = (p0 / (3.0f * p2) + (p2 / 3.0f) + (M / 3.0f));
       }
       M /= desatcurve;
     }
 
     return M;
-  }
+}
 
 __DEVICE__ float3 forwardTonescale( float3 inputJMh, int compressChroma)
 {
@@ -1072,8 +1072,8 @@ __DEVICE__ float2 cuspFromTable(float h)
 // Smooth minimum of a and b
 __DEVICE__ float smin(float a, float b, float s)
 {
-    float h = max(s - _fabs(a - b), 0.0) / s;
-    return min(a, b) - h * h * h * s * (1.0f / 6.0f);
+    float h = _fmaxf(s - _fabs(a - b), 0.0f) / s;
+    return _fminf(a, b) - h * h * h * s * (1.0f / 6.0f);
 }
 
 // Approximation of the gamut intersection to a curved and smoothened triangle
@@ -1087,7 +1087,7 @@ __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, f
 
     // Scale the cusp outward when smoothing to avoid reducing the gamut.  Reduce
     // smoothing for high cusps because smin() will bias it too much for the longer line.
-    float s = max(_mix(smoothing, smoothing * 0.01f, cusp.x / limitJmax), 0.0001f);
+    float s = _fmaxf(_mix(smoothing, smoothing * 0.01f, cusp.x / limitJmax), 0.0001f);
     cusp.y += 15.0f * s;
     cusp.x += 5.0f * s;
 
@@ -1121,7 +1121,7 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 
     // https://www.desmos.com/calculator/9u0wiiz9ys
     float Mratio = project_from.y / (focusDistance * JMcusp.y);
-    float a = max(0.001f, Mratio / focusJ);
+    float a = _fmaxf(0.001f, Mratio / focusJ);
     float b0 = 1.0f - Mratio;
     float b1 = -(1.0f + Mratio + (a * limitJmax));
     float b = project_from.x < focusJ ? b0 : b1;
