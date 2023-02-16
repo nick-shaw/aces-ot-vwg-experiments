@@ -487,6 +487,7 @@ __CONSTANT__ float2 gamutCuspTable[360] = {
 __CONSTANT__ float3 surround = {0.9, 0.59, 0.9};
 
 __CONSTANT__ float3 d65White = {95.05f, 100.0f, 108.88f};
+__CONSTANT__ float3 inWhite = {95.2646074570f, 100.0f, 100.8825184352f};
 
 // multiplies a 3D vector with a 3x3 matrix
 __DEVICE__ float3 vector_dot( float3x3 m, float3 v)
@@ -1152,7 +1153,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float3 out = vector_dot(AP0_ACES_to_XYZ_matrix, in);
     out *= referenceLuminance;
-    out = XYZ_to_Hellwig2022_JMh(out, d65White);
+    out = XYZ_to_Hellwig2022_JMh(out, inWhite);
     if (toneCurve)
     {
         out = forwardTonescale(out, compressChroma);
