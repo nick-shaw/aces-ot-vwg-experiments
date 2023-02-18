@@ -544,6 +544,12 @@ __DEVICE__ float sdiv( float a, float b )
     }
 }
 
+// linear interpolation between two values a & b with the bias t
+__DEVICE__ float lerp(float a, float b, float t)
+{
+    return a + t * (b - a);
+}
+
 // convert radians to degrees
 __DEVICE__ float degrees( float radians )
 {
@@ -991,6 +997,10 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     // https://www.desmos.com/calculator/ovy5wzr7lm
     //
     float shadowcurve = ptanh(luminance, shadowCompressParams.x, shadowCompressParams.y, shadowCompressParams.z);
+    if (isnan(shadowcurve))
+    {
+        shadowcurve = 1.0f;
+    }
 
     // In-gamut compression
     //
@@ -1065,8 +1075,11 @@ __DEVICE__ float2 cuspFromTable(float h)
         hi = 0;
     }
     float t = _fmod(h, 1.0f);
-    
-    return _mix(gamutCuspTable[lo], gamutCuspTable[hi], t);
+    float2 out;
+    out.x = lerp(gamutCuspTable[lo].x, gamutCuspTable[hi].x, t);
+    out.y = lerp(gamutCuspTable[lo].y, gamutCuspTable[hi].y, t);
+
+    return out;
 }
 
 // Smooth minimum of a and b
@@ -1087,7 +1100,7 @@ __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, f
 
     // Scale the cusp outward when smoothing to avoid reducing the gamut.  Reduce
     // smoothing for high cusps because smin() will bias it too much for the longer line.
-    float s = _fmaxf(_mix(smoothing, smoothing * 0.01f, cusp.x / limitJmax), 0.0001f);
+    float s = _fmaxf(lerp(smoothing, smoothing * 0.01f, cusp.x / limitJmax), 0.0001f);
     cusp.y += 15.0f * s;
     cusp.x += 5.0f * s;
 
@@ -1117,7 +1130,7 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
       return JMh;
 
     // Calculate where the out of gamut color is projected to
-    float focusJ = _mix(JMcusp.x, midJ, cuspMidBlend);
+    float focusJ = lerp(JMcusp.x, midJ, cuspMidBlend);
 
     // https://www.desmos.com/calculator/9u0wiiz9ys
     float Mratio = project_from.y / (focusDistance * JMcusp.y);
@@ -1140,7 +1153,7 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 
     // Compress the out of gamut color along the projection line
     float v = project_from.y / JMboundary.y;
-    v = compressPowerP(v, compressionFuncParams.x, _mix(compressionFuncParams.z, compressionFuncParams.y, projectJ / limitJmax), compressionFuncParams.w, invert);
+    v = compressPowerP(v, compressionFuncParams.x, lerp(compressionFuncParams.z, compressionFuncParams.y, projectJ / limitJmax), compressionFuncParams.w, invert);
     float2 JMcompressed = project_to + v * (JMboundary - project_to);
 
     return make_float3(JMcompressed.x, JMcompressed.y, JMh.z);
@@ -1149,6 +1162,9 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
     float3 in = make_float3(p_R, p_G, p_B);
+    in.x = _clampf(in.x, -65504.0f, 65504.0f);
+    in.y = _clampf(in.y, -65504.0f, 65504.0f);
+    in.z = _clampf(in.z, -65504.0f, 65504.0f);
 
     float3 out = vector_dot(AP0_ACES_to_XYZ_matrix, in);
     out *= referenceLuminance;
