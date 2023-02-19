@@ -100,6 +100,7 @@ __CONSTANT__ float sat = 1.2f;
 __CONSTANT__ float shadow_boost = 1.195f;
 // __CONSTANT__ float boundaryRGB = sstsLuminance.z / referenceLuminance;
 __CONSTANT__ float boundaryRGB = 1.0f;
+__CONSTANT__ float limitJmax = 100.0f;
 
 // DanieleEvoCurve (ACES2 candidate) parameters
 __CONSTANT__ float mmScaleFactor = 100.0f;
@@ -551,14 +552,14 @@ __DEVICE__ float lerp(float a, float b, float t)
 }
 
 // convert radians to degrees
-__DEVICE__ float degrees( float radians )
+__DEVICE__ float radians_to_degrees( float radians )
 {
     return radians * 180.0f / PI;
 }
 
 
 // convert degrees to radians
-__DEVICE__ float radians( float degrees )
+__DEVICE__ float degrees_to_radians( float degrees )
 {
     return degrees / 180.0f * PI;
 }
@@ -747,7 +748,7 @@ __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
 
     // # Computing the *hue* angle :math:`h`.
     // Unclear why this isnt matching the python version.
-    float h = mod(degrees(_atan2f(b, a)), 360.0f);
+    float h = mod(radians_to_degrees(_atan2f(b, a)), 360.0f);
 
     // # Step 6
     // # Computing achromatic responses for the stimulus.
@@ -825,7 +826,7 @@ __DEVICE__ float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     float B_aw = RGB_aw.z ;
     float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;
 
-    float hr = radians(h);
+    float hr = degrees_to_radians(h);
 
     // No *Helmholtz–Kohlrausch* Effect.
 
@@ -857,7 +858,7 @@ __DEVICE__ float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     // Always compressMode
     RGB_a = compress(RGB_a);
 
-    float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1, F_L);
+    float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1f, F_L);
 
     RGB_c = uncompress(RGB_c);
 
@@ -918,7 +919,7 @@ __DEVICE__ float ptanh(float x, float p, float t, float pt)
 // convert linear RGB values with the limiting primaries to ZCAM J (lightness), M (colorfulness) and h (hue) correlates
 __DEVICE__ float3 limit_RGB_to_JMh(float3 RGB)
 {
-    float3 luminanceRGB = RGB * boundaryRGB *referenceLuminance;
+    float3 luminanceRGB = RGB * boundaryRGB * referenceLuminance;
     float3 XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB);
     float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
     return JMh;
@@ -943,7 +944,7 @@ __DEVICE__ float desat_curve(float x)
   // https://www.desmos.com/calculator/lmbbu8so4c
 __DEVICE__ float compr_hue_depend(float h)
 {
-    float hr = radians(h);
+    float hr = degrees_to_radians(h);
     float hr2 = hr * 2.0f;
     float hr3 = hr * 3.0f;
 
@@ -969,7 +970,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     float M = JMh.y;
     
     // limitJmax (asumed to match limitRGB white)
-    float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
+//     float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
     // Model specific factors to avoid having to change parameters manually
     int camMode = 1;
@@ -993,7 +994,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
 
     // Path-to-black
     //
-    // Shadow compression to reduce clipping and colorfulness of noise.
+    // Shadow compression to reduce clipPIng and colorfulness of noise.
     // https://www.desmos.com/calculator/ovy5wzr7lm
     //
     float shadowcurve = ptanh(luminance, shadowCompressParams.x, shadowCompressParams.y, shadowCompressParams.z);
@@ -1094,7 +1095,7 @@ __DEVICE__ float smin(float a, float b, float s)
 __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, float smoothing)
 {
     // limitJmax (asumed to match limitRGB white)
-    float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
+//     float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
     float t0, t1;
 
@@ -1121,7 +1122,7 @@ __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, f
 __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 {
     // limitJmax (asumed to match limitRGB white)
-    float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
+//     float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
     float2 project_from = make_float2(JMh.x, JMh.y);
     float2 JMcusp = cuspFromTable(JMh.z);
