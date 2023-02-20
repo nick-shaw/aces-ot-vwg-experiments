@@ -11,15 +11,15 @@ typedef struct
 } float3x3;
 
 __CONSTANT__ float3x3 MATRIX_16 = {
-    {-0.32119474, -0.23319618, -0.01719972},
-    {-0.0910343 ,  0.44249129,  0.06447764},
-    { 0.02945856, -0.10641155,  0.40821152}
+    {-0.32119474f, -0.23319618f, -0.01719972f},
+    {-0.0910343f ,  0.44249129f,  0.06447764f},
+    { 0.02945856f, -0.10641155f,  0.40821152f}
 };
 
 __CONSTANT__ float3x3 MATRIX_INVERSE_16 = {
-    {-2.70657868, -1.40060996,  0.10718864},
-    {-0.56387056,  1.88543648, -0.32156592},
-    { 0.04833176,  0.59256575,  2.35815011}
+    {-2.70657868f, -1.40060996f,  0.10718864f},
+    {-0.56387056f,  1.88543648f, -0.32156592f},
+    { 0.04833176f,  0.59256575f,  2.35815011f}
 };
 
 __CONSTANT__ float3x3 identity_matrix = {
@@ -100,6 +100,8 @@ __CONSTANT__ float sat = 1.2f;
 __CONSTANT__ float shadow_boost = 1.195f;
 // __CONSTANT__ float boundaryRGB = sstsLuminance.z / referenceLuminance;
 __CONSTANT__ float boundaryRGB = 1.0f;
+// limitJmax (asumed to match limitRGB white)
+// float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 __CONSTANT__ float limitJmax = 100.0f;
 
 // DanieleEvoCurve (ACES2 candidate) parameters
@@ -122,6 +124,8 @@ __CONSTANT__ float focusDistance = 2.0f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.2f, 1.45f, 1.0f};
 // __CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
 __CONSTANT__ float gamut_gamma = 0.879464f; // reciprocal of above
+// cusp values calculated using Python in https://github.com/nick-shaw/aces-ot-vwg-experiments/blob/47bfe05f658b6dd644bb3b58172f74f96d85baa7/python/cusp_path.py
+// (resulting values saved in ./data/J_cusp_BT709.txt and ./data/M_cusp_BT709.txt)
 __CONSTANT__ float2 gamutCuspTable[360] = {
 {56.9, 69.58267212},
 {56.6, 69.6852417},
@@ -968,9 +972,6 @@ __DEVICE__ float compr_hue_depend(float h)
 __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
 {
     float M = JMh.y;
-    
-    // limitJmax (asumed to match limitRGB white)
-//     float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 
     // Model specific factors to avoid having to change parameters manually
     int camMode = 1;
@@ -1094,9 +1095,6 @@ __DEVICE__ float smin(float a, float b, float s)
 // along the projection line 'from -> to'. 
 __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, float smoothing)
 {
-    // limitJmax (asumed to match limitRGB white)
-//     float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
-
     float t0, t1;
 
     // Scale the cusp outward when smoothing to avoid reducing the gamut.  Reduce
@@ -1121,9 +1119,6 @@ __DEVICE__ float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, f
 
 __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 {
-    // limitJmax (asumed to match limitRGB white)
-//     float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
-
     float2 project_from = make_float2(JMh.x, JMh.y);
     float2 JMcusp = cuspFromTable(JMh.z);
 
