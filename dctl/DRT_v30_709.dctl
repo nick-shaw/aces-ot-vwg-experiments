@@ -22,24 +22,6 @@ __CONSTANT__ float3x3 MATRIX_INVERSE_16 = {
     { 0.04833176f,  0.59256575f,  2.35815011f}
 };
 
-__CONSTANT__ float3x3 identity_matrix = {
-    { 1.0f, 0.0f, 0.0f},
-    { 0.0f, 1.0f, 0.0f},
-    { 0.0f, 0.0f, 1.0f}
-};
-
-__CONSTANT__ float3x3 XYZ_to_LMS_CAT02 = {
-    { 0.7328,  0.4296, -0.1624},
-    {-0.7036,  1.6975,  0.0061},
-    { 0.0030,  0.0136,  0.9834}
-};
-
-__CONSTANT__ float3x3 LMS_to_XYZ_CAT02 = {
-    { 1.0961238208, -0.2788690002,  0.1827451794},
-    { 0.4543690420,  0.4735331543,  0.0720978037},
-    {-0.0096276087, -0.0056980312,  1.0153256400}
-};
-
 __CONSTANT__ float3x3 XYZ_to_AP0_ACES_matrix = {
     { 1.0498110175f,  0.0000000000f, -0.0000974845f},
     {-0.4959030231f,  1.3733130458f,  0.0982400361f},
@@ -99,7 +81,7 @@ __CONSTANT__ float3 shadowCompressParams = {0.54f, 0.13f, 0.54f};
 __CONSTANT__ float sat = 1.2f;
 __CONSTANT__ float shadow_boost = 1.195f;
 // __CONSTANT__ float boundaryRGB = sstsLuminance.z / referenceLuminance;
-__CONSTANT__ float boundaryRGB = 1.0f;
+// __CONSTANT__ float boundaryRGB = 1.0f;
 // limitJmax (asumed to match limitRGB white)
 // float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
 __CONSTANT__ float limitJmax = 100.0f;
@@ -583,7 +565,7 @@ __DEVICE__ float3 compress(float3 xyz)
     if (C == 0.0f)
         return xyz;
 
-    float R = _sqrtf(_powf(_fabs(x-C), 2.0f) + _powf(_fabs(y-C), 2.0f) + _powf(_fabs(z-C), 2.0f));
+    float R = _sqrtf((x-C)*(x-C) + (y-C)*(y-C) + (z-C)*(z-C));
     R = R * 0.816496580927726f; // np.sqrt(2/3)
     
     if (R != 0.0f)
@@ -692,9 +674,7 @@ __DEVICE__ float3 post_adaptation_non_linear_response_compression_inverse(float3
 
 __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
 {
-//     float _X_w = XYZ_w.x ;
     float Y_w = XYZ_w.y ;
-//     float _Z_w = XYZ_w.z ;
 
     // # Step 0
     // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
@@ -710,7 +690,6 @@ __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float n = sdiv(Y_b, Y_w);
     float z = 1.48f + _sqrtf(n);
 
-    // // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
     float3 D_RGB = D * Y_w / RGB_w + 1.0f - D;
     float3 RGB_wc = D_RGB * RGB_w;
 
@@ -767,21 +746,11 @@ __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     // with sdiv_mode():
     float J = 100.0f * spow(sdiv(A, A_w), surround.y * z);
 
-    // # Step 8
-    // # Computing the correlate of *brightness* :math:`Q`.
-    // with sdiv_mode():
-//     float Q = (2.0f / float(surround.y)) * (J / 100.0f) * A_w;
-
     // # Step 9
     // # Computing the correlate of *colourfulness* :math:`M`.
     float M = 43.0f * surround.z * _sqrtf(a * a + b * b);
 
-    // # Computing the correlate of *chroma* :math:`C`.
-    // with sdiv_mode():
-//     float C = 35.0f * sdiv(M, A_w);
-
     // Np *Helmholtz–Kohlrausch* Effect Extension.
-
 
     if (J == 0.0f)
     {
@@ -796,9 +765,7 @@ __DEVICE__ float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     float M = JMh.y;
     float h = JMh.z;
 
-//         float _X_w = XYZ_w.x;
     float Y_w = XYZ_w.y;
-//         float _Z_w = XYZ_w.z;
 
     // # Step 0
     // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
@@ -885,7 +852,7 @@ __DEVICE__ float3 JMh_to_luminance_RGB(float3 JMh)
     return luminanceRGB;
 }
 
-// convert RGB values in the output colorspace to the ZCAM J (lightness), M (colorfulness) and h (hue) correlates
+// convert RGB values in the output colorspace to the Hellwig J (lightness), M (colorfulness) and h (hue) correlates
 __DEVICE__ float3 luminance_RGB_to_JMh(float3 luminanceRGB)
 {
     float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
@@ -920,14 +887,14 @@ __DEVICE__ float ptanh(float x, float p, float t, float pt)
     return _powf(_tanhf(_powf(x, p) / t), 1.0f / pt);
 }
 
-// convert linear RGB values with the limiting primaries to ZCAM J (lightness), M (colorfulness) and h (hue) correlates
-__DEVICE__ float3 limit_RGB_to_JMh(float3 RGB)
-{
-    float3 luminanceRGB = RGB * boundaryRGB * referenceLuminance;
-    float3 XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB);
-    float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
-    return JMh;
-}
+// convert linear RGB values with the limiting primaries to Hellwig J (lightness), M (colorfulness) and h (hue) correlates
+// __DEVICE__ float3 limit_RGB_to_JMh(float3 RGB)
+// {
+//     float3 luminanceRGB = RGB * boundaryRGB * referenceLuminance;
+//     float3 XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB);
+//     float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
+//     return JMh;
+// }
 
 // Scaled power(p)
 __DEVICE__ float spowerp(float x, float l, float p)
@@ -1053,6 +1020,7 @@ __DEVICE__ float3 forwardTonescale( float3 inputJMh, int compressChroma)
 
     // only Daniele Evo tone scale
     float luminanceTS = daniele_evo_fwd(linear) * mmScaleFactor;
+    luminanceTS = _fmaxf(luminanceTS, 0.0f);
 
     float3 tonemappedmonoJMh = luminance_RGB_to_JMh(make_float3(luminanceTS,luminanceTS,luminanceTS));
     float3 tonemappedJMh = make_float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
@@ -1138,9 +1106,9 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
     float c1 = project_from.x + limitJmax * Mratio;
     float c = project_from.x < focusJ ? c0 : c1;
 
-    float J0 = _sqrtf(b * b - 4 * a * c);
-    float J1 = (-b - J0) / (2 * a);
-          J0 = (-b + J0) / (2 * a);
+    float J0 = _sqrtf(b * b - 4.0f * a * c);
+    float J1 = (-b - J0) / (2.0f * a);
+          J0 = (-b + J0) / (2.0f * a);
     float projectJ = project_from.x < focusJ ? J0 : J1;
 
     // Find gamut intersection
@@ -1158,32 +1126,33 @@ __DEVICE__ float3 compressGamut(float3 JMh, int invert)
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
     float3 in = make_float3(p_R, p_G, p_B);
+    float3 out = in;
     in.x = _clampf(in.x, -65504.0f, 65504.0f);
     in.y = _clampf(in.y, -65504.0f, 65504.0f);
     in.z = _clampf(in.z, -65504.0f, 65504.0f);
 
-    float3 out = vector_dot(AP0_ACES_to_XYZ_matrix, in);
-    out *= referenceLuminance;
+    float3 XYZ = vector_dot(AP0_ACES_to_XYZ_matrix, in);
+    XYZ *= referenceLuminance;
     float3 inWhite = vector_dot(AP0_ACES_to_XYZ_matrix, make_float3(100.0f, 100.0f, 100.0f));
-    out = XYZ_to_Hellwig2022_JMh(out, inWhite);
+    float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, inWhite);
     if (toneCurve)
     {
-        out = forwardTonescale(out, compressChroma);
+        JMh = forwardTonescale(JMh, compressChroma);
     }
     if (gamutCompress)
     {
-        out = compressGamut(out, 0);
+        JMh = compressGamut(JMh, 0);
     }
     if (JMhOut)
     {
-        out.x /= referenceLuminance;
-        out.y /= referenceLuminance;
-        out.z /= 360.0f;
+        out.x = JMh.x / referenceLuminance;
+        out.y = JMh.y / referenceLuminance;
+        out.z = JMh.z / 360.0f;
     }
     else
     {
-        out = Hellwig2022_JMh_to_XYZ(out , d65White) / referenceLuminance;
-        out = vector_dot(XYZ_to_RGB_output, out);
+        XYZ = Hellwig2022_JMh_to_XYZ(JMh , d65White) / referenceLuminance;
+        out = vector_dot(XYZ_to_RGB_output, XYZ);
         out = float3spow(out, 1.0f / 2.4f);
     }
 
