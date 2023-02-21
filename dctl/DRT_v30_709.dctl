@@ -583,7 +583,7 @@ __DEVICE__ float3 compress(float3 xyz)
     if (C == 0.0f)
         return xyz;
 
-    float R = _sqrtf(_powf((x-C), 2.0f) + _powf((y-C), 2.0f) + _powf((z-C), 2.0f));
+    float R = _sqrtf(_powf(_fabs(x-C), 2.0f) + _powf(_fabs(y-C), 2.0f) + _powf(_fabs(z-C), 2.0f));
     R = R * 0.816496580927726f; // np.sqrt(2/3)
     
     if (R != 0.0f)
@@ -622,7 +622,7 @@ __DEVICE__ float3 uncompress(float3 xyz)
     if (C == 0.0f)
          return xyz;
 
-    float R = _sqrtf(_powf((x-C), 2.0f) + _powf((y-C), 2.0f) + _powf((z-C), 2.0f));
+    float R = _sqrtf(_powf(_fabs(x-C), 2.0f) + _powf(_fabs(y-C), 2.0f) + _powf(_fabs(z-C), 2.0f));
     R = R * 0.816496580927726; // np.sqrt(2/3)
     
     if (R != 0.0f)
@@ -724,7 +724,7 @@ __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float R_aw = RGB_aw.x ;
     float G_aw = RGB_aw.y ;
     float B_aw = RGB_aw.z ;
-    float A_w = 2 * R_aw + G_aw + 0.05f * B_aw - 0.305f;
+    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;
 
     // # Step 1
     // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
@@ -760,7 +760,7 @@ __DEVICE__ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float G_a2 = RGB_a.y ;
     float B_a2 = RGB_a.z ;
     // A = 2 * R_a + G_a + 0.05 * B_a - 0.305
-    float A = 2 * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;
+    float A = 2.0f * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;
 
     // # Step 7
     // # Computing the correlate of *Lightness* :math:`J`.
