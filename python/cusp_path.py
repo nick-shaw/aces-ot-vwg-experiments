@@ -699,7 +699,7 @@ def find_boundary(h, iterations=10):
 PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_BT709
 space_name = "BT709" # filename friendly name
 
-J_resolution = 1024 # samples along J axis
+J_resolution = 1001 # samples along J axis
 iterations = 10 # number of iterations for boundary solve
 
 # Custom LMS Primaries from DRT v28
@@ -734,8 +734,8 @@ if __name__ == "__main__":
         M_cusp[h] = M_boundary.max()
         J_cusp[h] = 100.0 * (M_boundary.argmax()) / (J_resolution - 1)
 
-    np.savetxt('./data/M_cusp_{}.txt'.format(space_name), M_cusp)
-    np.savetxt('./data/J_cusp_{}.txt'.format(space_name), J_cusp)
+    np.savetxt('./data/M_cusp_{}.txt'.format(space_name), M_cusp, fmt='%.8f')
+    np.savetxt('./data/J_cusp_{}.txt'.format(space_name), J_cusp, fmt='%.1f')
     plt.plot(np.linspace(0, 359, 360), M_cusp, label='M cusp')
     plt.plot(np.linspace(0, 359, 360), J_cusp, label='J cusp')
     plt.ylim(0, 100)
