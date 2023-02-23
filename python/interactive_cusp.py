@@ -32,12 +32,12 @@ def JMh_to_RGB(J, M, h):
     RGB = np.clip(RGB, 0, 1)**(1/2.2)
     return (RGB[0], RGB[1], RGB[2])
 
-J_range = np.linspace(0, 100, J_resolution)
+J_range = np.linspace(0, 1000, J_resolution)
 
 fig, ax = plt.subplots(figsize=(10,10) )
 plt.subplots_adjust(left=0.05, top=0.9, bottom=0.3, right=0.97)
 
-plt.axis([-50, 100, 0, 100])
+plt.axis([-50, 100, 0, 1000])
 plt.title("CAM DRT Gamut Mapping")
 
 hue_slider = plt.axes([0.05, 0.1, 0.2, 0.01])
@@ -54,7 +54,7 @@ check_boxes = CheckButtons(check_box, ['Show Cusp', 'Show Path', 'Approximation'
 
 M_bound = cusp_path.find_boundary(h.val)
 M_cusp = M_bound.max()
-J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
+J_cusp = 1000.0 * M_bound.argmax() / (J_resolution - 1)
 compr = forwardGamutMapper(np.array([SJ.val, SM.val, h.val]), np.array([J_cusp, M_cusp]),
                            check_boxes.get_status()[2] == 1)
 
@@ -64,7 +64,7 @@ compressed, = ax.plot(CM, CJ, color=RGB, marker='o')
 ix, = ax.plot(ixM, ixJ, color="black", marker='o')
 focus, = ax.plot(0, projectJ, color="gray", marker='o')
 
-Jaxis = ax.plot([0, 0], [0, 100], color='black')
+Jaxis = ax.plot([0, 0], [0, 1000], color='black')
 
 RGB = JMh_to_RGB(SJ.val, SM.val, h.val)
 source, = ax.plot(SM.val, SJ.val, color=RGB, marker='o')
@@ -92,13 +92,13 @@ if check_boxes.get_status()[1]==1:
     pathix0, = ax.plot([ixM, 0], [ixJ, projectJ], color='black')
     if check_boxes.get_status()[2] == 1:
         ixl0, = ax.plot(np.linspace(0, M_cusp), np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp, color='red')
-        ixl1, = ax.plot([0, M_cusp], [100, J_cusp], color='red')
+        ixl1, = ax.plot([0, M_cusp], [283.3, J_cusp], color='red')
 
 
 def update(val):
     M_bound = cusp_path.find_boundary(h.val)
     M_cusp = M_bound.max()
-    J_cusp = 100.0 * M_bound.argmax() / (J_resolution - 1)
+    J_cusp = 1000.0 * M_bound.argmax() / (J_resolution - 1)
     curve.set_xdata( M_bound )
     curve.set_ydata( J_range )
 
@@ -144,7 +144,7 @@ def update(val):
             ixl0.set_xdata(np.linspace(0, M_cusp))
             ixl0.set_ydata(np.linspace(0, 1)**cusp_path.gamma_approx * J_cusp)
             ixl1.set_xdata([0, M_cusp])
-            ixl1.set_ydata([100, J_cusp])
+            ixl1.set_ydata([283.3, J_cusp])
         else:
             ixl0.set_xdata([0, 0])
             ixl0.set_ydata([0, 0])

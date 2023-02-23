@@ -645,10 +645,10 @@ def forwardGamutMapper(JMh, cusp, approx):
 
     # Compress
     normFact = 1.0 / np.maximum(0.0001, vec_length(np.subtract(boundary, project_to)))
-    print(normFact)
-    print(M / boundary[1])
+#     print(normFact)
+#     print(M / boundary[1])
     v = vec_length(np.subtract(project_from, project_to)) * normFact
-    print(v)
+#     print(v)
     # In v28 limit depends on tonescaled lightness so set it to the old 1.2 value
     vc = compress_powerp(v, 0.75, 1.2, 1.0)
     compressed = np.add(project_to, vec_normalize(np.subtract(project_from, project_to)) * vc / normFact)
@@ -661,14 +661,14 @@ def find_threshold(J, h, iterations=10, debug=False):
     L_A = 100
     Y_b = 20
     surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
-    M_max = np.minimum(J*1.25+25, 100.0)
+    M_max = np.minimum(J*1.25+30, 300.0)
     M = tstack((np.zeros(len(J)), M_max))
     i = iterations
     while i >= 0:
         mean = M.mean(axis=1)
         JMh = CAM_Specification_Hellwig2022(J=J, M=mean, h=h)
         XYZ = Hellwig2022_to_XYZ(JMh, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
-        RGB = vector_dot(PLOT_COLOURSPACE.matrix_XYZ_to_RGB, XYZ) / 100
+        RGB = vector_dot(PLOT_COLOURSPACE.matrix_XYZ_to_RGB, XYZ) / 1000
         M0, M1 = tsplit(M)
         neg = RGB.min(axis=1) < 0
         over = RGB.max(axis=1) > 1
@@ -689,20 +689,20 @@ def find_threshold(J, h, iterations=10, debug=False):
         i -= 1
     return M.mean(axis=1)
 
-def find_boundary(h, iterations=10):
-    J_range = np.linspace(0, 100, J_resolution)
+def find_boundary(h, iterations=20):
+    J_range = np.linspace(0, 1000, J_resolution)
     M_boundary = find_threshold(J_range, h, iterations)
         
     return M_boundary
 
 
-PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_BT709
-space_name = "BT709" # filename friendly name
+PLOT_COLOURSPACE = colour.models.RGB_COLOURSPACE_P3_D65
+space_name = "P3_D65" # filename friendly name
 
-J_resolution = 1001 # samples along J axis
-iterations = 10 # number of iterations for boundary solve
+J_resolution = 10001 # samples along J axis
+iterations = 20 # number of iterations for boundary solve
 
-# Custom LMS Primaries from DRT v28
+# Custom LMS Primaries from DRT v28 (but with EE illuminant
 RGB_COLOURSPACE_MATRIX_16 = colour.RGB_Colourspace(
     "MATRIX 16",
     np.array(
@@ -712,7 +712,7 @@ RGB_COLOURSPACE_MATRIX_16 = colour.RGB_Colourspace(
             [0.05, -0.15],
         ]
     ),
-    [4200, -1050],
+    [1/3, 1/3],
 )
 
 MATRIX_16 = RGB_COLOURSPACE_MATRIX_16.matrix_XYZ_to_RGB
@@ -729,16 +729,21 @@ if __name__ == "__main__":
 
     M_cusp = np.zeros(360)
     J_cusp = np.zeros(360)
+    M_boundary = find_boundary(0.0, iterations=iterations)
+    np.savetxt('./data/M_boundary.txt', M_boundary, fmt='%.8f')
+    for i in range(3000):
+        if M_boundary[i] == 0.0:
+            print(i)
     for h in range(360):
         M_boundary = find_boundary(h*1.0, iterations=iterations)
         M_cusp[h] = M_boundary.max()
-        J_cusp[h] = 100.0 * (M_boundary.argmax()) / (J_resolution - 1)
+        J_cusp[h] = 1000.0 * (M_boundary.argmax()) / (J_resolution - 1)
 
     np.savetxt('./data/M_cusp_{}.txt'.format(space_name), M_cusp, fmt='%.8f')
     np.savetxt('./data/J_cusp_{}.txt'.format(space_name), J_cusp, fmt='%.1f')
     plt.plot(np.linspace(0, 359, 360), M_cusp, label='M cusp')
     plt.plot(np.linspace(0, 359, 360), J_cusp, label='J cusp')
-    plt.ylim(0, 100)
+    plt.ylim(0, 300)
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100.0
     Y_b = 20.0
@@ -750,7 +755,7 @@ if __name__ == "__main__":
                ['magenta', [1.0, 0.0, 1.0]],
                ['yellow', [1.0, 1.0, 0.0]]]
     for cname, RGB in rgbcmyk:
-        XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, np.array(RGB)*100)
+        XYZ = vector_dot(PLOT_COLOURSPACE.matrix_RGB_to_XYZ, np.array(RGB)*1000)
         hellwig = XYZ_to_Hellwig2022(XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant=True)
         J = hellwig.J
         M = hellwig.M
