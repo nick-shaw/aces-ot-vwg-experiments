@@ -98,9 +98,9 @@ __CONSTANT__ float2 b = {0.135f, 0.13f};
 __CONSTANT__ float2 c = {-0.08f, 0.0f};
 __CONSTANT__ float chromaCompress = 1.0f;
 __CONSTANT__ float2 chromaCompressParams = {2.1f, 0.85f};
-__CONSTANT__ float3 shadowCompressParams = {0.54f, 0.13f, 0.54f};
+__CONSTANT__ float3 shadowCompressParams = {0.54f, 0.13f, 0.545f}; // 0.13 = max(0.121, 0.132 - 0.00002 * parent.ssts_luminance.z)
 __CONSTANT__ float sat = 1.2f;
-__CONSTANT__ float shadow_boost = 1.195f;
+__CONSTANT__ float shadow_boost = 1.195f; // max(1.08, 1.21 - 0.00015 * parent.ssts_luminance.z)
 // __CONSTANT__ float boundaryRGB = sstsLuminance.z / referenceLuminance;
 // __CONSTANT__ float boundaryRGB = 1.0f;
 // limitJmax (asumed to match limitRGB white)
