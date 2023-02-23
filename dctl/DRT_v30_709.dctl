@@ -502,8 +502,8 @@ __CONSTANT__ float st2084_m_2=2523.0f / 4096.0f * 128.0f;
 __CONSTANT__ float st2084_c_1=3424.0f / 4096.0f;
 __CONSTANT__ float st2084_c_2=2413.0f / 4096.0f * 32.0f;
 __CONSTANT__ float st2084_c_3=2392.0f / 4096.0f * 32.0f;
-__CONSTANT__ float st2084_m_1_d = 1.0f / st2084_m_1;
-__CONSTANT__ float st2084_m_2_d = 1.0f / st2084_m_2;
+__CONSTANT__ float st2084_m_1_d = 8192.0f / 1305.0f; // 1.0f / st2084_m_1;
+__CONSTANT__ float st2084_m_2_d = 32.0f / 2523.0f; // 1.0f / st2084_m_2;
 __CONSTANT__ float st2084_L_p = 10000.0f;
 
 // multiplies a 3D vector with a 3x3 matrix
