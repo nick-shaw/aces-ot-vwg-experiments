@@ -105,7 +105,7 @@ __CONSTANT__ float shadow_boost = 1.08f; // max(1.08, 1.21 - 0.00015 * parent.ss
 // __CONSTANT__ float boundaryRGB = 10.0f;
 // limitJmax (asumed to match limitRGB white)
 // float limitJmax = limit_RGB_to_JMh(make_float3(1.0f, 1.0f, 1.0f)).x;
-__CONSTANT__ float limitJmax = 283.3f;
+__CONSTANT__ float limitJmax = 283.25f;
 
 // DanieleEvoCurve (ACES2 candidate) parameters
 __CONSTANT__ float mmScaleFactor = 100.0f;
