@@ -991,6 +991,10 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     model_desat_factor += _logf(daniele_n / daniele_n_r) * 0.08f;
     float desatcurve = spowerp(x * model_desat_factor, chromaCompressParams.x, chromaCompressParams.y);
     desatcurve = desatcurve < (1.0f - end) ? desatcurve : (1.0f - end) + end * _tanhf((desatcurve - (1.0f - end)) / end);
+    if (isnan(desatcurve))
+    {
+        desatcurve = 0.0f;
+    }
 
     // Path-to-black
     //
@@ -1192,7 +1196,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     {
         XYZ = Hellwig2022_JMh_to_XYZ(JMh , d65White) / referenceLuminance;
         out = vector_dot(XYZ_to_RGB_output, XYZ);
-//         out = float3spow(out, 1.0f / 2.4f);
+        // trap black pixel NaNs
+        if (isnan(JMh.x))
+        {
+            out = make_float3(0.0f, 0.0f, 0.0f);
+        }
         out.x = linear_to_ST2084(out.x * 100.0f);
         out.y = linear_to_ST2084(out.y * 100.0f);
         out.z = linear_to_ST2084(out.z * 100.0f);
