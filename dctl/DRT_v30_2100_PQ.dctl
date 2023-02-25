@@ -1051,7 +1051,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
 __DEVICE__ float3 forwardTonescale( float3 inputJMh, int compressChroma)
 {
     float3 outputJMh;
-    float3 monoJMh = make_float3(inputJMh.x,0.0f,0.0f);
+    float3 monoJMh = make_float3(_fminf(inputJMh.x, daniele_r_hit_max), 0.0f, 0.0f);
     float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
     float linear = linearJMh.x / referenceLuminance;
 
