@@ -28,6 +28,14 @@ This repo contains various experiments related to the ACES 2.0 [Output Transform
 
 * `ssts_lib.h` - A cutdown of the functions from `ACES_LIB_MOD` including only the SSTS curve, for use in `tonecurves.dctl`
 
+* `DRT_v30_709.dctl` - A port of v30 of the Hellwig CAM based DRT targeting Rec.709 gamma 2.4.
+
+* `DRT_v30_709_sim_in_PQ.dctl` - The same SDR Rec.709 DRT as above, but encoded as BT.2020 PQ to simplify HDR/SDR comparison without needing to change monitor settings.
+
+* `DRT_v30_2100_PQ.dctl` - A 1000 nit P3-D65 limited version of the above DRT encoded as BT.2020 PQ.
+
+* `hellwig_lib.h` - A library of functions and constants used by the above DRTs, to reduce code duplication.
+
 
 To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*, *.cube* and *.h* files must be placed in a folder called `AMPAS` in the root of the Resolve LUT folder. Resolve should be in DaVinci YRGB mode, with the timeline colour space set to whatever the connected monitor is expecting. The first node in the node tree of the DRX is a conversion from LogC to ACEScct. This will obviously need to be modified if your source is not LogC.
 
