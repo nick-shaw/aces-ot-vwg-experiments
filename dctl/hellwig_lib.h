@@ -587,10 +587,10 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float luminance, int inver
     {
         desatcurve = 0.0f;
     }
-    if (luminance > 100.0f)
-    {
-        desatcurve = 1.0f;
-    }
+//     if (luminance > 100.0f)
+//     {
+//         desatcurve = 1.0f;
+//     }
 
     // Path-to-black
     //
