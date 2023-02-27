@@ -410,9 +410,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 {
     float3 in = make_float3(p_R, p_G, p_B);
     float3 out = in;
-    in.x = _clampf(in.x, -65504.0f, 65504.0f);
-    in.y = _clampf(in.y, -65504.0f, 65504.0f);
-    in.z = _clampf(in.z, -65504.0f, 65504.0f);
+    in.x = _clampf(in.x, -HALF_MAXIMUM, HALF_MAXIMUM);
+    in.y = _clampf(in.y, -HALF_MAXIMUM, HALF_MAXIMUM);
+    in.z = _clampf(in.z, -HALF_MAXIMUM, HALF_MAXIMUM);
 
     float3 XYZ = vector_dot(AP0_ACES_to_XYZ_matrix, in);
     XYZ *= referenceLuminance;
