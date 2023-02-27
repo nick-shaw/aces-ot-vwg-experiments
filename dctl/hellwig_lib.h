@@ -31,6 +31,12 @@ __CONSTANT__ float3x3 AP0_ACES_to_XYZ_matrix = {
     { 0.0000000000f,  0.0000000000f,  1.0088251844}
 };
 
+__CONSTANT__ float3x3  XYZ_to_AP0_ACES_matrix = {
+    { 1.0498110175f,  0.0000000000f, -0.0000974845f},
+    {-0.4959030231f,  1.3733130458f,  0.0982400361f},
+    { 0.0000000000f,  0.0000000000f,  0.9912520182f}
+};
+
 // Matrix for Hellwig inverse
 __CONSTANT__ float3x3 panlrcm = {
     { 460.0f,  451.0f,  288.0f},
@@ -511,6 +517,29 @@ __DEVICE__ inline float daniele_evo_fwd(float Y)
     return h;
 }
 
+__DEVICE__ inline float daniele_evo_rev(float Y)
+{
+    const float daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (_logf(daniele_n / daniele_n_r) / _logf(10000.0f / 100.0f));
+    const float daniele_m_0 = daniele_n / daniele_n_r;
+    const float daniele_m_1 = 0.5f * (daniele_m_0 + _sqrtf(daniele_m_0 * (daniele_m_0 + 4.0f * daniele_t_1)));
+    const float daniele_u = _powf((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0f), daniele_g);
+    const float daniele_m = daniele_m_1 / daniele_u;
+    const float daniele_w_i = _logf(daniele_n / 100.0f) / _logf(2.0f);
+    const float daniele_c_t = daniele_c_d * (1.0f + daniele_w_i * daniele_w_g) / daniele_n_r;
+    const float daniele_g_ip = 0.5f * (daniele_c_t + _sqrtf(daniele_c_t * (daniele_c_t + 4.0f * daniele_t_1)));
+    const float daniele_g_ipp2 = -daniele_m_1 * _powf(daniele_g_ip / daniele_m, 1.0f / daniele_g) / (_powf(daniele_g_ip / daniele_m, 1.0f / daniele_g) - 1.0f);
+    const float daniele_w_2 = daniele_c / daniele_g_ipp2;
+    const float daniele_s_2 = daniele_w_2 * daniele_m_1;
+    const float daniele_u_2 = _powf((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g);
+    const float daniele_m_2 = daniele_m_1 / daniele_u_2;
+
+    Y = max(0.0f, _fminf(daniele_n / (daniele_u_2 * daniele_n_r), Y));
+    float h = (Y + _sqrtf(Y * (4.0f * daniele_t_1 + Y))) / 2.0f;
+    float f = daniele_s_2 / (_powf((daniele_m_2 / h), (1.0f / daniele_g)) - 1.0f);
+
+    return f;
+}
+
 __DEVICE__ inline float ptanh(float x, float p, float t, float pt)
 {
     return x <= 10.0f ? _powf(_tanhf(_powf(x, p) / t), 1.0f / pt) : 1.0f;
@@ -673,6 +702,33 @@ __DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma)
 
     return outputJMh;
 }
+
+__DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma)
+  {
+    float3 tonemappedJMh = JMh;
+
+    float3 untonemappedColourJMh = tonemappedJMh;
+    
+    float3 monoTonemappedJMh = make_float3(tonemappedJMh.x, 0.0f, 0.0f);
+    float3 monoTonemappedRGB = JMh_to_luminance_RGB(monoTonemappedJMh);
+    float3 newMonoTonemappedJMh = luminance_RGB_to_JMh(monoTonemappedRGB);
+    float luminance = monoTonemappedRGB.x;
+
+    // Dummy value to init the var
+    float linear = daniele_evo_rev(luminance / mmScaleFactor);
+
+    linear = linear * referenceLuminance;
+  
+    float3 untonemappedMonoJMh = luminance_RGB_to_JMh(float3(linear,linear,linear));
+    untonemappedColourJMh = float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
+
+    if (compressChroma)
+    {
+      untonemappedColourJMh.y = chromaCompression(tonemappedJMh, linear/referenceLuminance, 1);
+    }
+
+    return  untonemappedColourJMh;
+  }
 
 __DEVICE__ inline float2 cuspFromTable(float h)
 {

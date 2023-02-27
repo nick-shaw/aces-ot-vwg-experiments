@@ -1,6 +1,7 @@
 DEFINE_UI_PARAMS(toneCurve, Tone Curve, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
 
 typedef struct
@@ -414,17 +415,43 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     in.y = _clampf(in.y, -HALF_MAXIMUM, HALF_MAXIMUM);
     in.z = _clampf(in.z, -HALF_MAXIMUM, HALF_MAXIMUM);
 
-    float3 XYZ = vector_dot(AP0_ACES_to_XYZ_matrix, in);
-    XYZ *= referenceLuminance;
     float3 inWhite = vector_dot(AP0_ACES_to_XYZ_matrix, make_float3(100.0f, 100.0f, 100.0f));
-    float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, inWhite);
-    if (toneCurve)
+    float3 XYZ;
+
+    if (!invert)
     {
-        JMh = forwardTonescale(JMh, compressChroma);
+        XYZ = vector_dot(AP0_ACES_to_XYZ_matrix, in);
     }
-    if (gamutCompress)
+    else
     {
-        JMh = compressGamut(JMh, 0);
+        in = float3spow(in, 2.4f);
+        XYZ = vector_dot(RGB_to_XYZ_output, in);
+    }
+    XYZ *= referenceLuminance;
+    float3 JMh;
+    if (!invert)
+    {
+        JMh = XYZ_to_Hellwig2022_JMh(XYZ, inWhite);
+        if (toneCurve)
+        {
+            JMh = forwardTonescale(JMh, compressChroma);
+        }
+        if (gamutCompress)
+        {
+            JMh = compressGamut(JMh, 0);
+        }
+    }
+    else
+    {
+        JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
+        if (gamutCompress)
+        {
+            JMh = compressGamut(JMh, 1);
+        }
+        if (toneCurve)
+        {
+            JMh = inverseTonescale(JMh, compressChroma);
+        }
     }
     if (JMhOut)
     {
@@ -434,14 +461,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
     else
     {
-        XYZ = Hellwig2022_JMh_to_XYZ(JMh , d65White) / referenceLuminance;
-        out = vector_dot(XYZ_to_RGB_output, XYZ);
-        // trap black pixel NaNs
-        if (isnan(JMh.x))
+        if (!invert)
         {
-            out = make_float3(0.0f, 0.0f, 0.0f);
+            XYZ = Hellwig2022_JMh_to_XYZ(JMh , d65White) / referenceLuminance;
+            out = vector_dot(XYZ_to_RGB_output, XYZ);
+            // trap black pixel NaNs
+            if (isnan(JMh.x))
+            {
+                out = make_float3(0.0f, 0.0f, 0.0f);
+            }
+            out = float3spow(out, 1.0f / 2.4f);
         }
-        out = float3spow(out, 1.0f / 2.4f);
+        else
+        {
+            XYZ = Hellwig2022_JMh_to_XYZ(JMh , inWhite) / referenceLuminance;
+            out = vector_dot(XYZ_to_AP0_ACES_matrix, XYZ);
+        }
     }
 
     return out ;
