@@ -615,7 +615,7 @@ __DEVICE__ float3 compress(float3 xyz)
 //       t = (0.5f + spow((_powf((s - 0.5f), 2.0f) + _powf((_sqrtf(4.0f / _powf(r, 2.0f) + 1.0f) - 1.0f), 2.0f) / 4.0f), 0.5f));
       t = (0.5f + _sqrtf(((s - 0.5f)*(s - 0.5f) + _powf((_sqrtf(4.0f / (r*r) + 1.0f) - 1.0f), 2.0f) / 4.0f)));
       if (t == 0.0f)
-        return make_float3(xyz.x, xyz.y, xyz.z);
+        return xyz;
       t = 1.0f / t;
     }
 
@@ -654,7 +654,7 @@ __DEVICE__ float3 uncompress(float3 xyz)
     {
          r = _sqrtf(_powf((2.0f * _sqrtf(_powf((1.0f / t - 0.5f),2.0f) - _powf((s - 0.5f), 2.0f)) + 1.0f), 2.0f) - 1.0f);
          if (r == 0.0f)
-            return make_float3(xyz.x, xyz.y, xyz.z);
+            return xyz;
          r = 2.0f / r;
     }
 
@@ -1003,7 +1003,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     // https://www.desmos.com/calculator/ovy5wzr7lm
     //
     float shadowcurve = ptanh(luminance, shadowCompressParams.x, shadowCompressParams.y, shadowCompressParams.z);
-    if (isnan(shadowcurve))
+    if (isnan(shadowcurve) || luminance > 0.98f) // hack to catch tanh overflow
     {
         shadowcurve = 1.0f;
     }
