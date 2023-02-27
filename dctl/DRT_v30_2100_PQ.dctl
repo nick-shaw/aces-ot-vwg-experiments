@@ -1003,7 +1003,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
     // https://www.desmos.com/calculator/ovy5wzr7lm
     //
     float shadowcurve = ptanh(luminance, shadowCompressParams.x, shadowCompressParams.y, shadowCompressParams.z);
-    if (isnan(shadowcurve) || luminance > 0.98f) // hack to catch tanh overflow
+    if (isnan(shadowcurve) || luminance > 1.0f) // hack to catch tanh overflow
     {
         shadowcurve = 1.0f;
     }
