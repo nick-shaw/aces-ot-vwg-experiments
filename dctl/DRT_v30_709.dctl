@@ -917,7 +917,7 @@ __DEVICE__ float daniele_evo_fwd(float Y)
 
 __DEVICE__ float ptanh(float x, float p, float t, float pt)
 {
-    return _powf(_tanhf(_powf(x, p) / t), 1.0f / pt);
+    return x <= 10.0f ? _powf(_tanhf(_powf(x, p) / t), 1.0f / pt) : 1.0f;
 }
 
 // convert linear RGB values with the limiting primaries to Hellwig J (lightness), M (colorfulness) and h (hue) correlates
@@ -1003,7 +1003,7 @@ __DEVICE__ float chromaCompression(float3 JMh, float luminance, int invert)
 
     // Path-to-black
     //
-    // Shadow compression to reduce clipPIng and colorfulness of noise.
+    // Shadow compression to reduce clipping and colorfulness of noise.
     // https://www.desmos.com/calculator/ovy5wzr7lm
     //
     float shadowcurve = ptanh(luminance, shadowCompressParams.x, shadowCompressParams.y, shadowCompressParams.z);
