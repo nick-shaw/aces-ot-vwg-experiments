@@ -589,10 +589,10 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float luminance, int inver
     model_desat_factor += _logf(daniele_n / daniele_n_r) * 0.08f;
     float desatcurve = spowerp(x * model_desat_factor, chromaCompressParams.x, chromaCompressParams.y);
     desatcurve = desatcurve < (1.0f - end) ? desatcurve : (1.0f - end) + end * _tanhf((desatcurve - (1.0f - end)) / end);
-    if (isnan(desatcurve))
-    {
-        desatcurve = 0.0f;
-    }
+//     if (isnan(desatcurve))
+//     {
+//         desatcurve = 0.0f;
+//     }
 //     if (luminance > 100.0f)
 //     {
 //         desatcurve = 1.0f;
@@ -604,10 +604,10 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float luminance, int inver
     // https://www.desmos.com/calculator/ovy5wzr7lm
     //
     float shadowcurve = ptanh(luminance, shadowCompressParams.x, shadowCompressParams.y, shadowCompressParams.z);
-    if (isnan(shadowcurve) || luminance > 1.0f) // hack to catch tanh overflow
-    {
-        shadowcurve = 1.0f;
-    }
+//     if (isnan(shadowcurve) || luminance > 1.0f) // hack to catch tanh overflow
+//     {
+//         shadowcurve = 1.0f;
+//     }
 
     // In-gamut compression
     //
