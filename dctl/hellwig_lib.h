@@ -44,7 +44,7 @@ __CONSTANT__ float3x3 panlrcm = {
     { 460.0f, -220.0f, -6300.0f},
 };
 
-__CONSTANT__ float HALF_MINIMUM = 0.0000000596046448f;
+__CONSTANT__ float float_epsilon = 0.0000000596046448f;
 __CONSTANT__ float HALF_MAXIMUM = 65504.0f;
 
 __CONSTANT__ float PI = 3.141592653589793f;
@@ -193,7 +193,7 @@ __DEVICE__ inline float3 compress(float3 xyz)
     R = R * 0.816496580927726f; // np.sqrt(2/3)
     
 //     if (R > 0.0001f)
-    if (R > HALF_MINIMUM)
+    if (R > float_epsilon)
     {
       x = (x - C) / R;
       y = (y - C) / R;
@@ -237,7 +237,7 @@ __DEVICE__ inline float3 uncompress(float3 xyz)
     R = R * 0.816496580927726; // np.sqrt(2/3)
 
 //     if (R > 0.0001f)
-    if (R > HALF_MINIMUM)
+    if (R > float_epsilon)
     {
         x = (x - C) / R;
         y = (y - C) / R;
@@ -614,7 +614,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float luminance, int inver
     //
     float end = 0.12f;
 //     float x = _log10f(luminance) - _log10f(desat_curve(luminance));
-    float x = _log10f(_fmaxf(HALF_MINIMUM, luminance)) - _log10f(_fmaxf(HALF_MINIMUM, desat_curve(luminance)));
+    float x = _log10f(_fmaxf(float_epsilon, luminance)) - _log10f(_fmaxf(float_epsilon, desat_curve(luminance)));
     model_desat_factor += _logf(daniele_n / daniele_n_r) * 0.08f;
     float desatcurve = spowerp(x * model_desat_factor, chromaCompressParams.x, chromaCompressParams.y);
     desatcurve = desatcurve < (1.0f - end) ? desatcurve : (1.0f - end) + end * _tanhf((desatcurve - (1.0f - end)) / end);
