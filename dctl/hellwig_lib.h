@@ -177,28 +177,31 @@ __DEVICE__ inline float3 compress(float3 xyz)
     float z = xyz.z;
    
     float C = (x + y + z) / 3.0f;
-    if (C == 0.0f)
+    if (C < 0.000001f)
         return xyz;
 
     float R = _sqrtf((x-C)*(x-C) + (y-C)*(y-C) + (z-C)*(z-C));
     R = R * 0.816496580927726f; // np.sqrt(2/3)
     
-    if (R != 0.0f)
+    if (R > 0.0001f)
     {
       x = (x - C) / R;
       y = (y - C) / R;
       z = (z - C) / R;
+    }
+    else
+    {
+      return xyz;
     }
       
     float r = R / C;
     float s = -_fminf(x, _fminf(y, z));
     
     float t = 0.0f;
-    if (r != 0.0f)
+    if (r > 0.000001f)
     {
-//       t = (0.5f + spow((_powf((s - 0.5f), 2.0f) + _powf((_sqrtf(4.0f / _powf(r, 2.0f) + 1.0f) - 1.0f), 2.0f) / 4.0f), 0.5f));
       t = (0.5f + _sqrtf(((s - 0.5f)*(s - 0.5f) + _powf((_sqrtf(4.0f / (r*r) + 1.0f) - 1.0f), 2.0f) / 4.0f)));
-      if (t == 0.0f)
+      if (t < 0.000001f)
         return xyz;
       t = 1.0f / t;
     }
@@ -217,27 +220,31 @@ __DEVICE__ inline float3 uncompress(float3 xyz)
     float z = xyz.z;
 
     float C = (x+y+z)*(1.0f / 3.0f) ;
-    if (C == 0.0f)
+    if (C < 0.000001f)
          return xyz;
 
     float R = _sqrtf(_powf(_fabs(x-C), 2.0f) + _powf(_fabs(y-C), 2.0f) + _powf(_fabs(z-C), 2.0f));
     R = R * 0.816496580927726; // np.sqrt(2/3)
     
-    if (R != 0.0f)
+    if (R > 0.0001f)
     {
         x = (x - C) / R;
         y = (y - C) / R;
         z = (z - C) / R;
+    }
+    else
+    {
+      return xyz;
     }
 
     float t = R / C;
     float s = -_fminf(x, _fminf(y, z));
     
     float r = 0.0f;
-    if (t != 0.0f)
+    if (t  > 0.000001f)
     {
          r = _sqrtf(_powf((2.0f * _sqrtf(_powf((1.0f / t - 0.5f),2.0f) - _powf((s - 0.5f), 2.0f)) + 1.0f), 2.0f) - 1.0f);
-         if (r == 0.0f)
+         if (r < 0.000001f)
             return xyz;
          r = 2.0f / r;
     }
@@ -639,7 +646,8 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float luminance, int inver
 __DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma)
 {
     float3 outputJMh;
-    float3 monoJMh = make_float3(_fminf(inputJMh.x, daniele_r_hit_max), 0.0f, 0.0f);
+//     float3 monoJMh = make_float3(_fminf(inputJMh.x, daniele_r_hit_max), 0.0f, 0.0f);
+    float3 monoJMh = make_float3(inputJMh.x, 0.0f, 0.0f);
     float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
     float linear = linearJMh.x / referenceLuminance;
 
