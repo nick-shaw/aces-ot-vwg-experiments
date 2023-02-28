@@ -479,21 +479,21 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
 }
 
 // convert JMh correlates to  RGB values in the output colorspace
-__DEVICE__ inline float3 JMh_to_luminance_RGB(float3 JMh)
-{
-    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( JMh, d65White);
-    float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
-
-    return luminanceRGB;
-}
+// __DEVICE__ inline float3 JMh_to_luminance_RGB(float3 JMh)
+// {
+//     float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( JMh, d65White);
+//     float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
+// 
+//     return luminanceRGB;
+// }
 
 // convert RGB values in the output colorspace to the Hellwig J (lightness), M (colorfulness) and h (hue) correlates
-__DEVICE__ inline float3 luminance_RGB_to_JMh(float3 luminanceRGB)
-{
-    float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
-    float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
-    return JMh;
-}
+// __DEVICE__ inline float3 luminance_RGB_to_JMh(float3 luminanceRGB)
+// {
+//     float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
+//     float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
+//     return JMh;
+// }
 
 __DEVICE__ inline float daniele_evo_fwd(float Y)
 {
@@ -683,13 +683,17 @@ __DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma)
     float3 outputJMh;
 //     float3 monoJMh = make_float3(_fminf(inputJMh.x, daniele_r_hit_max), 0.0f, 0.0f);
     float3 monoJMh = make_float3(inputJMh.x, 0.0f, 0.0f);
-    float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
-    float linear = linearJMh.x / referenceLuminance;
+//     float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
+    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoJMh, d65White);
+//     float linear = linearJMh.x / referenceLuminance;
+    float linear = luminanceXYZ.y / referenceLuminance;
 
     // only Daniele Evo tone scale
-    float luminanceTS = daniele_evo_fwd(linear) * mmScaleFactor;
+//     float luminanceTS = daniele_evo_fwd(linear) * mmScaleFactor;
+    float luminanceTS = daniele_evo_fwd(linear);
 
-    float3 tonemappedmonoJMh = luminance_RGB_to_JMh(make_float3(luminanceTS,luminanceTS,luminanceTS));
+//     float3 tonemappedmonoJMh = luminance_RGB_to_JMh(make_float3(luminanceTS,luminanceTS,luminanceTS));
+    float3 tonemappedmonoJMh = XYZ_to_Hellwig2022_JMh(d65White * luminanceTS, d65White);
     float3 tonemappedJMh = make_float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
 
     outputJMh = tonemappedJMh;
@@ -710,21 +714,24 @@ __DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma)
     float3 untonemappedColourJMh = tonemappedJMh;
     
     float3 monoTonemappedJMh = make_float3(tonemappedJMh.x, 0.0f, 0.0f);
-    float3 monoTonemappedRGB = JMh_to_luminance_RGB(monoTonemappedJMh);
-    float3 newMonoTonemappedJMh = luminance_RGB_to_JMh(monoTonemappedRGB);
-    float luminance = monoTonemappedRGB.x;
+//     float3 monoTonemappedRGB = JMh_to_luminance_RGB(monoTonemappedJMh);
+//     float3 newMonoTonemappedJMh = luminance_RGB_to_JMh(monoTonemappedRGB);
+//     float luminance = monoTonemappedRGB.x;
+    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoTonemappedJMh, d65White);
+    float luminance = luminanceXYZ.y;
 
-    // Dummy value to init the var
     float linear = daniele_evo_rev(luminance / mmScaleFactor);
 
-    linear = linear * referenceLuminance;
+//     linear = linear * referenceLuminance;
   
-    float3 untonemappedMonoJMh = luminance_RGB_to_JMh(float3(linear,linear,linear));
-    untonemappedColourJMh = float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
+//     float3 untonemappedMonoJMh = luminance_RGB_to_JMh(make_float3(linear,linear,linear));
+    float3 untonemappedMonoJMh = XYZ_to_Hellwig2022_JMh(d65White * linear, d65White);
+    untonemappedColourJMh = make_float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
 
     if (compressChroma)
     {
-      untonemappedColourJMh.y = chromaCompression(tonemappedJMh, linear/referenceLuminance, 1);
+//       untonemappedColourJMh.y = chromaCompression(tonemappedJMh, linear/referenceLuminance, 1);
+      untonemappedColourJMh.y = chromaCompression(tonemappedJMh, linear, 1);
     }
 
     return  untonemappedColourJMh;

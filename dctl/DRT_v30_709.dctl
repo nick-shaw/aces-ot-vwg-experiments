@@ -465,17 +465,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         {
             XYZ = Hellwig2022_JMh_to_XYZ(JMh , d65White) / referenceLuminance;
             out = vector_dot(XYZ_to_RGB_output, XYZ);
-            // trap black pixel NaNs
-            if (isnan(JMh.x))
-            {
-                out = make_float3(0.0f, 0.0f, 0.0f);
-            }
             out = float3spow(out, 1.0f / 2.4f);
         }
         else
         {
             XYZ = Hellwig2022_JMh_to_XYZ(JMh , inWhite) / referenceLuminance;
             out = vector_dot(XYZ_to_AP0_ACES_matrix, XYZ);
+        }
+        // trap black pixel NaNs
+        if (isnan(out.x) || isnan(out.y) || isnan(out.z))
+        {
+            out = make_float3(0.0f, 0.0f, 0.0f);
         }
     }
 
