@@ -50,12 +50,14 @@ for i in range(gamutCuspTableSize):
 np.savetxt('./data/blink_table_709.txt', gamutCuspTable, fmt='%.8f')
 
 maxDiff = 0.0
+index = 0
 
 for i in range(gamutCuspTableSize - 1):
     if (gamutCuspTable[i+1][2] - gamutCuspTable[i][2]) > maxDiff:
         maxDiff = (gamutCuspTable[i+1][2] - gamutCuspTable[i][2])
+        index = i
 
-print("Max difference = {}".format(maxDiff))
+print("Max h difference = {}, index {}-{}:\n{}, {}".format(maxDiff, index, index+1, gamutCuspTable[index][2], gamutCuspTable[index+1][2]))
 
 a = gamutCuspTable[0]
 b = gamutCuspTable[359]
@@ -65,7 +67,5 @@ t = -b[2] / (a[2] - b[2])
 
 c = lerp(t, b, a)
 
-print(a)
-print(b)
-print(t)
+print("cuspFromTable(0):")
 print(c)
