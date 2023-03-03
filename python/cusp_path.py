@@ -158,6 +158,10 @@ class CAM_Specification_Hellwig2022(MixinDataclassArithmetic):
     H: Optional[FloatingOrNDArray] = field(default_factory=lambda: None)
     HC: Optional[FloatingOrNDArray] = field(default_factory=lambda: None)
 
+LINEAR_VS_COMPRESS = False
+DO_COMPRESS = True
+DO_ECCENTRICITY = False
+SURROUND_STYLE = "Dim"
 
 def f_RGB_a(RGB: ArrayLike, F_L: FloatingOrArrayLike) -> NDArray:
     F_L_RGB = (F_L[..., np.newaxis] * np.absolute(RGB) / 100) ** 0.42
@@ -240,10 +244,6 @@ def uncompress(xyz):
     return np.where(RRR==0.0, xyz, np.array([x,y,z]).T)
 
 
-# LINEAR_VS_COMPRESS = False
-# DO_COMPRESS = False
-# DO_ECCENTRICITY = False
-
 def XYZ_to_Hellwig2022(
     XYZ: ArrayLike,
     XYZ_w: ArrayLike,
@@ -251,7 +251,7 @@ def XYZ_to_Hellwig2022(
     Y_b: FloatingOrArrayLike,
     surround: Union[
         InductionFactors_CIECAM02, InductionFactors_Hellwig2022
-    ] = VIEWING_CONDITIONS_Hellwig2022["Average"],
+    ] = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE],
     L_B=0,
     H_B=1,
     discount_illuminant: Boolean = False,
@@ -397,7 +397,7 @@ def Hellwig2022_to_XYZ(
     Y_b: FloatingOrArrayLike,
     surround: Union[
         InductionFactors_CIECAM02, InductionFactors_Hellwig2022
-    ] = VIEWING_CONDITIONS_Hellwig2022["Average"],
+    ] = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE],
     L_B=0,
     H_B=1,
     discount_illuminant: Boolean = False,
@@ -562,7 +562,7 @@ def find_gamut_intersection(pfrom, focus, h, precision = 10, startStepSize = 0.4
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100
     Y_b = 20
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
 
     stepSize = startStepSize
     unitVector = vec_normalize(np.subtract(project_to, focus));
@@ -595,18 +595,22 @@ def find_gamut_intersection(pfrom, focus, h, precision = 10, startStepSize = 0.4
 
     return JMtest
 
-# Gamut intersection to triangle (TODO: smoothing triangle cusp and curved shape)
+# Gamut intersection to curved triangle (TODO: smoothing triangle cusp)
 def find_gamut_intersection_tri(cusp, pfrom, pto):
+    bound_gamma = 1.0
     cuspJ, cuspM = tsplit(cusp)
     fromJ, fromM = tsplit(pfrom)
     toJ, toM = tsplit(pto)
 
     if (fromJ - toJ) * cuspM - (cuspJ - toJ) * fromM <= 0.0:
-        t = cuspM * toJ / (fromM * cuspJ + cuspM * (toJ - fromJ))
+        bound_gamma = gamma_approx
+        toJ_gamma = cuspJ * (toJ / cuspJ)**(1 / bound_gamma)
+        fromJ_gamma = cuspJ * (fromJ / cuspJ)**(1 / bound_gamma)
+        t = cuspM * toJ_gamma / (fromM * cuspJ + cuspM * (toJ_gamma - fromJ_gamma))
     else:
         t = cuspM * (toJ - 100) / (fromM * (cuspJ - 100) + cuspM * (toJ - fromJ))
 
-    return np.array([toJ * (1.0 - t) + t * fromJ, t * fromM]).T
+    return np.array([cuspJ * ((toJ * (1.0 - t) + t * fromJ) / cuspJ), t * fromM]).T
 
 def forwardGamutMapper(JMh, cusp, approx):
     J, M, h = tsplit(JMh)
@@ -616,32 +620,37 @@ def forwardGamutMapper(JMh, cusp, approx):
         return JMh
 
     # Calculate where the out of gamut color is projected to
-    # Mid gray assumed to be 10.0 bits (34.0 J)
+    # Mid gray assumed to be 10.0 nits (34.0 J)
+    g = 2.0 * cuspM
     focusJ = lerp(0.5, cuspJ, 34.0)
-    Jdiff = J - focusJ
-    if Jdiff > 0.0:
-        focusDistanceGain = (100 - focusJ) / np.maximum(0.0001, 100 - np.minimum(100, J))
-    else:
-        focusDistanceGain = focusJ / np.maximum(0.0001, J)
+    focusM = M / g;
 
-    # in v28 this depends on tonescaled lightness so just set it to the old 0.5 value
-    focusAdjust = 0.5
-    focusM = -cuspM * focusAdjust * focusDistanceGain
-    projectJ = focusJ - ((Jdiff / (M - focusM)) * focusM)
+    a = focusM / focusJ
+    b0 = 1.0 - focusM;
+    b1 = -(1.0 + focusM + (a * 100.0))
+    b = b0 if J < focusJ else b1
+    c0 = -J
+    c1 = J + 100.0 * focusM
+    c = c0 if J < focusJ else c1
+
+    J0 = np.sqrt(b * b - 4 * a * c)
+    J1 = (-b - J0) / (2 * a)
+    J0 = (-b + J0) / (2 * a)
+    projectJ = J0 if J < focusJ else J1
 
     # Find gamut intersection
     project_from = np.array([J, M]).T
     project_to = np.array([projectJ, 0]).T
-    if approx:
-        boundary = find_gamut_intersection_tri(cusp, project_from, project_to)
-    else:
-        boundary = find_gamut_intersection(project_from, np.array([focusJ, focusM]).T, h)
+    boundary = find_gamut_intersection_tri(cusp, project_from, project_to)
 
     # Compress
     normFact = 1.0 / np.maximum(0.0001, vec_length(np.subtract(boundary, project_to)))
+    print(normFact)
+    print(M / boundary[1])
     v = vec_length(np.subtract(project_from, project_to)) * normFact
+    print(v)
     # In v28 limit depends on tonescaled lightness so set it to the old 1.2 value
-    vc = compress_powerp(v, 0.75, 1.2, 1.2)
+    vc = compress_powerp(v, 0.75, 1.2, 1.0)
     compressed = np.add(project_to, vec_normalize(np.subtract(project_from, project_to)) * vc / normFact)
 
     J, M = tsplit(compressed)
@@ -651,10 +660,9 @@ def find_threshold(J, h, iterations=10, debug=False):
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100
     Y_b = 20
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
     M_max = np.minimum(J*1.25+25, 100.0)
     M = tstack((np.zeros(len(J)), M_max))
-#     M = np.array([0, min(J*1.25+25, 100.0)])
     i = iterations
     while i >= 0:
         mean = M.mean(axis=1)
@@ -678,21 +686,12 @@ def find_threshold(J, h, iterations=10, debug=False):
         M1_new = np.where(out_of_gamut, mean, M1)
         M0_new = np.where(out_of_gamut, M0, mean)
         M = tstack((M0_new, M1_new))
-#         if RGB.min() < 0 or RGB.max() > 1 or np.isnan(XYZ.min()):
-#             M[1] = M.mean()
-#         else:
-#             M[0] = M.mean()
         i -= 1
     return M.mean(axis=1)
 
 def find_boundary(h, iterations=10):
     J_range = np.linspace(0, 100, J_resolution)
-#     M_boundary = np.zeros(J_resolution)
-#     j = 0
     M_boundary = find_threshold(J_range, h, iterations)
-#     for J in J_range: 
-#         M_boundary[j] = find_threshold(J, h, iterations)
-#         j += 1
         
     return M_boundary
 
@@ -719,9 +718,9 @@ RGB_COLOURSPACE_MATRIX_16 = colour.RGB_Colourspace(
 MATRIX_16 = RGB_COLOURSPACE_MATRIX_16.matrix_XYZ_to_RGB
 MATRIX_INVERSE_16 = np.linalg.inv(MATRIX_16)
 
-LINEAR_VS_COMPRESS = False
-DO_COMPRESS = True
-DO_ECCENTRICITY = True
+
+z = 1.48 + np.sqrt(20.0 / 100.0)
+gamma_approx = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE].c * z
 
 if __name__ == "__main__":
     import os
@@ -731,8 +730,6 @@ if __name__ == "__main__":
     M_cusp = np.zeros(360)
     J_cusp = np.zeros(360)
     for h in range(360):
-#        if h % 10 == 0:
-#            print(h)
         M_boundary = find_boundary(h*1.0, iterations=iterations)
         M_cusp[h] = M_boundary.max()
         J_cusp[h] = 100.0 * (M_boundary.argmax()) / (J_resolution - 1)
@@ -745,7 +742,7 @@ if __name__ == "__main__":
     XYZ_w = colour.xy_to_XYZ(PLOT_COLOURSPACE.whitepoint) * 100
     L_A = 100.0
     Y_b = 20.0
-    surround = colour.VIEWING_CONDITIONS_HELLWIG2022["Dim"]
+    surround = colour.VIEWING_CONDITIONS_HELLWIG2022[SURROUND_STYLE]
     rgbcmyk = [['red', [1.0, 0.0, 0.0]],
                ['green', [0.0, 1.0, 0.0]],
                ['blue', [0.0, 0.0, 1.0]],
