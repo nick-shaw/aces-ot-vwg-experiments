@@ -763,3 +763,13 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig('cusp_paths_{}.png'.format(space_name))
     plt.show()
+    
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    plt.plot(np.linspace(0, 359 * 2 * np.pi / 360, 360), M_cusp, label='M cusp')
+    if DO_ECCENTRICITY:
+        plt.title('M Cusp (with eccentricity) {}'.format(PLOT_COLOURSPACE.name))
+        plt.savefig('M_cusp_polar_withE_{}.png'.format(space_name))
+    else:
+        plt.title('M Cusp (no eccentricity) {}'.format(PLOT_COLOURSPACE.name))
+        plt.savefig('M_cusp_polar_noE_{}.png'.format(space_name))
+    plt.show()

@@ -19,16 +19,16 @@ __CONSTANT__ float3x3 MATRIX_16 = {
 };
 
 __CONSTANT__ float3x3 MATRIX_INVERSE_16 = {
-    { 1.54705503, -0.58256219,  0.03550715},
-    { 0.32230313,  0.78421833, -0.10652146},
-    {-0.02762598,  0.24646862,  0.78115737}
+    { 1.54705503f, -0.58256219f,  0.03550715f},
+    { 0.32230313f,  0.78421833f, -0.10652146f},
+    {-0.02762598f,  0.24646862f,  0.78115737f}
 };
 
 // Input matrix
 __CONSTANT__ float3x3 AP0_ACES_to_XYZ_matrix = {
-    { 0.9525523959f,  0.0000000000f,  0.0000936786},
-    { 0.3439664498f,  0.7281660966f, -0.0721325464},
-    { 0.0000000000f,  0.0000000000f,  1.0088251844}
+    { 0.9525523959f,  0.0000000000f,  0.0000936786f},
+    { 0.3439664498f,  0.7281660966f, -0.0721325464f},
+    { 0.0000000000f,  0.0000000000f,  1.0088251844f}
 };
 
 __CONSTANT__ float3x3  XYZ_to_AP0_ACES_matrix = {
@@ -55,9 +55,9 @@ __CONSTANT__ float Y_b = 20.0f;
 
 __CONSTANT__ float referenceLuminance = 100.0f;
 
-__CONSTANT__ float3 surround = {0.9, 0.59, 0.9};
+__CONSTANT__ float3 surround = {0.9f, 0.59f, 0.9f};
 
-__CONSTANT__ float3 d65White = {95.05f, 100.0f, 108.88f};
+__CONSTANT__ float3 d65White = {95.0455927052f, 100.0f, 108.9057750760f};
 
 // Chroma compress parameters
 __CONSTANT__ float hoff = 0.835f;
