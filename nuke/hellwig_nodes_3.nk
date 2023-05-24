@@ -35,13 +35,14 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 Root {
  inputs 0
  name /Users/nick/github/aces-ot-vwg-experiments/nuke/hellwig_nodes_3.nk
- frame 5
+ frame 76
  last_frame 77
  lock_range true
  format "2048 1556 0 0 2048 1556 1 2K_Super_35(full-ap)"
  proxy_type scale
  proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
  colorManagement Nuke
+ OCIO_config studio-config-v1.0.0_aces-v1.3_ocio-v2.1
  workingSpaceLUT linear
  monitorLut sRGB
  monitorOutLUT rec709
@@ -59,16 +60,24 @@ Read {
  origlast 78
  origset true
  name Read2
- xpos -34
- ypos -243
+ xpos -31
+ ypos -262
 }
-set Nec009600 [stack 0]
+OCIOLookTransform {
+ in_colorspace aces_interchange
+ look "ACES 1.3 Reference Gamut Compression"
+ out_colorspace aces_interchange
+ name ACES_RGC
+ xpos -31
+ ypos -156
+}
+set N2bc8fa00 [stack 0]
 Group {
  name DRT_CAM1
  label "Input: \[value encoding_in] / \[value primaries_in]\nLimit: \[value primaries_limit] / \[value ssts_luminance.2]nits\nOutput: \[value encoding_out] / \[value primaries_out]\n\[value toneScaleMode]\n\[file tail \[value BlinkScript1.kernelSourceFile]]"
  note_font "Bitstream Vera Sans"
- xpos 295
- ypos -87
+ xpos 298
+ ypos -19
  addUserKnob {20 User}
  addUserKnob {26 input_div l Input}
  addUserKnob {4 encoding_in l encoding t "the input log or gamma encoding" M {Linear ACEScct sRGB BT.1886 "Gamma 2.6" ST2084 "" ""}}
@@ -280,20 +289,20 @@ Group {
   ypos -84
  }
 end_group
-push $Nec009600
+push $N2bc8fa00
 Colorspace {
  illuminant_in ACES
  primary_in ACES
  colorspace_out CIE-XYZ
  name ACES_to_XYZ
- xpos -34
- ypos -148
+ xpos -31
+ ypos -80
 }
 Multiply {
  value 100
  name Multiply_100
- xpos -34
- ypos -113
+ xpos -31
+ ypos -45
 }
 BlinkScript {
  kernelSourceFile "\[file dirname \[value root.name]]/Hellwig.blink"
@@ -317,8 +326,8 @@ BlinkScript {
  HellwigKernel_viewingConditions 1
  rebuild_finalise ""
  name XYZ_to_JMh
- xpos -34
- ypos -71
+ xpos -31
+ ypos -3
 }
 BlinkScript {
  kernelSourceFile "\[file dirname \[value root.name]]/tonescale.blink"
@@ -361,8 +370,8 @@ BlinkScript {
  tonescaleKernel_primariesOut 2
  rebuild_finalise ""
  name Tonescale_J
- xpos -34
- ypos -25
+ xpos -31
+ ypos 43
 }
 BlinkScript {
  kernelSourceFile "\[file dirname \[value root.name]]/gamut_compress.blink"
@@ -431,8 +440,8 @@ BlinkScript {
  gamut_compress35_kernel_Y_b_out 20
  rebuild_finalise ""
  name gamut_compress
- xpos -34
- ypos 16
+ xpos -31
+ ypos 84
 }
 BlinkScript {
  kernelSourceFile "\[file dirname \[value root.name]]/Hellwig.blink"
@@ -457,24 +466,25 @@ BlinkScript {
  HellwigKernel_invert true
  rebuild_finalise ""
  name JMh_to_XYZ
- xpos -34
- ypos 61
+ xpos -31
+ ypos 129
 }
 Multiply {
  value 0.01
  name Div_100
- xpos -34
- ypos 101
+ xpos -31
+ ypos 169
 }
 Colorspace {
  colorspace_in CIE-XYZ
  colorspace_out 2.40
  name XYZ_to_709
- xpos -34
- ypos 144
+ xpos -31
+ ypos 212
 }
 Viewer {
  inputs 2
+ frame 76
  frame_range 1-77
  colour_sample_bbox {0.4635416567 -0.1520833373 0.4645833373 -0.1510416716}
  samplepoints {{0.3083333373 0.159374997}
@@ -482,6 +492,6 @@ Viewer {
  viewerProcess None
  monitorOutOutputTransform rec709
  name Viewer1
- xpos -34
- ypos 185
+ xpos -31
+ ypos 253
 }
