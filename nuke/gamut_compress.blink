@@ -1,0 +1,2110 @@
+
+kernel gamut_compress35_kernel : ImageComputationKernel<ePixelWise>
+{
+  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image
+  Image<eWrite> dst; // the output image
+
+  param:
+    //
+    // Input Parameters
+    //
+
+    // Encoding of the Input Image
+    // 0: Linear
+    // 1: ACEScct
+    // 2: sRGB
+    // 3: BT.1886 (Gamma 2.4)
+    // 4: Gamma 2.6
+    // 5: ST2084
+    int encodingIn;
+
+    // Primaries of the Input Image
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    int primariesIn;
+
+    // Tonescale mode
+    // 0: Linear
+    // 1: Daniele Evo Curve
+    int toneScaleMode;
+
+    // Disable Degree of Adaptation Model for Zhai2018 CAT
+    // This is only effective if the limit primaries have a non-D65 white point
+    // since the input conversion is assumed to be fully adapted
+    // and the output conversion does not apply a CAT
+    bool discountIlluminant_in;
+    bool discountIlluminant_mid;
+    bool discountIlluminant_out;
+
+    // Toggles for Hellwig 2022 specific params
+    bool HK_mode_in;
+    bool HK_mode_mid;
+    bool HK_mode_out;
+    int compressMode;
+
+    // Reference Luminance in Cd/sqm
+    float referenceLuminance;
+
+    // Background Luminance in Cd/sqm
+    // float backgroundLuminance;
+
+    // Viewing Conditions (for output)
+    // 0: Dark
+    // 1: Dim
+    // 2: Average
+    int viewingConditions;
+    int outputViewingConditions;
+
+    // Toggle  Tone Mapping
+    bool applyTonecurve;
+    
+    // SSTS Luminances Min/Mid/Peak
+    float3 sstsLuminance;
+
+    // Toggle chroma compression
+    bool applyChromaCompression;
+
+    // Chroma compression params (limit, k1, k2)
+    float3 chromaCParams;
+    int cc_et;
+    // xy coordintes for chroma compression gamut
+    float2 crxy;
+    float2 cgxy;
+    float2 cbxy;
+    float2 cwxy;
+
+    // Global saturation
+    float sat;
+
+    //
+    // Gamut Mapping Parameters
+    //
+
+    // Primaries of the Target Gamut
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    int primariesLimit;
+
+
+    // Toggle Gamut Compression
+    bool applyGamutCompression;
+
+    // Blend Between Compressing towards
+    // Target Gamut Cusp Luminance (0.0)
+    // and SSTS Mid Luminance (1.0)
+    float cuspMidBlend;
+
+    // Focus distance of the compression focal point from the achromatic axis
+    float focusDistance;
+
+    // Gamut Compression Fuction Parameters
+    // Threshold / min Limit / max Limit / Power
+    float4 compressionFuncParams;
+    bool sixAxisCompressionMode;
+    float4 compressionFuncParamsR;
+    float4 compressionFuncParamsY;
+    float4 compressionFuncParamsG;
+    float4 compressionFuncParamsC;
+    float4 compressionFuncParamsB;
+    float4 compressionFuncParamsM;
+
+
+    // How much the edges of the target RGB cube are smoothed when finding the gamut boundary 
+    // in order to reduce visible contours at the gamut cusps
+    float smoothCusps;
+
+    //
+    // Output Parameters
+    //
+
+    // Encoding of the Output Image
+    // 0: Linear
+    // 1: ACEScct
+    // 2: sRGB
+    // 3: BT.1886 (Gamma 2.4)
+    // 4: Gamma 2.6
+    // 5: ST2084
+    int encodingOut;
+
+    // Primaries of the Output Image
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    int primariesOut;
+
+    // Clamp output values to 0.0 - 1.0
+    bool clampOutput;
+    bool softclampOutput;
+    float clamp_thr;
+    float clamp_dist;
+
+    //
+    // Extra Parameters
+    //
+
+    // Toggle Inverse Transform
+    bool invert;
+    // Diagnostic path modes
+    int diagnosticMode;
+
+    // DanieleEvoCurve (ACES2 candidate) parameters
+    float mmScaleFactor;
+    float daniele_n; // peak white  
+    float daniele_n_r;    // Normalized white in nits (what 1.0 should be)
+    float daniele_g;      // surround / contrast
+    float daniele_c;      // scene-referred grey
+    float daniele_c_d;    // display-referred grey (in nits)
+    float daniele_w_g;    // grey change between different peak luminance
+    float daniele_t_1;     // shadow toe, flare/glare compensation - how ever you want to call it
+    float daniele_r_hit_min;  // Scene-referred value "hitting the roof" at 100 nits
+    float daniele_r_hit_max;  // Scene-referred value "hitting the roof" at 10,000 nits
+
+    // Hellwig 2022 CAM params
+    // the kernel parameters
+
+    // 0 = Stock CAT16
+    // 1 = Thomas's custom primaries
+    // 2 = live from params below
+    int catDataSelection; // original vs modified CAT16 matrix
+    // xy coordintes for custom CAT matrix
+    float2 rxy;
+    float2 gxy;
+    float2 bxy;
+    float2 wxy;
+    float ra;
+    float ba;
+ 
+    // Input vars
+//     float3 XYZ_w;
+    float XYZ_w_scaler;
+    float L_A;
+    float Y_b;
+    float3 L_B;
+    float3 userSurround;
+    bool discount_illuminant;
+    // Output vars
+    float L_A_out;
+    float Y_b_out;
+
+
+  local:
+
+    // constants
+    float HALF_MINIMUM;
+    float HALF_MAXIMUM;
+
+    // Hellwig 2022 constants
+    float3x3 CAT_CAT16;
+    float3x3 panlrcm;
+
+    float daniele_r_hit;
+    float daniele_m_0;
+    float daniele_m_1;
+    float daniele_u;
+    float daniele_m;
+    float daniele_w_i;
+    float daniele_c_t;
+    float daniele_g_ip;
+    float daniele_g_ipp2;
+    float daniele_w_2;
+    float daniele_s_2;
+    float daniele_u_2;
+    float daniele_m_2;
+
+    // Chroma compression pre-calculated constants
+    float scaleM;     // Tonescale based M scaling factor
+    float nJ_exp;     // Tonescale based J exponent
+
+    // ST2084 vars
+    float st2084_m_1;
+    float st2084_m_2;
+    float st2084_c_1;
+    float st2084_c_2;
+    float st2084_c_3;
+    float st2084_m_1_d;
+    float st2084_m_2_d;
+    float st2084_L_p;
+
+    // using the float3x3 type to store the array of 6 coefficients
+    // because Blink does not support generic array assignments
+
+    // matrix vars
+    float3x3 identity_matrix;
+
+    float3x3 XYZ_to_RGB_input;
+    float3x3 XYZ_to_RGB_limit;
+    float3x3 XYZ_to_RGB_output;
+
+    float3x3 RGB_to_XYZ_input;
+    float3x3 RGB_to_XYZ_limit;
+    float3x3 RGB_to_XYZ_output;
+
+    // white points
+    float3 d65White;
+    float3 inWhite;
+    float3 outWhite;
+    float3 refWhite;
+    float3 limitWhite;
+
+    // the maximum RGB value of the limiting gamut
+    float boundaryRGB;
+
+    // the maximum lightness value of the limiting gamut
+    float limitJmax;
+
+    // Middle gray J
+    float midJ;
+
+    // Gamut intersection line gamma
+    float gamut_gamma;
+
+    // the 1D LUT used for quickly findig the approximate limiting gamut cusp JMh coordinates
+    // the samples are spaced by HSV hue increments of the limiting RGB gamut
+    // so to find the correct entry for a given CAM hue (h) value 
+    // one must search the table entries for the matching entry.z component
+    int gamutCuspTableSize;
+
+    // the 'gamutCuspTableUnsorted' table is populated
+    // in increments of H of the limiting gamut HSV space starting at H=0.0
+    // since it is unlikely that HSV.H=0 and JMh.h=0 line up
+    // the entries are then wrap-around shifted
+    // so that the 'gamutCuspTable' starts with the lowest JMh.h value
+    // both tables need to be declared here since temporary array variables
+    // in the init() fuction seem to crash Nuke on some systems
+    float3 gamutCuspTableUnsorted[360];
+    float3 gamutCuspTable[360];
+    float3 cgamutCuspTable[360];
+
+  void define()
+  {
+
+  }
+
+  // multiplies a 3D vector with a 3x3 matrix
+  float3 vector_dot( float3x3 m, float3 v)
+  {
+    float3 r = 1.0f;
+    for(int c = 0; c<3; c++)
+    {
+      r[c] = m[c][0]*v.x + m[c][1]*v.y + m[c][2]*v.z;
+    }
+
+    return r;
+  }
+
+  // linear interpolation between two values a & b with the bias t
+  float lerp(float a, float b, float t)
+  {
+    return a + t * (b - a);
+  }
+
+  // linear interpolation between two float4 values a & b with the bias t
+  float4 lerp4(float4 a, float4 b, float t)
+  {
+    return a + t * (b - a);
+  }
+
+  // "safe" power function to avoid NANs or INFs when taking a fractional power of a negative base
+  // this one initially returned -pow(abs(b), e) for negative b
+  // but this ended up producing undesirable results in some cases
+  // so now it just returns 0.0 instead
+  float spow( float base, float exponent )
+  {
+    // a = np.atleast_1d(a)
+    float a = base;
+    float b = exponent;
+    // // p = as_float_array(p)
+
+    // float a_p = sign(a) * pow(  fabs(a) ,p)  ; 
+
+    // // a_p[np.isnan(a_p)] = 0
+
+    // return a_p;
+
+    // np.sign(a) * pow(np.abs(a) , b) 
+
+    // float a_p =  sign(a) * pow(fabs(a) , b) ;
+    // if ( isnan(a_p) )
+    // {
+    //     a_p = a_p;
+    // }
+    // else 
+    // {
+    //     a_p = 0.0;
+    // }
+    // return a_p;
+
+    if(base < 0.0f && exponent != floor(exponent) )
+    {
+      return 0.0f;
+    }
+    else
+    {
+     return pow(base, exponent); 
+    }
+  }
+
+
+  // clamp the components of a 3D vector between a min & max value
+  float3 clamp3(float3 v, float min, float max)
+  {
+    v.x = clamp(v.x, min, max);
+    v.y = clamp(v.y, min, max);
+    v.z = clamp(v.z, min, max);
+    return v;
+  }
+
+
+  float3 float3spow( float3 base, float exponent )
+  {
+      return float3(spow(base.x, exponent), spow(base.y, exponent), spow(base.z, exponent));
+  }
+
+  float3 float3sign( float3 v )
+  {
+      return float3(sign(v.x), sign(v.y), sign(v.z));
+  }
+
+
+  float3 float3abs( float3 a )
+  {
+    return fabs(a);
+  }
+
+
+
+    // "safe" div
+    float sdiv( float a, float b )
+    {
+        if(b == 0.0f)
+        {
+        return 0.0f;
+        }
+        else
+        {
+        return a / b;
+        }
+    }
+    
+  float clip(float x, float a, float b)
+  {
+    return max(a, min(x, b));
+  }
+
+  float mod(float a, float N)
+  {
+    return a - N*floor(a/N);
+  } 
+
+  float degree_of_adaptation(float  F, float L_A )
+  {
+    float D = F * (1 - (1 / 3.6) * exp((-L_A - 42) / 92));
+
+    return D;
+  }
+
+  // convert radians to degrees
+  float degrees( float radians )
+  {
+    return radians * 180.0f / PI;
+  }
+
+
+  // convert degrees to radians
+  float radians( float degrees )
+  {
+    return degrees / 180.0f * PI;
+  }
+
+  float3 compress_aces(float3 rgb, float3 c, float3 m, float3 y, int invert)
+  {
+    float ach = max(rgb.x, max(rgb.y, rgb.z));
+    float3 d = 0.0f;
+
+    if (ach)
+    {
+      d.x = (ach - rgb.x) / fabs(ach);
+      d.y = (ach - rgb.y) / fabs(ach);
+      d.z = (ach - rgb.z) / fabs(ach);
+    }
+
+    rgb.x = compressPowerP(d.x, c.x, c.y, c.z, invert);
+    rgb.y = compressPowerP(d.y, m.x, m.y, m.z, invert);
+    rgb.z = compressPowerP(d.z, y.x, y.y, y.z, invert);
+
+    rgb = ach - rgb * fabs(ach);
+
+    return rgb;
+  }
+
+  float3 compress_bjorn(float3 xyz)
+  {
+    float x = xyz.x;
+    float y = xyz.y;
+    float z = xyz.z;
+
+    float C = (x+y+z)/3;
+    if (C == 0.0f)
+      return xyz;
+
+    float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2)) ;
+    // np.sqrt(2/3)
+    // 0.816496580927726
+    R = R * 0.816496580927726;
+
+    if (R != 0.0)
+    {
+      x = (x-C)/R ;
+      y = (y-C)/R ;
+      z = (z-C)/R ;
+    }
+
+    float r = R/C ;
+    float s = -min(x, min(y, z));
+
+    float t = 0.0;
+    if (r > 0.000001f)
+    {
+      t = (0.5+spow((spow((s-0.5),2) + spow((sqrt(4/spow(r,2)+1)-1),2)/4),0.5));
+      if (t < 0.000001f)
+        return xyz;
+      t = 1/t;
+    }
+
+    x = C*x*t + C ;
+    y = C*y*t + C ;
+    z = C*z*t + C ;
+
+    return float3(x,y,z);
+  }
+
+float3 uncompress_bjorn(float3 xyz)
+{
+  float x = xyz.x;
+  float y = xyz.y;
+  float z = xyz.z;
+
+  float C = (x+y+z)*(1.0/3.0) ;
+  if (C == 0.0)
+    return xyz;
+
+  float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2));
+  // np.sqrt(2/3)
+  // 0.816496580927726
+  R = R * 0.816496580927726;
+
+  if (R != 0.0)
+  {
+    x = (x-C)/R ;
+    y = (y-C)/R ;
+    z = (z-C)/R ;
+  }
+
+  float t = R/C ;
+  float s = -min(x, min(y, z));
+
+  float r = 0.0;
+  if (t > 0.000001f)
+  {
+    r = sqrt(spow((2*sqrt(spow((1/t-0.5),2)-spow((s-0.5),2))+1),2)-1);
+    if (r < 0.000001f)
+      return xyz;
+    r = 2/r;
+  }
+
+  x = C*x*r + C ;
+  y = C*y*r + C ;
+  z = C*z*r + C ;
+
+  return float3(x,y,z);
+}
+
+  float3 compress(float3 rgb)
+  {
+    return compress_bjorn(rgb);
+  }
+
+  float3 uncompress(float3 rgb)
+  {
+    return uncompress_bjorn(rgb);
+  }
+
+  float hue_angle_dependency_Hellwig2022(float h)
+  {
+    // h = as_float_array(h)
+    return float(         \
+     -0.160 * cos(h)      \
+    + 0.132 * cos(2 * h)  \
+    - 0.405 * sin(h)      \
+    + 0.080 * sin(2 * h)  \ 
+    + 0.792               \
+    );
+    }
+
+
+  float3x3  RGBPrimsToXYZMatrix(float2 rxy, float2 gxy, float2 bxy, float2 wxy,float Y, bool direction)
+  {
+    // # given r g b chromaticities and whitepoint, convert RGB colors to XYZ
+    // # based on CtlColorSpace.cpp from the CTL source code : 77
+    // # param: xy - dict of chromaticity xy coordinates: rxy: float2(x, y) etc
+    // # param: Y - luminance of "white" - defaults to 1.0
+    // # param: inverse - calculate XYZ to RGB instead
+
+    float2 r = rxy;
+    float2 g = gxy;
+    float2 b = bxy;
+    float2 w = wxy;
+
+    float X = w.x * Y / w.y;
+    float Z = (1 - w.x - w.y) * Y / w.y;
+
+    // # Scale factors for matrix rows
+    float d = r.x * (b.y - g.y) + b.x * (g.y - r.y) + g.x * (r.y - b.y);
+
+    float Sr =    (X * (b.y - g.y) -      \
+            g.x * (Y * (b.y - 1.0f) +  \
+            b.y  * (X + Z)) +       \
+            b.x  * (Y * (g.y - 1.0f) + \
+            g.y * (X + Z))) / d ;
+    
+    float Sg =    (X * (r.y - b.y) +      \
+            r.x * (Y * (b.y - 1.0f) +  \
+            b.y * (X + Z)) -        \
+            b.x * (Y * (r.y - 1.0f) +  \
+            r.y * (X + Z))) / d ;
+
+    float Sb =    (X * (g.y - r.y) -      \
+            r.x * (Y * (g.y - 1.0f) +  \
+            g.y * (X + Z)) +        \
+            g.x * (Y * (r.y - 1.0f) +  \
+            r.y * (X + Z))) / d ;
+
+    // # Assemble the matrix
+    float Mdata[] =
+    {
+            Sr * r.x, Sr * r.y, Sr * (1.0f - r.x - r.y),
+            Sg * g.x, Sg * g.y, Sg * (1.0f - g.x - g.y),
+            Sb * b.x, Sb * b.y, Sb * (1.0f - b.x - b.y),
+    };
+
+    float MdataNukeOrder[] = {
+      Mdata[0], Mdata[3], Mdata[6],
+      Mdata[1], Mdata[4], Mdata[7],
+      Mdata[2], Mdata[5], Mdata[8],
+    };
+
+    float3x3 newMatrix;
+    newMatrix.setArray(MdataNukeOrder);
+
+    // create inverse matrix
+    float3x3 newMatrixInverse = newMatrix.invert();
+
+    // return forward or inverse matrix
+    if (direction == 0)
+    {
+      return newMatrix;
+    }
+    else if (direction == 1)
+    {
+      return newMatrixInverse;
+    }
+  }
+
+  float3 viewingConditionsToSurround(int viewingConditions)
+  {
+      float3 newSurround;
+      // hack to turn incoming int value into surround coeffs
+      if (viewingConditions == 0)
+      {
+          // "Dark": InductionFactors_CIECAM02(0.8, 0.525, 0.8),
+          newSurround = float3(0.8, 0.525, 0.8);
+      }
+      else if (viewingConditions == 1)
+      {
+          // "Dim": InductionFactors_CIECAM02(0.9, 0.59, 0.9),
+          newSurround = float3(0.9, 0.59, 0.9);
+      }
+      else if (viewingConditions == 2)
+      {
+          // "Average": InductionFactors_CIECAM02(1, 0.69, 1),
+          newSurround = float3(1.0, 0.69, 1.0);
+      }
+      else if (viewingConditions == 3)
+      {
+          // Pull from external input
+          newSurround = userSurround;
+      }
+      return newSurround;
+  }
+
+  // "PowerP" compression function (also used in the ACES Reference Gamut Compression transform)
+  // values of v above  'treshold' are compressed by a 'power' function
+  // so that an input value of 'limit' results in an output of 1.0
+  float compressPowerP( float v, float threshold, float limit, float power, int inverse )
+  {
+    float s = (limit-threshold)/pow(pow((1.0f-threshold)/(limit-threshold),-power)-1.0f,1.0f/power);
+
+    float vCompressed;
+
+    if( inverse )
+    {
+      vCompressed = (v<threshold||limit<1.0001f||v>threshold+s)?v:threshold+s*pow(-(pow((v-threshold)/s,power)/(pow((v-threshold)/s,power)-1.0f)),1.0f/power);
+    }
+    else
+    {
+      vCompressed = (v<threshold||limit<1.0001f)?v:threshold+s*((v-threshold)/s)/(pow(1.0f+pow((v-threshold)/s,power),1.0f/power));
+    }
+
+    return vCompressed;
+  }
+
+  // convert XYZ tristimulus values to the CAM J (lightness), M (colorfulness) and h (hue) correlates
+  // needs XYZ tristimulus values for the reference white and a D65 white as well as the viewing conditions as parameters
+  float3 XYZ_to_JMh( float3 XYZ, float3 referenceWhite, float3 d65White, int viewingConditions , float L_A, float Y_b, bool discountIlluminant, bool HK_mode)
+  {
+    return XYZ_to_Hellwig2022_JMh(XYZ, referenceWhite, L_A, Y_b,viewingConditionsToSurround(viewingConditions),discountIlluminant,HK_mode);
+  }
+
+  // convert the CAM J (lightness), M (colorfulness) and h (hue) correlates to XYZ tristimulus values
+  // needs XYZ tristimulus values for the reference white and a D65 white as well as the viewing conditions as parameters
+  float3 JMh_to_XYZ( float3 JMh, float3 referenceWhite, float3 d65White, int viewingConditions , float L_A, float Y_b, bool discountIlluminant, bool HK_mode)
+  {
+    float3 XYZ;
+    XYZ = Hellwig2022_JMh_to_XYZ(JMh, referenceWhite, L_A, Y_b, viewingConditionsToSurround(viewingConditions), discountIlluminant,HK_mode);
+    return XYZ;
+  }
+
+  // convert ACEScct encoded values to linear
+  float ACEScct_to_linear( float v )
+  {
+    return v > 0.155251141552511f ? spow( 2.0f, v * 17.52f - 9.72f) : (v - 0.0729055341958355f) / 10.5402377416545f;
+  }
+
+  // encode linear values as ACEScct
+  float linear_to_ACEScct( float v )
+  {
+    return v > 0.0078125f ? (log2(v) + 9.72f) / 17.52f : 10.5402377416545f * v + 0.0729055341958355f;
+  }
+
+
+  // convert sRGB gamma encoded values to linear
+  float sRGB_to_linear( float v )
+  {
+    return v < 0.04045f ? v / 12.92f : spow((v + 0.055f) / 1.055f, 2.4f);
+  }
+
+  // encode linear values as sRGB gamma
+  float linear_to_sRGB( float v )
+  {
+    return v <= 0.0031308f ? 12.92f * v : 1.055 * (spow(v, 1.0f / 2.4f)) - 0.055f;
+  }
+
+  // convert ST2084 PQ encoded values to linear
+  float ST2084_to_linear( float v )
+  {
+    float V_p = spow(v, st2084_m_2_d);
+    return spow((max(0.0f, V_p - st2084_c_1) / (st2084_c_2 - st2084_c_3 * V_p)), st2084_m_1_d)*st2084_L_p;
+  }
+
+  // encode linear values as ST2084 PQ
+  float linear_to_ST2084( float v )
+  {
+    float Y_p = spow(max(0.0f, v) / st2084_L_p, st2084_m_1);
+
+    return spow((st2084_c_1 + st2084_c_2 * Y_p) / (st2084_c_3 * Y_p + 1.0f), st2084_m_2);
+  }
+
+  // decode value 'v' with the inverse of the selected encoding fuction to luminance
+  float encodingToLuminance(int encoding, float v)
+  {
+    if( encoding == 1 )
+    {
+      // ACEScct
+      return ACEScct_to_linear(v) * referenceLuminance;
+    }
+    else if( encoding == 2 )
+    {
+      // sRGB
+      return sRGB_to_linear(v) * referenceLuminance;
+    }
+    else if( encoding == 3 )
+    {
+      // BT.1886 (Gamma 2.4)
+      return spow(v, 2.4f) * referenceLuminance;
+    }
+    else if( encoding == 4 )
+    {
+      // Gamma 2.6
+      return spow(v, 2.6f) * referenceLuminance;
+    }
+    else if( encoding == 5 )
+    {
+      // ST2084
+      return ST2084_to_linear(v);
+    }
+    else
+    {
+      // Linear
+      // default
+      return v * referenceLuminance;
+    }
+  }
+
+  // decode the components of a 3D vector 'v' with the inverse of the selected encoding fuction to luminance
+  float3 encodingToLuminance3(int encoding, float3 v)
+  {
+    float3 lin;
+    lin.x = encodingToLuminance(encoding, v.x);
+    lin.y = encodingToLuminance(encoding, v.y);
+    lin.z = encodingToLuminance(encoding, v.z);
+
+    return lin;
+  }
+
+  // encode the linear luminance value 'v' with the encoding fuction selected by 'encoding'
+  float luminanceToEncoding(int encoding, float v)
+  {
+    if( encoding == 1 )
+    {
+      // ACEScct
+      return linear_to_ACEScct(v / referenceLuminance);
+    }
+    else if( encoding == 2 )
+    {
+      // sRGB
+      return linear_to_sRGB(v / referenceLuminance);
+    }
+    else if( encoding == 3 )
+    {
+      // BT.1886 (Gamma 2.4)
+      return spow(v / referenceLuminance, 1.0f/2.4f);
+    }
+    else if( encoding == 4 )
+    {
+      // Gamma 2.6
+      return spow(v / referenceLuminance, 1.0f/2.6f);
+    }
+    else if( encoding == 5 )
+    {
+      // ST2084
+      return linear_to_ST2084(v);
+    }
+    else
+    {
+      // Linear
+      // default
+      return v / referenceLuminance;
+    }
+  }
+
+  // encode the linear luminance value components of a 3D vector 'v' with the encoding fuction selected by 'encoding'
+  float3 luminanceToEncoding3(int encoding, float3 v)
+  {
+    float3 enc;
+    enc.x = luminanceToEncoding(encoding, v.x);
+    enc.y = luminanceToEncoding(encoding, v.y);
+    enc.z = luminanceToEncoding(encoding, v.z);
+
+    return enc;
+  }
+
+  // convert RGB values in the output colorspace to the CAM J (lightness), M (colorfulness) and h (hue) correlates
+  float3 output_RGB_to_JMh(float3 RGB)
+  {
+    float3 luminanceRGB = encodingToLuminance3(encodingOut, RGB);
+    float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
+    float3 JMh = XYZ_to_JMh(XYZ, limitWhite, d65White, viewingConditions, L_A_out, Y_b_out, discountIlluminant_out,HK_mode_out);
+    return JMh;
+  }
+
+  // convert RGB values in the output colorspace to the CAM J (lightness), M (colorfulness) and h (hue) correlates
+  float3 luminance_RGB_to_JMh(float3 luminanceRGB)
+  {
+    float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
+    float3 JMh = XYZ_to_JMh(XYZ, refWhite, d65White, outputViewingConditions, L_A, Y_b, discountIlluminant_mid, HK_mode_mid);
+    return JMh;
+  }
+
+
+  // convert CAM J (lightness), M (colorfulness) and h (hue) correlates to  RGB values in the output colorspace
+  float3 JMh_to_output_RGB(float3 JMh)
+  {
+    float3 luminanceXYZ = JMh_to_XYZ( JMh, limitWhite, d65White, outputViewingConditions , L_A_out, Y_b_out, discountIlluminant_out, HK_mode_out);
+    float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
+
+    if( softclampOutput )
+    {
+      // Soft clamp by compressing negative display linear values
+      float3 compr = float3(clamp_thr, clamp_dist, 1.2f);
+      luminanceRGB = compress_aces(luminanceRGB, compr, compr, compr, 0);
+    }
+
+    float3 outputRGB = luminanceToEncoding3( encodingOut, luminanceRGB);
+
+    if( clampOutput )
+    {
+      outputRGB = clamp3(outputRGB, 0.0f, 1.0f);
+    }
+
+    return outputRGB;
+  }
+
+  // convert CAM J (lightness), M (colorfulness) and h (hue) correlates to  RGB values in the output colorspace
+  float3 JMh_to_luminance_RGB(float3 JMh)
+  {
+      float3 luminanceXYZ = JMh_to_XYZ( JMh, refWhite, d65White, outputViewingConditions , L_A, Y_b, discountIlluminant_mid, HK_mode_mid);
+      float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
+
+      return luminanceRGB;
+  }
+
+
+  // convert linear RGB values with the limiting primaries to CAM J (lightness), M (colorfulness) and h (hue) correlates
+  float3 limit_RGB_to_JMh(float3 RGB)
+  {
+    float3 luminanceRGB = RGB * boundaryRGB *referenceLuminance;
+    float3 XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB);
+    float3 JMh = XYZ_to_JMh(XYZ, refWhite, d65White, viewingConditions, L_A, Y_b, discountIlluminant_mid, HK_mode_mid);
+    return JMh;
+  }
+
+
+  // convert CAM J (lightness), M (colorfulness) and h (hue) correlates to linear RGB values with the limiting primaries
+  float3 JMh_to_limit_RGB(float3 JMh)
+  {
+    float3 luminanceXYZ = JMh_to_XYZ( JMh, refWhite, d65White, viewingConditions, L_A, Y_b, discountIlluminant_mid, HK_mode_mid );
+    float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
+    float3 RGB = luminanceRGB / boundaryRGB / referenceLuminance;
+    return RGB;
+  }
+
+  float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)
+  {
+      float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);
+      float3 RGB_c = (400.0f * sign(RGB) * F_L_RGB) / (27.13f + F_L_RGB);
+      return RGB_c;
+  }
+
+  float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB,float F_L)
+  {
+      float3 RGB_p =  (float3sign(RGB) * 100.0f / F_L * float3spow((27.13f * float3abs(RGB)) / (400.0f - float3abs(RGB)), 1.0f / 0.42f) );
+      return RGB_p;
+  }
+
+  // XYZ to Hellwig2020 JMh
+  //
+  //     XYZ
+  //         *CIE XYZ* tristimulus values of test sample / stimulus.
+  //     XYZ_w
+  //         *CIE XYZ* tristimulus values of reference white.
+  //     L_A
+  //         Adapting field *luminance* :math:`L_A` in :math:`cd/m^2`, (often taken
+  //         to be 20% of the luminance of a white object in the scene).
+  //     Y_b
+  //         Luminous factor of background :math:`Y_b` such as
+  //         :math:`Y_b = 100 x L_b / L_w` where :math:`L_w` is the luminance of the
+  //         light source and :math:`L_b` is the luminance of the background. For
+  //         viewing images, :math:`Y_b` can be the average :math:`Y` value for the
+  //         pixels in the entire image, or frequently, a :math:`Y` value of 20,
+  //         approximate an :math:`L^*` of 50 is used.
+  //     surround
+  //         Surround viewing conditions induction factors.
+  //         Truth value indicating if the illuminant should be discounted.
+  //     discount_illuminant
+  //
+  // NOTE: Following modifications have been made to stock Hellwig2022 model for this DRT:
+  //
+  // - Custom primaries
+  // - Eccentriticty factor has been removed
+  // - Compress mode
+  //
+  float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)
+    {
+        XYZ_w = XYZ_w * XYZ_w_scaler;
+        float _X_w = XYZ_w.x ;
+        float Y_w = XYZ_w.y ;
+        float _Z_w = XYZ_w.z ;
+
+        // # Step 0
+        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+        float3x3 MATRIX_16 = CAT_CAT16;
+        float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);
+
+        // # Computing degree of adaptation :math:`D`.
+        float D = clip(degree_of_adaptation(surround.x, L_A), 0, 1);
+        if(discountIlluminant)
+        {
+            D = 1.0f;
+        }
+
+        // # Viewing conditions dependent parameters
+        float k = 1 / (5 * L_A + 1);
+        float k4 = pow(k,4);
+        float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
+        float n = sdiv(Y_b, Y_w);
+        float z = 1.48 + sqrt(n);
+
+        // // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
+        float3 D_RGB = D * Y_w / RGB_w + 1 - D;
+        float3 RGB_wc = D_RGB * RGB_w;
+
+        // # Applying forward post-adaptation non-linear response compression.
+        // F_L_RGB = spow(F_L[..., np.newaxis] * np.absolute(RGB_wc) / 100, 0.42)
+        float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
+
+        // # Computing achromatic responses for the whitepoint.
+        // RGB_aw = (400 * np.sign(RGB_wc) * F_L_RGB) / (27.13 + F_L_RGB) + 0.1
+        float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB);
+
+        // # Computing achromatic responses for the whitepoint.
+        // R_aw, G_aw, B_aw = tsplit(RGB_aw)
+        float R_aw = RGB_aw.x ;
+        float G_aw = RGB_aw.y ;
+        float B_aw = RGB_aw.z ;
+
+        // A_w = 2 * R_aw + G_aw + 0.05 * B_aw - 0.305
+        float A_w = ra * R_aw + G_aw + ba * B_aw;
+
+        // # Step 1
+        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+        // RGB = vector_dot(MATRIX_16, XYZ)
+
+        float3 RGB = vector_dot(MATRIX_16, XYZ);
+        // float3 RGB = XYZ;
+
+        // # Step 2
+        // RGB_c = D_RGB * RGB
+        float3 RGB_c = D_RGB * RGB;
+
+        // # Step 3
+        // # Applying forward post-adaptation non-linear response compression.
+
+        if (compressMode)
+        {
+          RGB_c = compress(RGB_c);
+        }
+
+        float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
+
+        if (compressMode)
+        {
+          RGB_a = uncompress(RGB_a);
+        }
+
+        // # Step 4
+        // # Converting to preliminary cartesian coordinates.
+        // R_a, G_a, B_a = tsplit(RGB_a)
+        float R_a = RGB_a.x ;
+        float G_a = RGB_a.y ;
+        float B_a = RGB_a.z ;
+        // a = R_a - 12 * G_a / 11 + B_a / 11
+        float a = R_a - 12.0f * G_a / 11.0f + B_a / 11.0f;
+        // b = (R_a + G_a - 2 * B_a) / 9
+        float b = (R_a + G_a - 2.0f * B_a) / 9.0f;
+
+        // # Computing the *hue* angle :math:`h`.
+        // h = np.degrees(np.arctan2(b, a)) % 360
+        // Unclear why this isnt matching the python version.
+        float h = mod(degrees(atan2(b, a)), 360.0f);
+
+        float hr = radians(h);
+
+        // # Step 6
+        // # Computing achromatic responses for the stimulus.
+        // R_a, G_a, B_a = tsplit(RGB_a)
+        float R_a2 = RGB_a.x ;
+        float G_a2 = RGB_a.y ;
+        float B_a2 = RGB_a.z ;
+
+        // A = 2 * R_a + G_a + 0.05 * B_a - 0.305
+        float A = ra * R_a2 + G_a2 + ba * B_a2;
+
+        // # Step 7
+        // # Computing the correlate of *Lightness* :math:`J`.
+        // with sdiv_mode():
+        //     J = 100 * spow(sdiv(A, A_w), surround.c * z)
+
+        float J = 100.0f * spow(sdiv(A, A_w), surround.y * z);
+
+        // # Step 8
+        // # Computing the correlate of *brightness* :math:`Q`.
+        // with sdiv_mode():
+        //     Q = (2 / as_float(surround.c)) * (J / 100) * A_w
+        float Q = (2.0f / float(surround.y)) * (J / 100.0f) * A_w;
+
+        // # Step 9
+        // # Computing the correlate of *colourfulness* :math:`M`.
+        // M = 43 * surround.N_c * e_t * np.sqrt(a**2 + b**2)
+        float M = 43.0f * surround.z * sqrt(a * a + b * b);
+
+        // # Computing the correlate of *chroma* :math:`C`.
+        // with sdiv_mode():
+        //     C = 35 * sdiv(M, A_w)
+        float C = 35.0f * sdiv(M, A_w);
+
+
+        // # Computing the correlate of *saturation* :math:`s`.
+        // with sdiv_mode():
+        //     s = 100 * sdiv(M, Q)
+        float s = 100.0f * sdiv(M, Q);
+
+        // # *Helmholtz–Kohlrausch* Effect Extension.
+        float J_HK = J + hue_angle_dependency_Hellwig2022(hr) * spow(C, 0.587f);
+        float Q_HK = (2.0f / surround.y) * (J_HK / 100.0f) * A_w ;
+
+        if (HK_mode)
+        {
+          return {J_HK,M,h};
+        }
+        else
+        {
+          if (J == 0.0f)
+            M = 0.0f;
+          return {J,M,h};
+        }
+    }
+
+    float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w, float L_A, float Y_b, float3 surround, bool discountIlluminant, bool HK_mode)
+    {
+        float J = JMh.x;
+        float M = JMh.y;
+        float h = JMh.z;
+        XYZ_w  = XYZ_w  * XYZ_w_scaler;
+  
+        // L_A = as_float_array(L_A)
+        // XYZ_w = to_domain_100(XYZ_w)
+        // _X_w, Y_w, _Z_w = tsplit(XYZ_w)
+        float _X_w = XYZ_w.x;
+        float Y_w = XYZ_w.y;
+        float _Z_w = XYZ_w.z;
+
+        // # Step 0
+        // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+        // RGB_w = vector_dot(MATRIX_16, XYZ_w)
+        float3x3 MATRIX_16 = CAT_CAT16;
+        float3 RGB_w = vector_dot(MATRIX_16, XYZ_w);
+
+        // # Computing degree of adaptation :math:`D`.
+        float D = clip(degree_of_adaptation(surround.x, L_A), 0, 1);
+        if(discountIlluminant)
+        {
+            D = 1.0f;
+        }
+
+        // # Viewing conditions dependent parameters
+        float k = 1 / (5 * L_A + 1);
+        float k4 = pow(k,4);
+        float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
+        float n = sdiv(Y_b, Y_w);
+        float z = 1.48 + sqrt(n);
+
+        // // float D_RGB = ( D[..., np.newaxis] * Y_w[..., np.newaxis] / RGB_w + 1 - D[..., np.newaxis] )
+        float3 D_RGB = D * Y_w / RGB_w + 1 - D;
+        float3 RGB_wc = D_RGB * RGB_w;
+
+        // # Applying forward post-adaptation non-linear response compression.
+        // F_L_RGB = spow(F_L[..., np.newaxis] * np.absolute(RGB_wc) / 100, 0.42)
+        float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
+
+        // # Computing achromatic responses for the whitepoint.
+        // RGB_aw = (400 * np.sign(RGB_wc) * F_L_RGB) / (27.13 + F_L_RGB) + 0.1
+        float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB);
+
+        // # Computing achromatic responses for the whitepoint.
+        // R_aw, G_aw, B_aw = tsplit(RGB_aw)
+        float R_aw = RGB_aw.x ;
+        float G_aw = RGB_aw.y ;
+        float B_aw = RGB_aw.z ;
+        // A_w = 2 * R_aw + G_aw + 0.05 * B_aw - 0.305
+        float A_w = ra * R_aw + G_aw + ba * B_aw;
+
+        float hr = radians(h);
+
+        // # *Helmholtz–Kohlrausch* Effect Extension.
+        float C = (M * 35) / A_w;
+        if (HK_mode)
+        {
+          J = J - hue_angle_dependency_Hellwig2022(hr) * spow(C, 0.587f);
+        }
+
+        // # Computing achromatic response :math:`A` for the stimulus.
+        // A = A = A_w * spow(J / 100, 1 / (surround.c * z))
+        float A = A_w * spow(J / 100.0f, 1.0f / (surround.y * z));
+
+        // # Computing *P_p_1* to *P_p_2*.
+        // P_p_1 = 43 * surround.N_c * e_t
+        // P_p_2 = A
+        float P_p_1 = 43.0f * surround.z;
+        float P_p_2 = A;
+
+
+        // # Step 3
+        // # Computing opponent colour dimensions :math:`a` and :math:`b`.
+        // with sdiv_mode():
+        //     gamma = M / P_p_1
+        float gamma = M / P_p_1;
+    
+        // a = gamma * np.cos(hr)
+        float a = gamma * cos(hr);
+        // b = gamma * np.sin(hr)
+        float b = gamma * sin(hr);
+
+
+        // # Step 4
+        // # Applying post-adaptation non-linear response compression matrix.
+        float3 RGB_a = vector_dot(panlrcm, float3(P_p_2, a, b)) / 1403.0f;
+
+        // # Step 5
+        // # Applying inverse post-adaptation non-linear response compression.
+
+        if (compressMode)
+        {
+          RGB_a = compress(RGB_a);
+        }
+
+        float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L);
+
+        if (compressMode)
+        {
+          RGB_c = uncompress(RGB_c);
+        }
+
+        // # Step 6
+        // RGB = RGB_c / D_RGB
+        float3 RGB = RGB_c / D_RGB;
+        
+    
+        // # Step 7
+        // XYZ = vector_dot(MATRIX_INVERSE_16, RGB)
+        float3x3 MATRIX_INVERSE_16 = CAT_CAT16.invert();
+        float3 XYZ = vector_dot(MATRIX_INVERSE_16, RGB);
+
+        return XYZ;
+    }
+
+
+  // convert HSV cylindrical projection values to RGB
+  float3 HSV_to_RGB( float3 HSV )
+  {
+    float C = HSV.z*HSV.y;
+    float X = C*(1.0f-fabs(fmod(HSV.x*6.0f,2.0f)-1.0f));
+    float m = HSV.z-C;
+
+    float3 RGB;
+    RGB.x = (HSV.x<1.0f/6.0f?  C :HSV.x<2.0f/6.0f?  X :HSV.x<3.0f/6.0f?0.0f:HSV.x<4.0f/6.0f?0.0f:HSV.x<5.0f/6.0f?  X :  C )+m;
+    RGB.y = (HSV.x<1.0f/6.0f?  X :HSV.x<2.0f/6.0f?  C :HSV.x<3.0f/6.0f?  C :HSV.x<4.0f/6.0f?  X :HSV.x<5.0f/6.0f?0.0f:0.0f)+m;
+    RGB.z = (HSV.x<1.0f/6.0f?0.0f:HSV.x<2.0f/6.0f?0.0f:HSV.x<3.0f/6.0f?  X :HSV.x<4.0f/6.0f?  C :HSV.x<5.0f/6.0f?  C :  X )+m;
+    return RGB;
+  }
+
+
+  // convert RGB to HSV cylindrical projection values
+  float3 RGB_to_HSV( float3 RGB )
+  {
+    float cmax = max(RGB.x,max(RGB.y,RGB.z));
+    float cmin = min(RGB.x,min(RGB.y,RGB.z));
+    float delta = cmax-cmin;
+
+    float3 HSV;
+    HSV.x = delta==0.0f?0.0f:cmax==RGB.x?(fmod((RGB.y-RGB.z)/delta+6.0f,6.0f))/6.0f:cmax==RGB.y?(((RGB.z-RGB.x)/delta+2.0f)/6.0f):(((RGB.x-RGB.y)/delta+4.0f)/6.0f);
+    HSV.y = cmax == 0.0f ? 0.0f : delta / cmax;
+    HSV.z = cmax;
+    return HSV;
+  }
+
+
+  // retrieve the JM coordinates of the limiting gamut cusp at the hue slice 'h'
+  // cusps are very expensive to compute
+  // and the DRT is only using them for lightness mapping
+  // which does not require a high degree of accuracy
+  // so instead we use a pre-computed table of cusp points
+  // sampled at 1 degree hue intervals of the the RGB target gamut
+  // and lerp between them to get the approximate J & M values
+  float2 cuspFromTable(float h)
+  {
+
+    float3 lo;
+    float3 hi;
+
+    if( h <= gamutCuspTable[0].z )
+    {
+      lo = gamutCuspTable[gamutCuspTableSize-1];
+      lo.z = lo.z-360.0f;
+      hi = gamutCuspTable[0];
+    }
+    else if( h >= gamutCuspTable[gamutCuspTableSize-1].z )
+    {
+      lo = gamutCuspTable[gamutCuspTableSize-1];
+      hi = gamutCuspTable[0];
+      hi.z = hi.z+360.f;
+    }
+    else
+    {
+      for(int i = 1; i < gamutCuspTableSize; ++i)
+      {
+        if( h <= gamutCuspTable[i].z )
+        {
+          lo = gamutCuspTable[i-1];
+          hi = gamutCuspTable[i];
+          break;
+        }
+      }
+    }
+
+    float t = (h - lo.z) / (hi.z - lo.z);
+
+    float cuspJ = lerp(lo.x, hi.x, t);
+    float cuspM = lerp(lo.y, hi.y, t);
+
+    return float2(cuspJ,cuspM);
+  }
+
+  float2 ccuspFromTable(float h)
+  {
+
+    float3 lo;
+    float3 hi;
+
+    if( h <= cgamutCuspTable[0].z )
+    {
+      lo = cgamutCuspTable[gamutCuspTableSize-1];
+      lo.z = lo.z-360.0f;
+      hi = cgamutCuspTable[0];
+    }
+    else if( h >= cgamutCuspTable[gamutCuspTableSize-1].z )
+    {
+      lo = cgamutCuspTable[gamutCuspTableSize-1];
+      hi = cgamutCuspTable[0];
+      hi.z = hi.z+360.f;
+    }
+    else
+    {
+      for(int i = 1; i < gamutCuspTableSize; ++i)
+      {
+        if( h <= cgamutCuspTable[i].z )
+        {
+          lo = cgamutCuspTable[i-1];
+          hi = cgamutCuspTable[i];
+          break;
+        }
+      }
+    }
+
+    float t = (h - lo.z) / (hi.z - lo.z);
+
+    float cuspJ = lerp(lo.x, hi.x, t);
+    float cuspM = lerp(lo.y, hi.y, t);
+
+    return float2(cuspJ,cuspM);
+  }
+
+  float daniele_evo_fwd(float Y)
+  {
+    float f = daniele_m_2 * pow(max(0.0f, Y) / (Y + daniele_s_2), daniele_g);
+    float h = max(0.0f, f * f / (f + daniele_t_1));
+
+    return h;
+  }
+
+  float daniele_evo_rev(float Y)
+  {
+    Y = max(0.0f, min(daniele_n / (daniele_u_2 * daniele_n_r), Y));
+    float h = (Y + sqrt(Y * (4.0f * daniele_t_1 + Y))) / 2.0f;
+    float f = daniele_s_2 / (pow((daniele_m_2 / h), (1.0f / daniele_g)) - 1.0f);
+
+    return f;
+  }
+
+  // Returns saturation multiplier.  This boost saturation more for darker colors than
+  // for brighter colors.  It keeps noise floor and very deep shadows less saturated.
+  float sat_factor(float nJ, float origJ)
+  {
+    float shadows = max(0.02f, 0.15f - 0.00025f * daniele_n);
+    float shdsat = sat + 1.0f * (1.0f - shadows);
+    float satmul = sat + 1.0f * (1.0f - nJ);
+    float shadowmul = lerp(0.01f, shdsat, min(1.0f, origJ / shadows));
+
+    return nJ > shadows ? satmul : shadowmul;
+  }
+
+  // Return compression gamut cusp M scaled with an eccentricity factor
+  float cusp_with_eccentricity_factor(float h)
+  {
+    float2 JMcusp = ccuspFromTable(h);
+    float e_t = 1.0f;
+
+    // CAM16
+    if (cc_et == 0)
+    {
+      // NOTE: custom scaler 0.275 instead of 0.25 in CAM16
+      e_t = 0.275f * (cos(2.0f + h * PI / 180.0f) + 3.8f);
+    }
+    // Hellwig2022
+    // CAM16 vs Hellwig2022: https://onlinelibrary.wiley.com/cms/asset/60788dfc-6bae-4949-bf8d-bd8c3467aef8/col22792-fig-0005-m.jpg
+    else if (cc_et == 1)
+    {
+      float hr = radians(h);
+      float _h = hr;
+      float _2_h = 2 * hr;
+      float _3_h = 3 * hr;
+      float _4_h = 4 * hr;
+      e_t = (
+        -0.0582f * cos(_h)
+        - 0.0258f * cos(_2_h)
+        - 0.1347f * cos(_3_h)
+        + 0.0289f * cos(_4_h)
+        - 0.1475f * sin(_h)
+        - 0.0308f * sin(_2_h)
+        + 0.0385f * sin(_3_h)
+        + 0.0096f * sin(_4_h)
+        + 1.0f
+      );
+    }
+    // Custom https://www.desmos.com/calculator/vukgp6rtos
+    else if (cc_et == 2)
+    {
+      float hr = radians(h);
+      float hr2 = hr * 2;
+      float hr3 = hr * 3;
+      e_t = (-0.47f * cos(hr) +
+              0.07f * cos(hr2) +
+             -0.11f * cos(hr3) +
+             -0.33f * sin(hr) +
+              0.19f * sin(hr2) +
+              0.00f * sin(hr3) +
+              1.86f) * 0.58f;
+    }
+
+    return JMcusp.y * e_t;
+  }
+
+  // Compress a range of values from 0 to limit.  Doesn't compress anything beyond the limit.
+  // The k1 parameter affects the strength of compression, the k2 parameter affects the
+  // expansion rate of the curve.  https://www.desmos.com/calculator/vqxgfzzyvx
+  float compress_range(float x, float limit, float k1, float k2, int invert)
+  {
+    if (x > limit)
+      return x;
+
+    k1 = sqrt(k1 * k1 + k2 * k2);
+    float k3 = (limit + k1) / (limit + k2);
+
+    if (!invert)
+      return 0.5f * (k3 * x - k1 + sqrt((k3 * x - k1) * (k3 * x - k1) + 4 * k2 * k3 * x));
+    else
+      return (x * x + k1 * x) / (k3 * (x + k2));
+  }
+
+  // In-gamut chroma compression
+  //
+  // Compresses colors inside the gamut with the aim for colorfulness to have an
+  // appropriate rate of change from display black to display white.
+  //
+  // Steps:
+  //  - Scale down M by tonescaledJ / origJ
+  //  - Normalize M to compression gamut cusp (becomes hue-dependent)
+  //  - Compress M with compress_range().  Compression is increased as tonescaledJ
+  //    increases to create the path-to-white.
+  //  - Denormalize M with the gamut cusp
+  //  - Apply global saturation, boosting shadows more
+  //
+  float chromaCompression(float3 JMh, float origJ, int invert)
+  {
+    float M = JMh.y;
+    if (M == 0.0f)
+      return M;
+
+    float nJ = JMh.x / limitJmax;
+    float noJ = origJ / limitJmax;
+    float Mcusp = cusp_with_eccentricity_factor(JMh.z);
+    float sat_fact = sat_factor(nJ, noJ);
+
+    if (!invert)
+    {
+      M *= pow(nJ, nJ_exp) / noJ;
+      M /= Mcusp;
+      M = compress_range(M, chromaCParams.x, nJ * chromaCParams.y, max(1.0f - nJ, 0.01f) * chromaCParams.z, 0);
+      M *= Mcusp * sat_fact * scaleM;
+    }
+    else
+    {
+      M /= Mcusp * sat_fact * scaleM;
+      M = compress_range(M, chromaCParams.x, nJ * chromaCParams.y, max(1.0f - nJ, 0.01f) * chromaCParams.z, 1);
+      M *= Mcusp;
+      M = noJ * (M / pow(nJ, nJ_exp));
+    }
+
+    return M;
+  }
+
+  float3 input_RGB_to_JMh(float3 inputRGB)
+  {
+    // clamp input to +/- HALF_MAXIMUM range (to remove inf values, etc.)
+    inputRGB = clamp3(inputRGB, -HALF_MAXIMUM, HALF_MAXIMUM);
+
+    // convert to linear XYZ luminance values
+    float3 luminanceRGB = encodingToLuminance3( encodingIn, inputRGB);
+    float3 luminanceXYZ = vector_dot(RGB_to_XYZ_input, luminanceRGB);
+    float3 JMh = XYZ_to_JMh(luminanceXYZ, inWhite, d65White, viewingConditions, L_A, Y_b, discountIlluminant_in, HK_mode_in);
+
+    if (diagnosticMode == 6)
+    {
+      return luminanceXYZ;
+    }
+   else
+    {
+      return JMh;
+    }
+  }
+
+
+  float3 JMh_to_input_RGB(float3 JMh)
+  {
+    float3 luminanceXYZ = JMh_to_XYZ( JMh, inWhite, d65White, viewingConditions , L_A, Y_b, discountIlluminant_in, HK_mode_in);
+    float3 luminanceRGB = vector_dot(XYZ_to_RGB_input, luminanceXYZ);
+    float3 inputRGB = luminanceToEncoding3( encodingIn, luminanceRGB);
+
+    return inputRGB;
+  }
+
+
+  float3 forwardTonescale( float3 inputJMh, float3 srcRGB )
+  {
+    float3 outputJMh;
+    float3 monoJMh = float3(inputJMh.x,0.0f,0.0f);
+    float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
+    float linear = linearJMh.x/referenceLuminance;
+
+    float luminanceTS = linear;
+
+    // switch for applying the different tonescale compression functions
+    if ( toneScaleMode == 0 )
+    {
+      luminanceTS =  linear;
+    }
+    else if( toneScaleMode == 1 )
+    {
+        luminanceTS = daniele_evo_fwd(linear) * mmScaleFactor;
+    }
+
+    float3 tonemappedmonoJMh = luminance_RGB_to_JMh(float3(luminanceTS,luminanceTS,luminanceTS));
+    float3 tonemappedJMh = float3(tonemappedmonoJMh.x,inputJMh.y,inputJMh.z);
+
+    if( applyTonecurve )
+    {
+        outputJMh = tonemappedJMh;
+    }
+    else
+    {
+        outputJMh = inputJMh;
+    }
+
+    if (applyChromaCompression)
+    {
+      outputJMh.y = chromaCompression(outputJMh, inputJMh.x, 0);
+    }
+    else
+    {
+      outputJMh.y = outputJMh.y;  
+    }
+
+    return outputJMh;
+  }
+
+
+  float3 inverseTonescale( float3 JMh )
+  {
+    float3 tonemappedJMh = JMh;
+
+    if( ! applyTonecurve && !applyChromaCompression )
+    {
+      // nothing else to do here
+      return tonemappedJMh;
+    }
+
+    float3 untonemappedColourJMh = tonemappedJMh;
+    
+    float3 monoTonemappedJMh = float3(tonemappedJMh.x,0.0f,0.0f);
+    float3 monoTonemappedRGB = JMh_to_luminance_RGB(monoTonemappedJMh);
+    float3 newMonoTonemappedJMh = luminance_RGB_to_JMh(monoTonemappedRGB);
+    float luminance = monoTonemappedRGB.x;
+
+    // Dummy value to init the var
+    float linear = 0.0f;
+    if( toneScaleMode == 1 )
+    {
+        linear = daniele_evo_rev(luminance / mmScaleFactor);
+    }
+    else
+    {
+        linear = luminance;
+    }
+
+    linear = linear*referenceLuminance;
+  
+    if( applyTonecurve )
+    {
+      float3 untonemappedMonoJMh = luminance_RGB_to_JMh(float3(linear,linear,linear));
+      untonemappedColourJMh = float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z);
+    } 
+
+    if (applyChromaCompression)
+    {
+      untonemappedColourJMh.y = chromaCompression(tonemappedJMh, untonemappedColourJMh.x, 1);
+    }
+
+    return  untonemappedColourJMh;
+  }
+
+  // Smooth minimum of a and b
+  float smin(float a, float b, float s)
+  {
+    float h = max(s - fabs(a - b), 0.0) / s;
+    return min(a, b) - h * h * h * s * (1.0f / 6.0f);
+  }
+
+  // Approximation of the gamut intersection to a curved and smoothened triangle
+  // along the projection line 'from -> to'. 
+  float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, float smoothing)
+  {
+    float t0, t1;
+
+    // Scale the cusp outward when smoothing to avoid reducing the gamut.  Reduce
+    // smoothing for high cusps because smin() will bias it too much for the longer line.
+    float s = max(lerp(smoothing, smoothing * 0.01f, cusp.x / limitJmax), 0.0001f);
+    cusp.y += 10.0f * s;
+    cusp.x += 6.0f * s;
+
+    // Line below the cusp is curved with gamut_gamma
+    float toJ_gamma = cusp.x * spow(to.x / cusp.x, gamut_gamma);
+    float fromJ_gamma = cusp.x * spow(from.x / cusp.x, gamut_gamma);
+    t0 = cusp.y * toJ_gamma / (from.y * cusp.x + cusp.y * (toJ_gamma - fromJ_gamma));
+
+    // Line above the cusp
+    t1 = cusp.y * (to.x - limitJmax) / (from.y * (cusp.x - limitJmax) + cusp.y * (to.x - from.x));
+
+    // Smooth minimum to smooth the cusp
+    t1 = smin(fabs(t0), fabs(t1), s);
+
+    return float2(to.x * (1.0f - t1) + t1 * from.x, t1 * from.y);
+  }
+
+
+  float4 getCompressionFuncParams(float h)
+  {
+    float angleR = 27.0f;
+    float angleY = 111.0f;
+    float angleG = 143.0f;
+    float angleC = 231.0f;
+    float angleB = 283.0f;
+    float angleM = 337.0f;
+
+    float lerpVal = 0.0f;
+    // float newW = 0.0f;
+    // float newX = 0.0f;
+    // float newY = 0.0f;
+    // float newZ = 0.0f;
+
+    if (!sixAxisCompressionMode)
+      return compressionFuncParams;
+    else
+    {
+      if (h>=angleR && h<angleY)
+      {
+        lerpVal = (h-angleR)/(angleY-angleR);
+        return lerp4(compressionFuncParamsR, compressionFuncParamsY, lerpVal);
+      }
+      if (h>=angleY && h<angleG)
+      {
+        lerpVal = (h-angleY)/(angleG-angleY);
+        return lerp4(compressionFuncParamsY, compressionFuncParamsG, lerpVal);
+      }
+      if (h>=angleG && h<angleC)
+      {
+          lerpVal = (h-angleG)/(angleC-angleG);
+          return lerp4(compressionFuncParamsG, compressionFuncParamsC, lerpVal);
+      }
+      if (h>=angleC && h<angleB)
+      {
+          lerpVal = (h-angleC)/(angleB-angleC);
+          return lerp4(compressionFuncParamsC, compressionFuncParamsB, lerpVal);
+      }
+      if (h>=angleB && h<angleM)
+      {
+          lerpVal = (h-angleB)/(angleM-angleB);
+          return lerp4(compressionFuncParamsB, compressionFuncParamsM, lerpVal);
+      }
+      if (h>=angleM && h<angleR+360.0f)
+      {
+          lerpVal = (h-angleM)/(angleR+360.0f-angleM);
+          return lerp4(compressionFuncParamsM, compressionFuncParamsR, lerpVal);
+      }
+      if (h<angleR)
+      {
+          lerpVal = (h+360.0f-angleM)/(angleR+360.0f-angleM);
+          return lerp4(compressionFuncParamsM, compressionFuncParamsR, lerpVal);
+      }
+      else
+      {
+        return compressionFuncParams;
+      }
+    }
+    
+  }
+
+
+  float3 compressGamut(float3 JMh, int invert)
+  {
+    float2 project_from = float2(JMh.x, JMh.y);
+    float2 JMcusp = cuspFromTable(JMh.z);
+
+    if (!applyGamutCompression)
+      return JMh;
+    if (project_from.y == 0.0f)
+      return JMh;
+
+    // Calculate where the out of gamut color is projected to
+    float focusJ = lerp(JMcusp.x, midJ, cuspMidBlend);
+
+    // https://www.desmos.com/calculator/9u0wiiz9ys
+    float Mratio = project_from.y / (focusDistance * JMcusp.y);
+    float a = max(0.001f, Mratio / focusJ);
+    float b0 = 1.0f - Mratio;
+    float b1 = -(1.0f + Mratio + (a * limitJmax));
+    float b = project_from.x < focusJ ? b0 : b1;
+    float c0 = -project_from.x;
+    float c1 = project_from.x + limitJmax * Mratio;
+    float c = project_from.x < focusJ ? c0 : c1;
+
+    // XXX this sqrt can cause NaNs (subtraction goes negative)
+    float J0 = sqrt(b * b - 4 * a * c);
+    float J1 = (-b - J0) / (2 * a);
+          J0 = (-b + J0) / (2 * a);
+    float projectJ = project_from.x < focusJ ? J0 : J1;
+
+    // Find gamut intersection
+    float2 project_to = float2(projectJ, 0.0f);
+    float2 JMboundary = find_gamut_intersection(JMcusp, project_from, project_to, smoothCusps);
+
+    // Get hue dependent compression parameters
+    float4 interpolatedCompressionFuncParams = getCompressionFuncParams(JMh.z);
+
+    // Compress the out of gamut color along the projection line
+    float2 JMcompressed = project_from;
+    float v = project_from.y / JMboundary.y;
+    if (v >= interpolatedCompressionFuncParams.x)
+    {
+      v = compressPowerP(v, interpolatedCompressionFuncParams.x,
+                         lerp(interpolatedCompressionFuncParams.z, interpolatedCompressionFuncParams.y, projectJ / limitJmax),
+                         interpolatedCompressionFuncParams.w, invert);
+      JMcompressed = project_to + v * (JMboundary - project_to);
+    }
+
+    if (diagnosticMode == 5)
+    {
+      return float3(focusJ, Mratio, projectJ);
+    }
+    else
+    {
+      return float3(JMcompressed.x, JMcompressed.y, JMh.z);
+    }
+  }
+
+  // Generate the Hellwig2022 post adaptation non-linear compression matrix
+  // that is used in the inverse of the model (JMh-to-XYZ).
+  //
+  // Original:
+  //  460.0f, 451.0f, 288.0f,
+  //  460.0f, -891.0f, -261.0f,
+  //  460.0f, -220.0f, -6300.0f
+  void generate_panlrcm()
+  {
+    float panlrcm_data[]=
+    {
+      // original values: 2.0f, 1.0f, 0.05f,
+      ra, 1.0f, ba,
+      1.0f, -12.0f / 11.0f, 1.0f / 11.0f,
+      1.0f / 9.0f, 1.0f / 9.0f, -2.0f / 9.0f
+    };
+    panlrcm.setArray(panlrcm_data);
+    panlrcm = panlrcm.invert();
+
+    // Normalize rows so that first column is 460
+    for (int i = 0; i < 3; i++)
+    {
+      float n = 460.0f / panlrcm[i][0];
+      panlrcm[i][0] *= n;
+      panlrcm[i][1] *= n;
+      panlrcm[i][2] *= n;
+    }
+  }
+
+  void init()
+  {
+    HALF_MINIMUM = 0.0000000596046448f;
+    HALF_MAXIMUM = 65504.0f;
+
+    st2084_m_1=2610.0f / 4096.0f * (1.0f / 4.0f);
+    st2084_m_2=2523.0f / 4096.0f * 128.0f;
+    st2084_c_1=3424.0f / 4096.0f;
+    st2084_c_2=2413.0f / 4096.0f * 32.0f;
+    st2084_c_3=2392.0f / 4096.0f * 32.0f;
+    st2084_m_1_d = 1.0f / st2084_m_1;
+    st2084_m_2_d = 1.0f / st2084_m_2;
+    st2084_L_p = 10000.0f;
+
+    // pre-calculate Daniele Evo constants
+    daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (log(daniele_n / daniele_n_r) / log(10000.0f / 100.0f));
+    daniele_m_0 = daniele_n / daniele_n_r;
+    daniele_m_1 = 0.5f * (daniele_m_0 + sqrt(daniele_m_0 * (daniele_m_0 + 4.0f * daniele_t_1)));
+    daniele_u = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0f), daniele_g);
+    daniele_m = daniele_m_1 / daniele_u;
+    daniele_w_i = log(daniele_n / 100.0f) / log(2.0f);
+    daniele_c_t = daniele_c_d * (1.0f + daniele_w_i * daniele_w_g) / daniele_n_r;
+    daniele_g_ip = 0.5f * (daniele_c_t + sqrt(daniele_c_t * (daniele_c_t + 4.0f * daniele_t_1)));
+    daniele_g_ipp2 = -daniele_m_1 * pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) / (pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) - 1.0f);
+    daniele_w_2 = daniele_c / daniele_g_ipp2;
+    daniele_s_2 = daniele_w_2 * daniele_m_1;
+    daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g);
+    daniele_m_2 = daniele_m_1 / daniele_u_2;
+
+    // Pre-calculate chroma compression constants. Tonescale based scaling factor and exponent to bring
+    // colorfulness at middle grey and under closer with different peak luminances for better appearance match.
+    // https://www.desmos.com/calculator/wdsyjmhcsh
+    scaleM = daniele_n > 100 ? 1.0f - (4.4f - daniele_m_0 * 0.0007f) * daniele_c_t + 0.25f : 1.0f;
+    nJ_exp = max(0.935f, 1.1f - 0.001f * daniele_n);
+
+    float identity_matrix_data[]={ 1.0f, 0.0f, 0.0f,
+                                   0.0f, 1.0f, 0.0f,
+                                   0.0f, 0.0f, 1.0f };
+    identity_matrix.setArray(identity_matrix_data);
+
+    // Blink does not seem to support initialising multidimensional arrays
+    // So instead of being able to index the matrix data directly from one
+    // we need to use long if/else statements to populate the
+    // input, limit & output primary matrices
+    // (maybe there is a better way?)
+
+    float XYZ_to_AP0_ACES_matrix_data[]=
+    {
+       1.0498110175f,  0.0000000000f, -0.0000974845f,
+      -0.4959030231f,  1.3733130458f,  0.0982400361f,
+       0.0000000000f,  0.0000000000f,  0.9912520182f
+    };
+
+    float XYZ_to_AP1_ACES_matrix_data[]=
+    {
+       1.6410233797f, -0.3248032942f, -0.2364246952f,
+      -0.6636628587f,  1.6153315917f,  0.0167563477f,
+       0.0117218943f, -0.0082844420f,  0.9883948585f,
+    };
+
+    float XYZ_to_Rec709_D65_matrix_data[]=
+    {
+       3.2409699419f, -1.5373831776f, -0.4986107603f,
+      -0.9692436363f,  1.8759675015f,  0.0415550574f,
+       0.0556300797f, -0.2039769589f,  1.0569715142f,
+    };
+
+    float XYZ_to_Rec2020_D65_matrix_data[]=
+    {
+       1.7166511880f, -0.3556707838f, -0.2533662814f,
+      -0.6666843518f,  1.6164812366f,  0.0157685458f,
+       0.0176398574f, -0.0427706133f,  0.9421031212f,
+    };
+
+    float XYZ_to_P3_D65_matrix_data[]=
+    {
+       2.4934969119f, -0.9313836179f, -0.4027107845f,
+      -0.8294889696f,  1.7626640603f,  0.0236246858f,
+       0.0358458302f, -0.0761723893f,  0.9568845240f,
+    };
+
+    float XYZ_to_P3_DCI_matrix_data[]=
+    {
+       2.7253940305f, -1.0180030062f, -0.4401631952f,
+      -0.7951680258f,  1.6897320548f,  0.0226471906f,
+       0.0412418914f, -0.0876390192f,  1.1009293786f
+    };
+
+    float CAT_CAT16_data[]=
+    {
+      0.401288, 0.650173, -0.051461,
+      -0.250268, 1.204414, 0.045854,
+      -0.002079, 0.048952, 0.953127,
+    };
+
+    float Modified_CAT16_data[]=
+    {
+      0.656619, 0.342071, 0.00131062,
+      -0.222571, 1.10658, 0.115987,
+      -0.000634146, 0.05855, 0.942084,
+    };
+
+    // populate the input primaries matrix
+    if( primariesIn == 0 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesIn == 1 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesIn == 2 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesIn == 3 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesIn == 4 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesIn == 5 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_input.setArray(identity_matrix_data);
+    }
+
+    // populate the limiting primaries matrix
+    if( primariesLimit == 0 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesLimit == 1 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesLimit == 2 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesLimit == 3 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesLimit == 4 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesLimit == 5 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_limit.setArray(identity_matrix_data);
+    }
+
+    // populate the output primaries matrix
+    if( primariesOut == 0 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesOut == 1 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesOut == 2 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesOut == 3 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesOut == 4 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesOut == 5 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_output.setArray(identity_matrix_data);
+    }
+
+    RGB_to_XYZ_input  = XYZ_to_RGB_input.invert();
+    RGB_to_XYZ_limit  = XYZ_to_RGB_limit.invert();
+    RGB_to_XYZ_output = XYZ_to_RGB_output.invert();
+
+    float3x3 XYZ_to_RGB_sRGB;
+    XYZ_to_RGB_sRGB.setArray(XYZ_to_Rec709_D65_matrix_data);
+    float3 white(1.0f, 1.0f, 1.0f);
+
+    d65White = vector_dot(XYZ_to_RGB_sRGB.invert(), white);
+    inWhite = vector_dot(RGB_to_XYZ_input, white);
+    outWhite = vector_dot(RGB_to_XYZ_output, white);
+    refWhite = vector_dot(RGB_to_XYZ_limit, white);
+    limitWhite = vector_dot(RGB_to_XYZ_limit, white);
+
+    boundaryRGB = sstsLuminance.z / referenceLuminance;
+
+    if (catDataSelection == 0)
+    {
+        CAT_CAT16.setArray(CAT_CAT16_data);
+    }
+    else if (catDataSelection == 1)
+    {
+        CAT_CAT16.setArray(Modified_CAT16_data);
+    }
+    else if (catDataSelection == 2)
+    {
+        CAT_CAT16 = RGBPrimsToXYZMatrix(rxy,gxy,bxy,wxy,1.0f,1);
+    }
+
+    generate_panlrcm();
+
+    //
+    // solving the RGB cusp from JMh is very expensive
+    // instead we go the other way and start with a RGB cusp sweep
+    // which is easily calculated by converting via HSV (Hue, 1.0, 1.0)
+    // we then convert each cusp to JMh and add them to a table 
+    //
+
+    gamutCuspTableSize = 360;
+
+  // Cusp table for chroma compression gamut
+  {
+    float3x3 tmpx = XYZ_to_RGB_limit;
+    float3x3 tmpr = RGB_to_XYZ_limit;
+
+    XYZ_to_RGB_limit = RGBPrimsToXYZMatrix(crxy, cgxy, cbxy, cwxy, 1.0f, 1);
+    RGB_to_XYZ_limit  = XYZ_to_RGB_limit.invert();
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB);
+    }
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsorted[i].z <  gamutCuspTableUnsorted[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+    }
+    XYZ_to_RGB_limit = tmpx;
+    RGB_to_XYZ_limit = tmpr;
+  }
+ 
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB);
+    }
+
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsorted[i].z <  gamutCuspTableUnsorted[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+    }
+
+    // limitJmax (asumed to match limitRGB white)
+    limitJmax = limit_RGB_to_JMh(float3(1.0f)).x;
+
+    midJ = XYZ_to_JMh(refWhite * sstsLuminance.y, refWhite, d65White, outputViewingConditions, L_A_out, Y_b_out, discountIlluminant_mid, HK_mode_mid).x;
+    gamut_gamma = 1.0f / (viewingConditionsToSurround(outputViewingConditions).y * (1.48f + sqrt(Y_b_out / L_A_out)));
+  }
+
+
+  void process()
+  {
+    SampleType(src) source = src();
+    float3 srcRGB(source.x, source.y, source.z);
+    float3 dstRGB;
+    float3 diagnostic;
+    float3 compressedJMh;
+    float3 tonemappedJMh;
+    float3 JMh;
+
+    if( invert )
+    {
+      compressedJMh = output_RGB_to_JMh(srcRGB);
+      tonemappedJMh = compressGamut(compressedJMh, 1);
+      JMh = inverseTonescale(tonemappedJMh);
+      dstRGB = JMh_to_input_RGB(JMh);
+      diagnostic =  dstRGB;
+    }
+    else
+    {
+//       JMh = input_RGB_to_JMh(srcRGB);
+//       tonemappedJMh = forwardTonescale(JMh, srcRGB);
+      compressedJMh = compressGamut(srcRGB, 0);
+
+//       dstRGB = JMh_to_output_RGB(compressedJMh);
+      diagnostic =  compressedJMh;
+    }
+
+    if ( diagnosticMode == 1 || diagnosticMode == 6 )
+    {
+      // Mode 6 actually returns XYZ, mode 1 returns real JMh
+      diagnostic =  JMh;
+    }
+    else if ( diagnosticMode == 2)
+    {
+      diagnostic = tonemappedJMh;
+    }
+    else if ( diagnosticMode == 3 || diagnosticMode == 5 )
+    {
+      diagnostic =  compressedJMh;
+    }
+    else if ( diagnosticMode == 4 || diagnosticMode == 7 )
+    {
+      if (diagnosticMode == 4)
+        srcRGB = JMh;
+      dstRGB = JMh_to_output_RGB(srcRGB);
+      diagnostic =  dstRGB;
+    }
+    else if ( diagnosticMode == 8)
+    {
+      diagnostic =  inWhite;
+    }
+    else if ( diagnosticMode == 9)
+    {
+      diagnostic =  outWhite;
+    }
+    else if ( diagnosticMode == 10)
+    {
+      diagnostic =  limitWhite;
+    }
+    else if ( diagnosticMode == 11)
+    {
+      diagnostic =  d65White;
+    }
+
+    dst() = float4(diagnostic.x, diagnostic.y, diagnostic.z, source.w ); 
+  }
+};

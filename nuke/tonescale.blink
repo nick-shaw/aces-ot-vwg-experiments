@@ -1,4 +1,4 @@
-kernel HellwigKernel : ImageComputationKernel<ePixelWise>
+kernel tonescaleKernel : ImageComputationKernel<ePixelWise>
 {
   Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image
   Image<eWrite> dst; // the output image
@@ -35,7 +35,45 @@ kernel HellwigKernel : ImageComputationKernel<ePixelWise>
     // 2: Average
     int viewingConditions;
 
-    bool invert;
+    // DanieleEvoCurve (ACES2 candidate) parameters
+    float daniele_n; // peak white  
+    float daniele_n_r;    // Normalized white in nits (what 1.0 should be)
+    float daniele_g;      // surround / contrast
+    float daniele_c;      // scene-referred grey
+    float daniele_c_d;    // display-referred grey (in nits)
+    float daniele_w_g;    // grey change between different peak luminance
+    float daniele_t_1;     // shadow toe, flare/glare compensation - how ever you want to call it
+    float daniele_r_hit_min;  // Scene-referred value "hitting the roof" at 100 nits
+    float daniele_r_hit_max;  // Scene-referred value "hitting the roof" at 10,000 nits
+
+    bool applyChromaCompression;
+    
+    // Chroma compression params (limit, k1, k2)
+    float3 chromaCParams;
+    int cc_et;
+    // xy coordintes for chroma compression gamut
+    float2 crxy;
+    float2 cgxy;
+    float2 cbxy;
+    float2 cwxy;
+
+    // Global saturation
+    float sat;
+
+    //
+    // Gamut Mapping Parameters
+    //
+
+    // Primaries of the Target Gamut
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    int primariesLimit;
+
+    int primariesOut;
 
   local:
     // constants
@@ -46,6 +84,61 @@ kernel HellwigKernel : ImageComputationKernel<ePixelWise>
     float3x3 CAT_CAT16;
     float3x3 panlrcm;
 
+    // using the float3x3 type to store the array of 6 coefficients
+    // because Blink does not support generic array assignments
+
+    // matrix vars
+    float3x3 identity_matrix;
+
+    float3x3 XYZ_to_RGB_limit;
+    float3x3 XYZ_to_RGB_output;
+
+    float3x3 RGB_to_XYZ_limit;
+    float3x3 RGB_to_XYZ_output;
+
+    float daniele_r_hit;
+    float daniele_m_0;
+    float daniele_m_1;
+    float daniele_u;
+    float daniele_m;
+    float daniele_w_i;
+    float daniele_c_t;
+    float daniele_g_ip;
+    float daniele_g_ipp2;
+    float daniele_w_2;
+    float daniele_s_2;
+    float daniele_u_2;
+    float daniele_m_2;
+
+    // Chroma compression pre-calculated constants
+    float limitJmax;
+    float scaleM;     // Tonescale based M scaling factor
+    float nJ_exp;     // Tonescale based J exponent
+
+    // Middle gray J
+    float midJ;
+
+    // Gamut intersection line gamma
+    float gamut_gamma;
+
+    // the 1D LUT used for quickly findig the approximate limiting gamut cusp JMh coordinates
+    // the samples are spaced by HSV hue increments of the limiting RGB gamut
+    // so to find the correct entry for a given CAM hue (h) value 
+    // one must search the table entries for the matching entry.z component
+    int gamutCuspTableSize;
+
+    // the 'gamutCuspTableUnsorted' table is populated
+    // in increments of H of the limiting gamut HSV space starting at H=0.0
+    // since it is unlikely that HSV.H=0 and JMh.h=0 line up
+    // the entries are then wrap-around shifted
+    // so that the 'gamutCuspTable' starts with the lowest JMh.h value
+    // both tables need to be declared here since temporary array variables
+    // in the init() fuction seem to crash Nuke on some systems
+    float3 gamutCuspTableUnsorted[360];
+    float3 gamutCuspTable[360];
+    float3 cgamutCuspTable[360];
+
+    float boundaryRGB;
 
   // In define(), parameters can be given labels and default values.
   void define() {
@@ -61,6 +154,12 @@ kernel HellwigKernel : ImageComputationKernel<ePixelWise>
     }
 
     return r;
+  }
+
+  // linear interpolation between two values a & b with the bias t
+  float lerp(float a, float b, float t)
+  {
+    return a + t * (b - a);
   }
 
   float clip(float x, float a, float b)
@@ -267,6 +366,24 @@ float3 uncompress_bjorn(float3 xyz)
       return RGB_p;
   }
 
+  // convert linear RGB values with the limiting primaries to CAM J (lightness), M (colorfulness) and h (hue) correlates
+  float3 limit_RGB_to_JMh(float3 RGB)
+  {
+    float3 luminanceRGB = RGB * boundaryRGB * daniele_n_r;
+    float3 XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB);
+    float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, XYZ_w, L_A, Y_b,viewingConditionsToSurround(viewingConditions),discount_illuminant,HK_mode);
+    return JMh;
+  }
+
+
+  // convert CAM J (lightness), M (colorfulness) and h (hue) correlates to linear RGB values with the limiting primaries
+  float3 JMh_to_limit_RGB(float3 JMh)
+  {
+    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ(JMh, XYZ_w, L_A, Y_b, viewingConditionsToSurround(viewingConditions), discount_illuminant,HK_mode);
+    float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
+    float3 RGB = luminanceRGB / boundaryRGB / daniele_n_r;
+    return RGB;
+  }
 
   float hue_angle_dependency_Hellwig2022(float h)
   {
@@ -668,6 +785,269 @@ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, f
     }
   }
 
+  // convert HSV cylindrical projection values to RGB
+  float3 HSV_to_RGB( float3 HSV )
+  {
+    float C = HSV.z*HSV.y;
+    float X = C*(1.0f-fabs(fmod(HSV.x*6.0f,2.0f)-1.0f));
+    float m = HSV.z-C;
+
+    float3 RGB;
+    RGB.x = (HSV.x<1.0f/6.0f?  C :HSV.x<2.0f/6.0f?  X :HSV.x<3.0f/6.0f?0.0f:HSV.x<4.0f/6.0f?0.0f:HSV.x<5.0f/6.0f?  X :  C )+m;
+    RGB.y = (HSV.x<1.0f/6.0f?  X :HSV.x<2.0f/6.0f?  C :HSV.x<3.0f/6.0f?  C :HSV.x<4.0f/6.0f?  X :HSV.x<5.0f/6.0f?0.0f:0.0f)+m;
+    RGB.z = (HSV.x<1.0f/6.0f?0.0f:HSV.x<2.0f/6.0f?0.0f:HSV.x<3.0f/6.0f?  X :HSV.x<4.0f/6.0f?  C :HSV.x<5.0f/6.0f?  C :  X )+m;
+    return RGB;
+  }
+
+
+  // convert RGB to HSV cylindrical projection values
+  float3 RGB_to_HSV( float3 RGB )
+  {
+    float cmax = max(RGB.x,max(RGB.y,RGB.z));
+    float cmin = min(RGB.x,min(RGB.y,RGB.z));
+    float delta = cmax-cmin;
+
+    float3 HSV;
+    HSV.x = delta==0.0f?0.0f:cmax==RGB.x?(fmod((RGB.y-RGB.z)/delta+6.0f,6.0f))/6.0f:cmax==RGB.y?(((RGB.z-RGB.x)/delta+2.0f)/6.0f):(((RGB.x-RGB.y)/delta+4.0f)/6.0f);
+    HSV.y = cmax == 0.0f ? 0.0f : delta / cmax;
+    HSV.z = cmax;
+    return HSV;
+  }
+
+  // retrieve the JM coordinates of the limiting gamut cusp at the hue slice 'h'
+  // cusps are very expensive to compute
+  // and the DRT is only using them for lightness mapping
+  // which does not require a high degree of accuracy
+  // so instead we use a pre-computed table of cusp points
+  // sampled at 1 degree hue intervals of the the RGB target gamut
+  // and lerp between them to get the approximate J & M values
+  float2 cuspFromTable(float h)
+  {
+
+    float3 lo;
+    float3 hi;
+
+    if( h <= gamutCuspTable[0].z )
+    {
+      lo = gamutCuspTable[gamutCuspTableSize-1];
+      lo.z = lo.z-360.0f;
+      hi = gamutCuspTable[0];
+    }
+    else if( h >= gamutCuspTable[gamutCuspTableSize-1].z )
+    {
+      lo = gamutCuspTable[gamutCuspTableSize-1];
+      hi = gamutCuspTable[0];
+      hi.z = hi.z+360.f;
+    }
+    else
+    {
+      for(int i = 1; i < gamutCuspTableSize; ++i)
+      {
+        if( h <= gamutCuspTable[i].z )
+        {
+          lo = gamutCuspTable[i-1];
+          hi = gamutCuspTable[i];
+          break;
+        }
+      }
+    }
+
+    float t = (h - lo.z) / (hi.z - lo.z);
+
+    float cuspJ = lerp(lo.x, hi.x, t);
+    float cuspM = lerp(lo.y, hi.y, t);
+
+    return float2(cuspJ,cuspM);
+  }
+
+  float2 ccuspFromTable(float h)
+  {
+
+    float3 lo;
+    float3 hi;
+
+    if( h <= cgamutCuspTable[0].z )
+    {
+      lo = cgamutCuspTable[gamutCuspTableSize-1];
+      lo.z = lo.z-360.0f;
+      hi = cgamutCuspTable[0];
+    }
+    else if( h >= cgamutCuspTable[gamutCuspTableSize-1].z )
+    {
+      lo = cgamutCuspTable[gamutCuspTableSize-1];
+      hi = cgamutCuspTable[0];
+      hi.z = hi.z+360.f;
+    }
+    else
+    {
+      for(int i = 1; i < gamutCuspTableSize; ++i)
+      {
+        if( h <= cgamutCuspTable[i].z )
+        {
+          lo = cgamutCuspTable[i-1];
+          hi = cgamutCuspTable[i];
+          break;
+        }
+      }
+    }
+
+    float t = (h - lo.z) / (hi.z - lo.z);
+
+    float cuspJ = lerp(lo.x, hi.x, t);
+    float cuspM = lerp(lo.y, hi.y, t);
+
+    return float2(cuspJ,cuspM);
+  }
+
+  float daniele_evo_fwd(float Y)
+  {
+    float f = daniele_m_2 * pow(max(0.0f, Y) / (Y + daniele_s_2), daniele_g);
+    float h = max(0.0f, f * f / (f + daniele_t_1));
+
+    return h;
+  }
+
+  // Returns saturation multiplier.  This boost saturation more for darker colors than
+  // for brighter colors.  It keeps noise floor and very deep shadows less saturated.
+  float sat_factor(float nJ, float origJ)
+  {
+    float shadows = max(0.02f, 0.15f - 0.00025f * daniele_n);
+    float shdsat = sat + 1.0f * (1.0f - shadows);
+    float satmul = sat + 1.0f * (1.0f - nJ);
+    float shadowmul = lerp(0.01f, shdsat, min(1.0f, origJ / shadows));
+
+    return nJ > shadows ? satmul : shadowmul;
+  }
+
+  // Return compression gamut cusp M scaled with an eccentricity factor
+  float cusp_with_eccentricity_factor(float h)
+  {
+    float2 JMcusp = ccuspFromTable(h);
+    float e_t = 1.0f;
+
+    // CAM16
+    if (cc_et == 0)
+    {
+      // NOTE: custom scaler 0.275 instead of 0.25 in CAM16
+      e_t = 0.275f * (cos(2.0f + h * PI / 180.0f) + 3.8f);
+    }
+    // Hellwig2022
+    // CAM16 vs Hellwig2022: https://onlinelibrary.wiley.com/cms/asset/60788dfc-6bae-4949-bf8d-bd8c3467aef8/col22792-fig-0005-m.jpg
+    else if (cc_et == 1)
+    {
+      float hr = radians(h);
+      float _h = hr;
+      float _2_h = 2 * hr;
+      float _3_h = 3 * hr;
+      float _4_h = 4 * hr;
+      e_t = (
+        -0.0582f * cos(_h)
+        - 0.0258f * cos(_2_h)
+        - 0.1347f * cos(_3_h)
+        + 0.0289f * cos(_4_h)
+        - 0.1475f * sin(_h)
+        - 0.0308f * sin(_2_h)
+        + 0.0385f * sin(_3_h)
+        + 0.0096f * sin(_4_h)
+        + 1.0f
+      );
+    }
+    // Custom https://www.desmos.com/calculator/vukgp6rtos
+    else if (cc_et == 2)
+    {
+      float hr = radians(h);
+      float hr2 = hr * 2;
+      float hr3 = hr * 3;
+      e_t = (-0.47f * cos(hr) +
+              0.07f * cos(hr2) +
+             -0.11f * cos(hr3) +
+             -0.33f * sin(hr) +
+              0.19f * sin(hr2) +
+              0.00f * sin(hr3) +
+              1.86f) * 0.58f;
+    }
+
+    return JMcusp.y * e_t;
+  }
+
+  // Compress a range of values from 0 to limit.  Doesn't compress anything beyond the limit.
+  // The k1 parameter affects the strength of compression, the k2 parameter affects the
+  // expansion rate of the curve.  https://www.desmos.com/calculator/vqxgfzzyvx
+  float compress_range(float x, float limit, float k1, float k2, int invert)
+  {
+    if (x > limit)
+      return x;
+
+    k1 = sqrt(k1 * k1 + k2 * k2);
+    float k3 = (limit + k1) / (limit + k2);
+
+    if (!invert)
+      return 0.5f * (k3 * x - k1 + sqrt((k3 * x - k1) * (k3 * x - k1) + 4 * k2 * k3 * x));
+    else
+      return (x * x + k1 * x) / (k3 * (x + k2));
+  }
+
+  // In-gamut chroma compression
+  //
+  // Compresses colors inside the gamut with the aim for colorfulness to have an
+  // appropriate rate of change from display black to display white.
+  //
+  // Steps:
+  //  - Scale down M by tonescaledJ / origJ
+  //  - Normalize M to compression gamut cusp (becomes hue-dependent)
+  //  - Compress M with compress_range().  Compression is increased as tonescaledJ
+  //    increases to create the path-to-white.
+  //  - Denormalize M with the gamut cusp
+  //  - Apply global saturation, boosting shadows more
+  //
+  float chromaCompression(float3 JMh, float origJ, int invert)
+  {
+    float M = JMh.y;
+    if (M == 0.0f)
+      return M;
+
+    float nJ = JMh.x / limitJmax;
+    float noJ = origJ / limitJmax;
+    float Mcusp = cusp_with_eccentricity_factor(JMh.z);
+    float sat_fact = sat_factor(nJ, noJ);
+
+    if (!invert)
+    {
+      M *= pow(nJ, nJ_exp) / noJ;
+      M /= Mcusp;
+      M = compress_range(M, chromaCParams.x, nJ * chromaCParams.y, max(1.0f - nJ, 0.01f) * chromaCParams.z, 0);
+      M *= Mcusp * sat_fact * scaleM;
+    }
+    else
+    {
+      M /= Mcusp * sat_fact * scaleM;
+      M = compress_range(M, chromaCParams.x, nJ * chromaCParams.y, max(1.0f - nJ, 0.01f) * chromaCParams.z, 1);
+      M *= Mcusp;
+      M = noJ * (M / pow(nJ, nJ_exp));
+    }
+
+    return M;
+  }
+
+  float3 forwardTonescale( float3 inputJMh )
+  {
+    float3 monoJMh = float3(inputJMh.x, 0.0f, 0.0f);
+    float3 linearXYZ = Hellwig2022_JMh_to_XYZ( monoJMh, XYZ_w, L_A, Y_b, viewingConditionsToSurround(viewingConditions), discount_illuminant,HK_mode);
+    float linear = linearXYZ.y / daniele_n_r;
+
+    float luminanceTS = daniele_evo_fwd(linear);
+
+    float3 tonemappedmonoJMh = XYZ_to_Hellwig2022_JMh( luminanceTS*XYZ_w, XYZ_w, L_A, Y_b, viewingConditionsToSurround(viewingConditions), discount_illuminant,HK_mode);
+    float3 tonemappedJMh = float3(tonemappedmonoJMh.x,inputJMh.y,inputJMh.z);
+    
+    if (applyChromaCompression)
+    {
+      tonemappedJMh.y = chromaCompression(tonemappedJMh, inputJMh.x, 0);
+    }
+
+    return tonemappedJMh;
+  }
+
   // The init() function is run before any calls to process().
   // Local variables can be initialized here.
   void init() {
@@ -703,25 +1083,218 @@ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, f
 
     generate_panlrcm();
 
+float identity_matrix_data[]={ 1.0f, 0.0f, 0.0f,
+                                   0.0f, 1.0f, 0.0f,
+                                   0.0f, 0.0f, 1.0f };
+    identity_matrix.setArray(identity_matrix_data);
+
+    // Blink does not seem to support initialising multidimensional arrays
+    // So instead of being able to index the matrix data directly from one
+    // we need to use long if/else statements to populate the
+    // input, limit & output primary matrices
+    // (maybe there is a better way?)
+
+    float XYZ_to_AP0_ACES_matrix_data[]=
+    {
+       1.0498110175f,  0.0000000000f, -0.0000974845f,
+      -0.4959030231f,  1.3733130458f,  0.0982400361f,
+       0.0000000000f,  0.0000000000f,  0.9912520182f
+    };
+
+    float XYZ_to_AP1_ACES_matrix_data[]=
+    {
+       1.6410233797f, -0.3248032942f, -0.2364246952f,
+      -0.6636628587f,  1.6153315917f,  0.0167563477f,
+       0.0117218943f, -0.0082844420f,  0.9883948585f,
+    };
+
+    float XYZ_to_Rec709_D65_matrix_data[]=
+    {
+       3.2409699419f, -1.5373831776f, -0.4986107603f,
+      -0.9692436363f,  1.8759675015f,  0.0415550574f,
+       0.0556300797f, -0.2039769589f,  1.0569715142f,
+    };
+
+    float XYZ_to_Rec2020_D65_matrix_data[]=
+    {
+       1.7166511880f, -0.3556707838f, -0.2533662814f,
+      -0.6666843518f,  1.6164812366f,  0.0157685458f,
+       0.0176398574f, -0.0427706133f,  0.9421031212f,
+    };
+
+    float XYZ_to_P3_D65_matrix_data[]=
+    {
+       2.4934969119f, -0.9313836179f, -0.4027107845f,
+      -0.8294889696f,  1.7626640603f,  0.0236246858f,
+       0.0358458302f, -0.0761723893f,  0.9568845240f,
+    };
+
+    float XYZ_to_P3_DCI_matrix_data[]=
+    {
+       2.7253940305f, -1.0180030062f, -0.4401631952f,
+      -0.7951680258f,  1.6897320548f,  0.0226471906f,
+       0.0412418914f, -0.0876390192f,  1.1009293786f
+    };
+
+    // populate the limiting primaries matrix
+    if( primariesLimit == 0 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesLimit == 1 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesLimit == 2 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesLimit == 3 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesLimit == 4 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesLimit == 5 )
+    {
+      XYZ_to_RGB_limit.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_limit.setArray(identity_matrix_data);
+    }
+
+    // populate the output primaries matrix
+    if( primariesOut == 0 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesOut == 1 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesOut == 2 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesOut == 3 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesOut == 4 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesOut == 5 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_output.setArray(identity_matrix_data);
+    }
+
+    RGB_to_XYZ_limit  = XYZ_to_RGB_limit.invert();
+    RGB_to_XYZ_output = XYZ_to_RGB_output.invert();
+
+    boundaryRGB = daniele_n / daniele_n_r;
+
+    // pre-calculate Daniele Evo constants
+    daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (log(daniele_n / daniele_n_r) / log(10000.0f / 100.0f));
+    daniele_m_0 = daniele_n / daniele_n_r;
+    daniele_m_1 = 0.5f * (daniele_m_0 + sqrt(daniele_m_0 * (daniele_m_0 + 4.0f * daniele_t_1)));
+    daniele_u = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0f), daniele_g);
+    daniele_m = daniele_m_1 / daniele_u;
+    daniele_w_i = log(daniele_n / 100.0f) / log(2.0f);
+    daniele_c_t = daniele_c_d * (1.0f + daniele_w_i * daniele_w_g) / daniele_n_r;
+    daniele_g_ip = 0.5f * (daniele_c_t + sqrt(daniele_c_t * (daniele_c_t + 4.0f * daniele_t_1)));
+    daniele_g_ipp2 = -daniele_m_1 * pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) / (pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) - 1.0f);
+    daniele_w_2 = daniele_c / daniele_g_ipp2;
+    daniele_s_2 = daniele_w_2 * daniele_m_1;
+    daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g);
+    daniele_m_2 = daniele_m_1 / daniele_u_2;
+
+    limitJmax = XYZ_to_Hellwig2022_JMh( XYZ_w, XYZ_w, L_A, Y_b, viewingConditionsToSurround(viewingConditions), discount_illuminant, HK_mode).x;
+    
+    // Pre-calculate chroma compression constants. Tonescale based scaling factor and exponent to bring
+    // colorfulness at middle grey and under closer with different peak luminances for better appearance match.
+    // https://www.desmos.com/calculator/wdsyjmhcsh
+    scaleM = daniele_n > 100 ? 1.0f - (4.4f - daniele_m_0 * 0.0007f) * daniele_c_t + 0.25f : 1.0f;
+    nJ_exp = max(0.935f, 1.1f - 0.001f * daniele_n);
+
+
+    //
+    // solving the RGB cusp from JMh is very expensive
+    // instead we go the other way and start with a RGB cusp sweep
+    // which is easily calculated by converting via HSV (Hue, 1.0, 1.0)
+    // we then convert each cusp to JMh and add them to a table 
+    //
+
+    gamutCuspTableSize = 360;
+
+  // Cusp table for chroma compression gamut
+  {
+    float3x3 tmpx = XYZ_to_RGB_limit;
+    float3x3 tmpr = RGB_to_XYZ_limit;
+
+    XYZ_to_RGB_limit = RGBPrimsToXYZMatrix(crxy, cgxy, cbxy, cwxy, 1.0f, 1);
+    RGB_to_XYZ_limit  = XYZ_to_RGB_limit.invert();
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB);
+    }
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsorted[i].z <  gamutCuspTableUnsorted[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+    }
+    XYZ_to_RGB_limit = tmpx;
+    RGB_to_XYZ_limit = tmpr;
+  }
+ 
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB);
+    }
+
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsorted[i].z <  gamutCuspTableUnsorted[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+    }
   }
 
   void process() {
     // Read the input image
     SampleType(src) input = src();
 
-    // Isolate the XYZ components
+    // Isolate the JMh components
     float3 srcPixel(input.x, input.y, input.z);
 
     float3 dstPixel;
 
-    if(invert)
-    {
-        dstPixel  = Hellwig2022_JMh_to_XYZ(srcPixel, XYZ_w, L_A, Y_b, viewingConditionsToSurround(viewingConditions), discount_illuminant,HK_mode);
-    }
-    else
-    {
-        dstPixel = XYZ_to_Hellwig2022_JMh(srcPixel, XYZ_w, L_A, Y_b,viewingConditionsToSurround(viewingConditions),discount_illuminant,HK_mode);
-    }
+    dstPixel = forwardTonescale(srcPixel);
 
     // Write the result to the output image
     dst() = float4(dstPixel.x, dstPixel.y, dstPixel.z, input.w);
