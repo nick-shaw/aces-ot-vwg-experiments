@@ -1,0 +1,81 @@
+kernel hellwig_ach : ImageComputationKernel<ePixelWise>
+{
+  Image<eRead, eAccessPoint, eEdgeClamped> src;
+  Image<eWrite> dst;
+
+  param:
+    float L_A;
+    float Y_b;
+    int surround;
+    int direction;
+    
+
+  local:
+    float k;
+    float k4;
+    float F_L;
+    float n;
+    float z;
+    float F_L_W;
+    float A_w;
+    float S_G;
+
+  void define() {
+  }
+
+  float Y_to_J( float Y, float F_L, float A_w, float S_G, float z )
+  {
+      float F_L_Y = pow(F_L * fabs(Y) / 100.0f, 0.42f);
+
+      return 100.0f * sign(Y) * pow(((400.0f * F_L_Y) / (27.13f + F_L_Y)) / A_w, S_G * z);
+  }
+
+  float J_to_Y(float J, float F_L, float A_w, float S_G, float z )
+  {
+      float A = A_w * sign(J) * pow(fabs(J) / 100.0f, 1.0f / (S_G * z));
+
+      return 100.0f * sign(A) / F_L * pow((27.13f * fabs(A)) / (400.0f - fabs(A)), 1.0f / 0.42f);
+  }
+
+  void init() {
+      k = 1.0f / (5.0f * L_A + 1.0f);
+      k4 = k*k*k*k;
+      F_L = 0.2f * k4 * 5.0f * L_A + 0.1f * pow(1.0f - k4, 2.0f) * pow(5.0f * L_A, 1.0f / 3.0f) ;
+      n = Y_b / 100.0f;
+      z = 1.48f + sqrt(n);
+      F_L_W = pow(F_L, 0.42f);
+      A_w = (400.0f * F_L_W) / (27.13f + F_L_W);
+      if(surround==0)
+      {
+          S_G = 0.525f;
+      }
+      else if(surround==1)
+      {
+          S_G = 0.59f;
+      }
+      else
+      {
+          S_G = 0.69f;
+      }
+  }
+
+  void process() {
+    SampleType(src) input = src();
+
+    float in;
+    float out;
+
+    if (direction == 0)
+    {
+        in = input.y;
+        out = Y_to_J(in, F_L, A_w, S_G, z);
+    }
+    else
+    {
+        in = input.x;
+        out = J_to_Y(in, F_L, A_w, S_G, z);
+    }
+
+    dst() = float4(out, out, out, input.w);
+  }
+};

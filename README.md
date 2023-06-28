@@ -53,6 +53,10 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 
 * `XYZ_JMh.blink` - The Blink kernel used in the script above
 
+* `hellwig_ach.nk` - Converts achromatic luminance to/from Hellwig J
+
+* `hellwig_ach.blink` - The Blink kernel used in the script above
+
 ## PYTHON
 
 * `cusp_path.py` - Code taken from [Thomas Mansencal's Colab](https://colab.research.google.com/drive/1OerRYxnKOYGhiZEZda1QS93JWBfN_WI0) with additional functions for gamut boundary finding. Also generates a plot of the cusp path and saves the source data for that plot in the `data` folder.

@@ -1,0 +1,45 @@
+set cut_paste_input [stack 0]
+push $cut_paste_input
+Group {
+ name hellwig_ach
+ label "\[value dir]"
+ addUserKnob {20 User}
+ addUserKnob {41 useGPUIfAvailable l "Use GPU if available" T ach_helwig.useGPUIfAvailable}
+ addUserKnob {41 vectorize l "Vectorize on CPU" -STARTLINE T ach_helwig.vectorize}
+ addUserKnob {41 hellwig_ach_L_A l L_A T ach_helwig.hellwig_ach_L_A}
+ addUserKnob {41 hellwig_ach_Y_b l Y_b T ach_helwig.hellwig_ach_Y_b}
+ addUserKnob {4 surr l surround M {Dark Dim Average}}
+ surr Dim
+ addUserKnob {4 dir l direction M {Forward Inverse}}
+ addUserKnob {26 divider l "" +STARTLINE}
+ addUserKnob {26 info l "" t "Converts luminance to Hellwig J and vice versa.\n\nY input for the forward transform is taken from the green channel (red and blue are ignored) assuming input is XYZ.\n\nJ input for the inverse transform is taken from the red channel (green and blue are ignored) assuming input is JMh.\n\nThe result is output on all three channels." +STARTLINE T "Luminance to/from Hellwig J"}
+}
+ Input {
+  inputs 0
+  name Input1
+  xpos -12
+  ypos -71
+ }
+ BlinkScript {
+  kernelSourceFile "\[file dirname \[value root.name]]/hellwig_ach.blink"
+  recompileCount 91
+  ProgramGroup 1
+  KernelDescription "2 \"hellwig_ach\" iterate pixelWise a4e1de2e8eacf06b93bba42939cdf796e01a083a99f92b327d1a558a1f785cfc 2 \"src\" Read Point \"dst\" Write Point 4 \"L_A\" Float 1 AAAAAA== \"Y_b\" Float 1 AAAAAA== \"surround\" Int 1 AAAAAA== \"direction\" Int 1 AAAAAA== 4 \"L_A\" 1 1 \"Y_b\" 1 1 \"surround\" 1 1 \"direction\" 1 1 8 \"k\" Float 1 1 AAAAAA== \"k4\" Float 1 1 AAAAAA== \"F_L\" Float 1 1 AAAAAA== \"n\" Float 1 1 AAAAAA== \"z\" Float 1 1 AAAAAA== \"F_L_W\" Float 1 1 AAAAAA== \"A_w\" Float 1 1 AAAAAA== \"S_G\" Float 1 1 AAAAAA=="
+  kernelSource "kernel hellwig_ach : ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image\n  Image<eWrite> dst; // the output image\n\n  param:\n    float L_A;\n    float Y_b;\n    int surround;\n    int direction;\n    \n\n  local:\n    float k;\n    float k4;\n    float F_L;\n    float n;\n    float z;\n    float F_L_W;\n    float A_w;\n    float S_G;\n\n  void define() \{\n  \}\n\n  float Y_to_J( float Y, float F_L, float A_w, float S_G, float z )\n  \{\n      float F_L_Y = pow(F_L * fabs(Y) / 100.0f, 0.42f);\n\n      return 100.0f * sign(Y) * pow(((400.0f * F_L_Y) / (27.13f + F_L_Y)) / A_w, S_G * z);\n  \}\n\n  float J_to_Y(float J, float F_L, float A_w, float S_G, float z )\n  \{\n      float A = A_w * sign(J) * pow(fabs(J) / 100.0f, 1.0f / (S_G * z));\n\n      return 100.0f * sign(A) / F_L * pow((27.13f * fabs(A)) / (400.0f - fabs(A)), 1.0f / 0.42f);\n  \}\n\n  void init() \{\n      k = 1.0f / (5.0f * L_A + 1.0f);\n      k4 = k*k*k*k;\n      F_L = 0.2f * k4 * 5.0f * L_A + 0.1f * pow(1.0f - k4, 2.0f) * pow(5.0f * L_A, 1.0f / 3.0f) ;\n      n = Y_b / 100.0f;\n      z = 1.48f + sqrt(n);\n      F_L_W = pow(F_L, 0.42f);\n      A_w = (400.0f * F_L_W) / (27.13f + F_L_W);\n      if(surround==0)\n      \{\n          S_G = 0.525f;\n      \}\n      else if(surround==1)\n      \{\n          S_G = 0.59f;\n      \}\n      else\n      \{\n          S_G = 0.69f;\n      \}\n  \}\n\n  void process() \{\n    SampleType(src) input = src();\n\n    float in;\n    float out;\n\n    if (direction == 0)\n    \{\n        in = input.y;\n        out = Y_to_J(in, F_L, A_w, S_G, z);\n    \}\n    else\n    \{\n        in = input.x;\n        out = J_to_Y(in, F_L, A_w, S_G, z);\n    \}\n\n    dst() = float4(out, out, out, input.w);\n  \}\n\};\n"
+  rebuild ""
+  hellwig_ach_L_A 100
+  hellwig_ach_Y_b 20
+  hellwig_ach_surround {{parent.surr}}
+  hellwig_ach_direction {{parent.dir}}
+  rebuild_finalise ""
+  name ach_helwig
+  selected true
+  xpos -12
+  ypos -10
+ }
+ Output {
+  name Output1
+  xpos -12
+  ypos 69
+ }
+end_group
