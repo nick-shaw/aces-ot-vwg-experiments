@@ -234,6 +234,7 @@ push $Na4719a00
     alpha {}}
   name CMF_Lookup
   label "CIE 1931 2 deg\n360-830nm"
+  selected true
   xpos -36
   ypos -137
  }
@@ -241,6 +242,7 @@ push $Na4719a00
   colorspace_in CIE-XYZ
   colorspace_out CIE-Yxy
   name XYZ_to_Yxy
+  selected true
   xpos -36
   ypos -95
  }
@@ -250,14 +252,13 @@ push $Na4719a00
   expr1 "y < freq ? g : start.x + (y - freq) * (end.x - start.x) / purples"
   expr2 "y < freq ? b : start.y + (y - freq) * (end.y - start.y) / purples"
   name Purples
-  selected true
   xpos -36
   ypos -56
   addUserKnob {20 User}
   addUserKnob {12 start}
-  start {0.73597 0.26403}
+  start {0.73469 0.26531}
   addUserKnob {12 end}
-  end {0.17556 0.0053}
+  end {0.17411 0.00496}
   addUserKnob {3 purples}
   purples {{parent.purple_samples}}
  }
