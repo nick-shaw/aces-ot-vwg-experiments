@@ -47,3 +47,8 @@ M_boundary = smin(M_boundary_lower, M_boundary_upper, smoothness)
 J_boundary = J_intersect_source + slope * M_boundary
 
 print("Gamut boundary intersection: JM = [{:.3f}, {:.3f}]".format(J_boundary, M_boundary))
+
+# Compression pseudocode
+# M_compressed = M_boundary * compressPowerP(JM_source[1] / M_boundary, compression_parameters)
+# J_compressed = J_intersect_source + slope * M_compressed
+# JM_compressed = np.array([J_compressed, M_compressed])
