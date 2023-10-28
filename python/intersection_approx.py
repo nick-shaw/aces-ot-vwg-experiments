@@ -3,8 +3,8 @@ import numpy as np
 # Python implementation of smoothed gamut intersection – https://www.desmos.com/calculator/caou5awk29
 
 # Arbitrary values to test
-JM_cusp = np.array([69.9, 51.4])
-JM_source = np.array([68.4, 67.5])
+JM_cusp = [69.9, 51.4]
+JM_source = [68.4, 67.5]
 gamma_top = 1.12
 gamma_bottom = 1.15
 
@@ -51,4 +51,4 @@ print("Gamut boundary intersection: JM = [{:.3f}, {:.3f}]".format(J_boundary, M_
 # Compression pseudocode
 # M_compressed = M_boundary * compressPowerP(JM_source[1] / M_boundary, compression_parameters)
 # J_compressed = J_intersect_source + slope * M_compressed
-# JM_compressed = np.array([J_compressed, M_compressed])
+# JM_compressed = [J_compressed, M_compressed]
