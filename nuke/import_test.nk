@@ -1,0 +1,174 @@
+#! /Applications/Nuke15.0v1/Nuke15.0v1.app/Contents/MacOS/libnuke-15.0.1.dylib -nx
+version 15.0 v1
+define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
+<layout version="1.0">
+    <window x="0" y="25" w="1920" h="1147" maximized="1" screen="0">
+        <splitter orientation="1">
+            <split size="40"/>
+            <dock id="" hideTitles="1" activePageId="Toolbar.1">
+                <page id="Toolbar.1"/>
+            </dock>
+            <split size="1257" stretch="1"/>
+            <splitter orientation="2">
+                <split size="662"/>
+                <dock id="" activePageId="Viewer.1">
+                    <page id="Viewer.1"/>
+                    <page id="Error Console.1"/>
+                </dock>
+                <split size="465"/>
+                <dock id="" activePageId="DAG.1" focus="true">
+                    <page id="DAG.1"/>
+                    <page id="Curve Editor.1"/>
+                    <page id="DopeSheet.1"/>
+                </dock>
+            </splitter>
+            <split size="615"/>
+            <dock id="" activePageId="Properties.1">
+                <page id="Properties.1"/>
+                <page id="uk.co.thefoundry.backgroundrenderview.1"/>
+                <page id="Scenegraph.1"/>
+            </dock>
+        </splitter>
+    </window>
+</layout>
+}
+Root {
+ inputs 0
+ name /Users/nick/github/aces-ot-vwg-experiments/nuke/import_test.nk
+ format "2048 1556 0 0 2048 1556 1 2K_Super_35(full-ap)"
+ proxy_type scale
+ proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
+ colorManagement Nuke
+ workingSpaceLUT linear
+ monitorLut sRGB
+ monitorOutLUT rec709
+ int8Lut sRGB
+ int16Lut sRGB
+ logLut Cineon
+ floatLut linear
+}
+Read {
+ inputs 0
+ file_type exr
+ file /Volumes/SSD_4TB_01/images1/MISC/IsabellaAsReference_AP0.exr
+ format "1920 1080 0 0 1920 1080 1 HD_1080"
+ origset true
+ name Read1
+ xpos -28
+ ypos -224
+}
+CMSTestPattern {
+ inputs 0
+ cube_size 17
+ name CMSTestPattern1
+ xpos -154
+ ypos -215
+}
+ColorMatrix {
+ matrix {
+     {0.6624541811 0.1340042065 0.156187687}
+     {0.2722287168 0.6740817658 0.05368951741}
+     {-0.00557464949 0.004060733529 1.0103391}
+   }
+ name AP1_to_XYZ
+ xpos -28
+ ypos -109
+}
+Multiply {
+ value 100
+ name Multiply1
+ label "\[value value]"
+ xpos -28
+ ypos -85
+}
+BlinkScript {
+ recompileCount 89
+ ProgramGroup 1
+ KernelDescription "3 \"JMhKernel\" iterate pixelWise c1ef0a651ca8198fcab8bd2bf162260b11e377e9b18f648109e108056b305476 2 \"src\" Read Point \"dst\" Write Point 8 \"Ref White XYZ\" Float 3 neBzPwAAgD8vIYE/AAAAAA== \"Adapting Field\" Float 1 AADIQg== \"Background\" Float 1 AADIQg== \"Surround\" Float 3 ZmZmPz0KFz9mZmY/AAAAAA== \"discountIlluminant\" Bool 1 AA== \"compressMode\" Bool 1 AA== \"HK_mode\" Bool 1 AA== \"matrix\" Int 1 AAAAAA== 8 \"XYZ_w\" 3 1 Default \"L_A\" 1 1 Default \"Y_b\" 1 1 Default \"surround\" 3 1 Default \"discountIlluminant\" 1 1 Default \"compressMode\" 1 1 Default \"HK_mode\" 1 1 Default \"matrix\" 1 1 Default 1 \"coefficients\" Float 3 1 AAAAAAAAAAAAAAAAAAAAAA=="
+ kernelSource "#include \"/Users/nick/github/aces-ot-vwg-experiments/nuke/lib_hellwig.rpp\"\n\nkernel JMhKernel : ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image\n  Image<eWrite> dst; // the output image\n\n  param:\n    float3 XYZ_w;\n    float L_A;\n    float Y_b;\n    float3 surround;\n    bool discountIlluminant;\n    bool compressMode;\n    bool HK_mode;\n    int matrix;\n\n  local:\n    float3 coefficients;  // This local variable is not exposed to the user.\n\n  // In define(), parameters can be given labels and default values.\n  void define() \{\n    defineParam(XYZ_w, \"Ref White XYZ\", \{0.9526460745698462f, 1.0f, 1.0088251843515859f\});\n    defineParam(L_A, \"Adapting Field\", 100.0f);\n    defineParam(Y_b, \"Background\", 100.0f);\n    defineParam(surround, \"Surround\", \{0.9f, 0.59f, 0.9f\});\n  \}\n\n  // The init() function is run before any calls to process().\n  // Local variables can be initialized here.\n  void init() \{\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n\n    // Isolate the RGB components\n    float3 srcPixel(input.x, input.y, input.z);\n\n    // Apply XYZ to JMh\n    float3 destPixel = XYZ_to_Hellwig2022_JMh( srcPixel, XYZ_w, L_A,  Y_b, surround, discountIlluminant, compressMode, HK_mode, matrix);\n\n    // Write the result to the output image\n    dst() = float4(destPixel.x, destPixel.y, destPixel.z, input.w);\n  \}\n\};\n"
+ rebuild ""
+ "JMhKernel_Ref White XYZ" {0.9526460746 1 1.008825184}
+ JMhKernel_Background 20
+ JMhKernel_Surround {0.9 0.59 0.9}
+ JMhKernel_discountIlluminant true
+ JMhKernel_compressMode true
+ JMhKernel_matrix 1
+ rebuild_finalise ""
+ name XYZ_to_JMh
+ xpos -28
+ ypos -19
+}
+BlinkScript {
+ recompileCount 92
+ ProgramGroup 1
+ KernelDescription "3 \"XYZKernel\" iterate pixelWise 7f021cb2097444f30bd8d6ccd0cd4f4775b159eaaf2c7f16df7caa587a99f876 2 \"src\" Read Point \"dst\" Write Point 8 \"Ref White XYZ\" Float 3 neBzPwAAgD8vIYE/AAAAAA== \"Adapting Field\" Float 1 AADIQg== \"Background\" Float 1 AADIQg== \"Surround\" Float 3 ZmZmPz0KFz9mZmY/AAAAAA== \"discountIlluminant\" Bool 1 AA== \"compressMode\" Bool 1 AA== \"HK_mode\" Bool 1 AA== \"matrix\" Int 1 AAAAAA== 8 \"XYZ_w\" 3 1 Default \"L_A\" 1 1 Default \"Y_b\" 1 1 Default \"surround\" 3 1 Default \"discountIlluminant\" 1 1 Default \"compressMode\" 1 1 Default \"HK_mode\" 1 1 Default \"matrix\" 1 1 Default 1 \"coefficients\" Float 3 1 AAAAAAAAAAAAAAAAAAAAAA=="
+ kernelSource "#include \"/Users/nick/github/aces-ot-vwg-experiments/nuke/lib_hellwig.rpp\"\n\nkernel XYZKernel : ImageComputationKernel<ePixelWise>\n\{\n  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image\n  Image<eWrite> dst; // the output image\n\n  param:\n    float3 XYZ_w;\n    float L_A;\n    float Y_b;\n    float3 surround;\n    bool discountIlluminant;\n    bool compressMode;\n    bool HK_mode;\n    int matrix;\n\n  local:\n    float3 coefficients;  // This local variable is not exposed to the user.\n\n  // In define(), parameters can be given labels and default values.\n  void define() \{\n    defineParam(XYZ_w, \"Ref White XYZ\", \{0.9526460745698462f, 1.0f, 1.0088251843515859f\});\n    defineParam(L_A, \"Adapting Field\", 100.0f);\n    defineParam(Y_b, \"Background\", 100.0f);\n    defineParam(surround, \"Surround\", \{0.9f, 0.59f, 0.9f\});\n  \}\n\n  // The init() function is run before any calls to process().\n  // Local variables can be initialized here.\n  void init() \{\n  \}\n\n  void process() \{\n    // Read the input image\n    SampleType(src) input = src();\n\n    // Isolate the RGB components\n    float3 srcPixel(input.x, input.y, input.z);\n\n    // Apply XYZ to JMh\n    float3 destPixel = Hellwig2022_JMh_to_XYZ( srcPixel, XYZ_w, L_A,  Y_b, surround, discountIlluminant, compressMode, HK_mode, matrix);\n\n    // Write the result to the output image\n    dst() = float4(destPixel.x, destPixel.y, destPixel.z, input.w);\n  \}\n\};\n"
+ rebuild ""
+ "XYZKernel_Ref White XYZ" {0.9526460746 1 1.008825184}
+ XYZKernel_Background 20
+ XYZKernel_Surround {0.9 0.59 0.9}
+ XYZKernel_discountIlluminant true
+ XYZKernel_compressMode true
+ XYZKernel_matrix 1
+ rebuild_finalise ""
+ name JMh_to_XYZ
+ xpos -28
+ ypos 13
+}
+Multiply {
+ value 0.01
+ name Multiply2
+ label "\[value value]"
+ xpos -28
+ ypos 45
+}
+ColorMatrix {
+ matrix {
+     {0.6624541811 0.1340042065 0.156187687}
+     {0.2722287168 0.6740817658 0.05368951741}
+     {-0.00557464949 0.004060733529 1.0103391}
+   }
+ invert true
+ name XYZ_to_AP1
+ xpos -28
+ ypos 96
+}
+PlotChromaticity {
+ name PlotChromaticity1
+ xpos -28
+ ypos 131
+}
+Viewer {
+ frame 1
+ frame_range 1-100
+ colour_sample_bbox {0.380859375 -0.0283203125 0.380859375 -0.02734375}
+ samplepoints {{0.2877263725 0.03621730208}
+   }
+ gl_buffer_depth half-float
+ viewerProcess None
+ input_process_node ""
+ monitorOutOutputTransform rec709
+ name Viewer1
+ xpos -28
+ ypos 171
+}
+Colorspace {
+ inputs 0
+ colorspace_in CIE-XYZ
+ illuminant_in ACES
+ illuminant_out ACES
+ primary_out ACES
+ name XYZ_to_AP0
+ xpos -327
+ ypos -2
+}
+Colorspace {
+ inputs 0
+ illuminant_in ACES
+ primary_in ACES
+ colorspace_out CIE-XYZ
+ illuminant_out ACES
+ name AP0_to_XYZ
+ xpos -306
+ ypos -123
+}
