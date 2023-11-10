@@ -54,15 +54,34 @@ Read {
  format "1920 1080 0 0 1920 1080 1 HD_1080"
  origset true
  name Read1
- xpos -28
- ypos -224
+ xpos 128
+ ypos -219
+}
+Colorspace {
+ illuminant_in ACES
+ primary_in ACES
+ colorspace_out CIE-XYZ
+ illuminant_out ACES
+ name AP0_to_XYZ
+ xpos 128
+ ypos -108
+}
+Colorspace {
+ inputs 0
+ colorspace_in CIE-XYZ
+ illuminant_in ACES
+ illuminant_out ACES
+ primary_out ACES
+ name XYZ_to_AP0
+ xpos -143
+ ypos 134
 }
 CMSTestPattern {
  inputs 0
  cube_size 17
  name CMSTestPattern1
- xpos -154
- ypos -215
+ xpos -28
+ ypos -212
 }
 ColorMatrix {
  matrix {
@@ -75,6 +94,7 @@ ColorMatrix {
  ypos -109
 }
 Multiply {
+ channels rgb
  value 100
  name Multiply1
  label "\[value value]"
@@ -92,11 +112,21 @@ BlinkScript {
  JMhKernel_Surround {0.9 0.59 0.9}
  JMhKernel_discountIlluminant true
  JMhKernel_compressMode true
- JMhKernel_matrix 1
+ JMhKernel_matrix {{matrix}}
  rebuild_finalise ""
  name XYZ_to_JMh
  xpos -28
  ypos -19
+ addUserKnob {20 User}
+ addUserKnob {4 matrix M {Stock Thomas}}
+ matrix Thomas
+ addUserKnob {41 "JMhKernel_Ref White XYZ_1" l "Ref White XYZ" T "XYZ_to_JMh.JMhKernel_Ref White XYZ"}
+ addUserKnob {41 "JMhKernel_Adapting Field_1" l "Adapting Field" T "XYZ_to_JMh.JMhKernel_Adapting Field"}
+ addUserKnob {41 JMhKernel_Background_1 l Background T XYZ_to_JMh.JMhKernel_Background}
+ addUserKnob {41 JMhKernel_Surround_1 l Surround T XYZ_to_JMh.JMhKernel_Surround}
+ addUserKnob {41 JMhKernel_discountIlluminant_1 l discountIlluminant T XYZ_to_JMh.JMhKernel_discountIlluminant}
+ addUserKnob {41 JMhKernel_compressMode_1 l compressMode T XYZ_to_JMh.JMhKernel_compressMode}
+ addUserKnob {41 JMhKernel_HK_mode_1 l HK_mode T XYZ_to_JMh.JMhKernel_HK_mode}
 }
 BlinkScript {
  recompileCount 92
@@ -109,13 +139,24 @@ BlinkScript {
  XYZKernel_Surround {0.9 0.59 0.9}
  XYZKernel_discountIlluminant true
  XYZKernel_compressMode true
- XYZKernel_matrix 1
+ XYZKernel_matrix {{matrix}}
  rebuild_finalise ""
  name JMh_to_XYZ
  xpos -28
  ypos 13
+ addUserKnob {20 User}
+ addUserKnob {4 matrix M {Stock Thomas}}
+ matrix Thomas
+ addUserKnob {41 "XYZKernel_Ref White XYZ_1" l "Ref White XYZ" T "JMh_to_XYZ.XYZKernel_Ref White XYZ"}
+ addUserKnob {41 "XYZKernel_Adapting Field_1" l "Adapting Field" T "JMh_to_XYZ.XYZKernel_Adapting Field"}
+ addUserKnob {41 XYZKernel_Background_1 l Background T JMh_to_XYZ.XYZKernel_Background}
+ addUserKnob {41 XYZKernel_Surround_1 l Surround T JMh_to_XYZ.XYZKernel_Surround}
+ addUserKnob {41 XYZKernel_discountIlluminant_1 l discountIlluminant T JMh_to_XYZ.XYZKernel_discountIlluminant}
+ addUserKnob {41 XYZKernel_compressMode_1 l compressMode T JMh_to_XYZ.XYZKernel_compressMode}
+ addUserKnob {41 XYZKernel_HK_mode_1 l HK_mode T JMh_to_XYZ.XYZKernel_HK_mode}
 }
 Multiply {
+ channels rgb
  value 0.01
  name Multiply2
  label "\[value value]"
@@ -131,14 +172,24 @@ ColorMatrix {
  invert true
  name XYZ_to_AP1
  xpos -28
- ypos 96
+ ypos 87
 }
+set N5c673e00 [stack 0]
+PositionToPoints2 {
+ P_channel rgb
+ detail 1
+ name PositionToPoints1
+ xpos 147
+ ypos 117
+}
+push $N5c673e00
 PlotChromaticity {
  name PlotChromaticity1
  xpos -28
- ypos 131
+ ypos 133
 }
 Viewer {
+ inputs 2
  frame 1
  frame_range 1-100
  colour_sample_bbox {0.380859375 -0.0283203125 0.380859375 -0.02734375}
@@ -150,25 +201,5 @@ Viewer {
  monitorOutOutputTransform rec709
  name Viewer1
  xpos -28
- ypos 171
-}
-Colorspace {
- inputs 0
- colorspace_in CIE-XYZ
- illuminant_in ACES
- illuminant_out ACES
- primary_out ACES
- name XYZ_to_AP0
- xpos -327
- ypos -2
-}
-Colorspace {
- inputs 0
- illuminant_in ACES
- primary_in ACES
- colorspace_out CIE-XYZ
- illuminant_out ACES
- name AP0_to_XYZ
- xpos -306
- ypos -123
+ ypos 181
 }
