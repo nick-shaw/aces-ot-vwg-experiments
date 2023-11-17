@@ -50,23 +50,6 @@ Root {
  logLut Cineon
  floatLut linear
 }
-Read {
- inputs 0
- file_type exr
- file /Volumes/SSD_4TB_01/images1/MISC/IsabellaAsReference_AP0.exr
- format "1920 1080 0 0 1920 1080 1 HD_1080"
- origset true
- name Read1
- xpos -158
- ypos -247
-}
-Multiply {
- inputs 0
- value {{1/100} {1/100} {0.5/PI} 1}
- name JMh_scale
- xpos -500
- ypos -33
-}
 Group {
  inputs 0
  name Dominant_Wavelength
@@ -476,9 +459,9 @@ Group {
  xpos 30
  ypos 96
  addUserKnob {20 User}
- addUserKnob {41 colorspace_in l input T Out_to_XYZ.colorspace_in}
- addUserKnob {41 illuminant_in l "" -STARTLINE T Out_to_XYZ.illuminant_in}
- addUserKnob {41 primary_in l "" -STARTLINE T Out_to_XYZ.primary_in}
+ addUserKnob {41 colorspace_out l output T Out_to_XYZ.colorspace_in}
+ addUserKnob {41 illuminant_out l "" -STARTLINE T Out_to_XYZ.illuminant_in}
+ addUserKnob {41 primary_out l "" -STARTLINE T Out_to_XYZ.primary_in}
  addUserKnob {41 "XYZKernel_Adapting Field" l "Adapting Field" T "JMh_to_XYZ.XYZKernel_Adapting Field"}
  addUserKnob {41 XYZKernel_Background l Background T JMh_to_XYZ.XYZKernel_Background}
  addUserKnob {41 XYZKernel_Surround l Surround T JMh_to_XYZ.XYZKernel_Surround}
@@ -617,4 +600,21 @@ Viewer {
  name Viewer1
  xpos 30
  ypos 225
+}
+Read {
+ inputs 0
+ file_type exr
+ file /Volumes/SSD_4TB_01/images1/MISC/IsabellaAsReference_AP0.exr
+ format "1920 1080 0 0 1920 1080 1 HD_1080"
+ origset true
+ name Read1
+ xpos -158
+ ypos -247
+}
+Multiply {
+ inputs 0
+ value {{1/100} {1/100} {0.5/PI} 1}
+ name JMh_scale
+ xpos -500
+ ypos -33
 }
