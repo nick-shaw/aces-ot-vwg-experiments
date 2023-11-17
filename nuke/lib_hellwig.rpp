@@ -232,20 +232,30 @@ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, f
       -0.250268, 1.204414, 0.045854,
       -0.002079, 0.048952, 0.953127,
     };
-    float Modified_CAT16_data[]=
+    float Thomas_CAT16_data[]=
     {
       0.656619, 0.342071, 0.00131062,
       -0.222571, 1.10658, 0.115987,
       -0.000634146, 0.05855, 0.942084,
+    };
+    float Pekka_CAT16_data[]=
+    {
+      1.45196063, -0.55651104,  0.10455041,
+      0.30986965,  0.77055374, -0.08042339,
+      0.00885342,  0.21404271,  0.78010688,
     };
     float3x3 MATRIX_16;
     if (matrix == 0)
     {
         MATRIX_16.setArray(CAT_CAT16_data);
     }
-    else
+    else if (matrix == 1)
     {
-        MATRIX_16.setArray(Modified_CAT16_data);
+        MATRIX_16.setArray(Thomas_CAT16_data);
+    }
+    else if (matrix == 2)
+    {
+        MATRIX_16.setArray(Pekka_CAT16_data);
     }
     
 // 	float3x3 MATRIX_16 = CAT_CAT16;
@@ -413,20 +423,30 @@ float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w, float L_A, float Y_b, f
       -0.250268, 1.204414, 0.045854,
       -0.002079, 0.048952, 0.953127,
     };
-    float Modified_CAT16_data[]=
+    float Thomas_CAT16_data[]=
     {
       0.656619, 0.342071, 0.00131062,
       -0.222571, 1.10658, 0.115987,
       -0.000634146, 0.05855, 0.942084,
+    };
+    float Pekka_CAT16_data[]=
+    {
+      1.45196063, -0.55651104,  0.10455041,
+      0.30986965,  0.77055374, -0.08042339,
+      0.00885342,  0.21404271,  0.78010688,
     };
     float3x3 MATRIX_16;
     if (matrix == 0)
     {
         MATRIX_16.setArray(CAT_CAT16_data);
     }
-    else
+    else if (matrix == 1)
     {
-        MATRIX_16.setArray(Modified_CAT16_data);
+        MATRIX_16.setArray(Thomas_CAT16_data);
+    }
+    else if (matrix == 2)
+    {
+        MATRIX_16.setArray(Pekka_CAT16_data);
     }
         
 	float3x3 MATRIX_INVERSE_16 = MATRIX_16.invert();
