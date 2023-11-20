@@ -1,0 +1,528 @@
+// Functions used in ACES 2.0 candidate CAM DRT
+// Derived from v49
+
+
+  // multiplies a 3D vector with a 3x3 matrix
+  float3 vector_dot( float3x3 m, float3 v)
+  {
+    float3 r = 1.0f;
+    for(int c = 0; c<3; c++)
+    {
+      r[c] = m[c][0]*v.x + m[c][1]*v.y + m[c][2]*v.z;
+    }
+
+    return r;
+  }
+
+  // linear interpolation between two values a & b with the bias t
+  float lerp(float a, float b, float t)
+  {
+    return a + t * (b - a);
+  }
+
+  // linear interpolation between two float4 values a & b with the bias t
+  float4 lerp4(float4 a, float4 b, float t)
+  {
+    return a + t * (b - a);
+  }
+
+  // "safe" power function to avoid NANs or INFs when taking a fractional power of a negative base
+  // this one initially returned -pow(abs(b), e) for negative b
+  // but this ended up producing undesirable results in some cases
+  // so now it just returns 0.0 instead
+  float spow( float base, float exponent )
+  {
+    // a = np.atleast_1d(a)
+    float a = base;
+    float b = exponent;
+    // // p = as_float_array(p)
+
+    // float a_p = sign(a) * pow(  fabs(a) ,p)  ; 
+
+    // // a_p[np.isnan(a_p)] = 0
+
+    // return a_p;
+
+    // np.sign(a) * pow(np.abs(a) , b) 
+
+    // float a_p =  sign(a) * pow(fabs(a) , b) ;
+    // if ( isnan(a_p) )
+    // {
+    //     a_p = a_p;
+    // }
+    // else 
+    // {
+    //     a_p = 0.0;
+    // }
+    // return a_p;
+
+    if(base < 0.0f && exponent != floor(exponent) )
+    {
+      return 0.0f;
+    }
+    else
+    {
+     return pow(base, exponent); 
+    }
+  }
+
+
+  // clamp the components of a 3D vector between a min & max value
+  float3 clamp3(float3 v, float min, float max)
+  {
+    v.x = clamp(v.x, min, max);
+    v.y = clamp(v.y, min, max);
+    v.z = clamp(v.z, min, max);
+    return v;
+  }
+
+
+  float3 float3spow( float3 base, float exponent )
+  {
+      return float3(spow(base.x, exponent), spow(base.y, exponent), spow(base.z, exponent));
+  }
+
+  float3 float3sign( float3 v )
+  {
+      return float3(sign(v.x), sign(v.y), sign(v.z));
+  }
+
+
+  float3 float3abs( float3 a )
+  {
+    return fabs(a);
+  }
+
+
+
+    // "safe" div
+    float sdiv( float a, float b )
+    {
+        if(b == 0.0f)
+        {
+        return 0.0f;
+        }
+        else
+        {
+        return a / b;
+        }
+    }
+    
+  float clip(float x, float a, float b)
+  {
+    return max(a, min(x, b));
+  }
+
+  float mod(float a, float N)
+  {
+    return a - N*floor(a/N);
+  } 
+
+  float degree_of_adaptation(float  F, float L_A )
+  {
+    float D = F * (1 - (1 / 3.6) * exp((-L_A - 42) / 92));
+
+    return D;
+  }
+
+  // convert radians to degrees
+  float degrees( float radians )
+  {
+    return radians * 180.0f / PI;
+  }
+
+  // convert degrees to radians
+  float radians( float degrees )
+  {
+    return degrees / 180.0f * PI;
+  }
+
+  // "PowerP" compression function (also used in the ACES Reference Gamut Compression transform)
+  // values of v above  'treshold' are compressed by a 'power' function
+  // so that an input value of 'limit' results in an output of 1.0
+  float compressPowerP( float v, float threshold, float limit, float power, int inverse )
+  {
+    float s = (limit-threshold)/pow(pow((1.0f-threshold)/(limit-threshold),-power)-1.0f,1.0f/power);
+
+    float vCompressed;
+
+    if( inverse )
+    {
+      vCompressed = (v<threshold||limit<1.0001f||v>threshold+s)?v:threshold+s*pow(-(pow((v-threshold)/s,power)/(pow((v-threshold)/s,power)-1.0f)),1.0f/power);
+    }
+    else
+    {
+      vCompressed = (v<threshold||limit<1.0001f)?v:threshold+s*((v-threshold)/s)/(pow(1.0f+pow((v-threshold)/s,power),1.0f/power));
+    }
+
+    return vCompressed;
+  }
+
+  float3 compress_aces(float3 rgb, float3 c, float3 m, float3 y, int invert)
+  {
+    float ach = max(rgb.x, max(rgb.y, rgb.z));
+    float3 d = 0.0f;
+
+    if (ach)
+    {
+      d.x = (ach - rgb.x) / fabs(ach);
+      d.y = (ach - rgb.y) / fabs(ach);
+      d.z = (ach - rgb.z) / fabs(ach);
+    }
+
+    rgb.x = compressPowerP(d.x, c.x, c.y, c.z, invert);
+    rgb.y = compressPowerP(d.y, m.x, m.y, m.z, invert);
+    rgb.z = compressPowerP(d.z, y.x, y.y, y.z, invert);
+
+    rgb = ach - rgb * fabs(ach);
+
+    return rgb;
+  }
+
+  float3 compress_bjorn(float3 xyz)
+  {
+    float x = xyz.x;
+    float y = xyz.y;
+    float z = xyz.z;
+
+    float C = (x+y+z)/3;
+    if (C == 0.0f)
+      return xyz;
+
+    float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2)) ;
+    // np.sqrt(2/3)
+    // 0.816496580927726
+    R = R * 0.816496580927726;
+
+    if (R != 0.0)
+    {
+      x = (x-C)/R ;
+      y = (y-C)/R ;
+      z = (z-C)/R ;
+    }
+
+    float r = R/C ;
+    float s = -min(x, min(y, z));
+
+    float t = 0.0;
+    if (r > 0.000001f)
+    {
+      t = 0.5f + spow(spow(s - 0.5f, 2.0f) + spow(sqrt(4.0f / spow(r, 2.0f) + 1.0f) - 1.0f, 2.0f) / 4.0f, 0.5f);
+      if (t < 0.000001f)
+        return xyz;
+      t = 1.0f / t;
+    }
+
+    x = C*x*t + C ;
+    y = C*y*t + C ;
+    z = C*z*t + C ;
+
+    return float3(x,y,z);
+  }
+
+float3 uncompress_bjorn(float3 xyz)
+{
+  float x = xyz.x;
+  float y = xyz.y;
+  float z = xyz.z;
+
+  float C = (x+y+z)*(1.0/3.0) ;
+  if (C == 0.0)
+    return xyz;
+
+  float R = sqrt(spow((x-C),2) + spow((y-C),2) + spow((z-C),2));
+  // np.sqrt(2/3)
+  // 0.816496580927726
+  R = R * 0.816496580927726;
+
+  if (R != 0.0)
+  {
+    x = (x-C)/R ;
+    y = (y-C)/R ;
+    z = (z-C)/R ;
+  }
+
+  float t = R/C ;
+  float s = -min(x, min(y, z));
+
+  float r = 0.0;
+  if (t > 0.000001f)
+  {
+    r = sqrt(spow((2*sqrt(spow((1/t-0.5),2)-spow((s-0.5),2))+1),2)-1);
+    if (r < 0.000001f)
+      return xyz;
+    r = 2/r;
+  }
+
+  x = C*x*r + C ;
+  y = C*y*r + C ;
+  z = C*z*r + C ;
+
+  return float3(x,y,z);
+}
+
+  float3 compress(float3 rgb)
+  {
+    return compress_bjorn(rgb);
+  }
+
+  float3 uncompress(float3 rgb)
+  {
+    return uncompress_bjorn(rgb);
+  }
+
+  float hue_angle_dependency_Hellwig2022(float h)
+  {
+    // h = as_float_array(h)
+    return float(         \
+     -0.160 * cos(h)      \
+    + 0.132 * cos(2 * h)  \
+    - 0.405 * sin(h)      \
+    + 0.080 * sin(2 * h)  \ 
+    + 0.792               \
+    );
+    }
+
+
+  float3x3  RGBPrimsToXYZMatrix(float2 rxy, float2 gxy, float2 bxy, float2 wxy,float Y, bool direction)
+  {
+    // # given r g b chromaticities and whitepoint, convert RGB colors to XYZ
+    // # based on CtlColorSpace.cpp from the CTL source code : 77
+    // # param: xy - dict of chromaticity xy coordinates: rxy: float2(x, y) etc
+    // # param: Y - luminance of "white" - defaults to 1.0
+    // # param: inverse - calculate XYZ to RGB instead
+
+    float2 r = rxy;
+    float2 g = gxy;
+    float2 b = bxy;
+    float2 w = wxy;
+
+    float X = w.x * Y / w.y;
+    float Z = (1 - w.x - w.y) * Y / w.y;
+
+    // # Scale factors for matrix rows
+    float d = r.x * (b.y - g.y) + b.x * (g.y - r.y) + g.x * (r.y - b.y);
+
+    float Sr =    (X * (b.y - g.y) -      \
+            g.x * (Y * (b.y - 1.0f) +  \
+            b.y  * (X + Z)) +       \
+            b.x  * (Y * (g.y - 1.0f) + \
+            g.y * (X + Z))) / d ;
+    
+    float Sg =    (X * (r.y - b.y) +      \
+            r.x * (Y * (b.y - 1.0f) +  \
+            b.y * (X + Z)) -        \
+            b.x * (Y * (r.y - 1.0f) +  \
+            r.y * (X + Z))) / d ;
+
+    float Sb =    (X * (g.y - r.y) -      \
+            r.x * (Y * (g.y - 1.0f) +  \
+            g.y * (X + Z)) +        \
+            g.x * (Y * (r.y - 1.0f) +  \
+            r.y * (X + Z))) / d ;
+
+    // # Assemble the matrix
+    float Mdata[] =
+    {
+            Sr * r.x, Sr * r.y, Sr * (1.0f - r.x - r.y),
+            Sg * g.x, Sg * g.y, Sg * (1.0f - g.x - g.y),
+            Sb * b.x, Sb * b.y, Sb * (1.0f - b.x - b.y),
+    };
+
+    float MdataNukeOrder[] = {
+      Mdata[0], Mdata[3], Mdata[6],
+      Mdata[1], Mdata[4], Mdata[7],
+      Mdata[2], Mdata[5], Mdata[8],
+    };
+
+    float3x3 newMatrix;
+    newMatrix.setArray(MdataNukeOrder);
+
+    // create inverse matrix
+    float3x3 newMatrixInverse = newMatrix.invert();
+
+    // return forward or inverse matrix
+    if (direction == 0)
+    {
+      return newMatrix;
+    }
+    else if (direction == 1)
+    {
+      return newMatrixInverse;
+    }
+  }
+
+  // convert ACEScct encoded values to linear
+  float ACEScct_to_linear( float v )
+  {
+    return v > 0.155251141552511f ? spow( 2.0f, v * 17.52f - 9.72f) : (v - 0.0729055341958355f) / 10.5402377416545f;
+  }
+
+  // encode linear values as ACEScct
+  float linear_to_ACEScct( float v )
+  {
+    return v > 0.0078125f ? (log2(v) + 9.72f) / 17.52f : 10.5402377416545f * v + 0.0729055341958355f;
+  }
+
+
+  // convert sRGB gamma encoded values to linear
+  float sRGB_to_linear( float v )
+  {
+    return v < 0.04045f ? v / 12.92f : spow((v + 0.055f) / 1.055f, 2.4f);
+  }
+
+  // encode linear values as sRGB gamma
+  float linear_to_sRGB( float v )
+  {
+    return v <= 0.0031308f ? 12.92f * v : 1.055 * (spow(v, 1.0f / 2.4f)) - 0.055f;
+  }
+
+  float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)
+  {
+      float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);
+      float3 RGB_c = (400.0f * sign(RGB) * F_L_RGB) / (27.13f + F_L_RGB);
+      return RGB_c;
+  }
+
+  float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB,float F_L)
+  {
+      float3 RGB_p =  (float3sign(RGB) * 100.0f / F_L * float3spow((27.13f * float3abs(RGB)) / (400.0f - float3abs(RGB)), 1.0f / 0.42f) );
+      return RGB_p;
+  }
+
+  // convert HSV cylindrical projection values to RGB
+  float3 HSV_to_RGB( float3 HSV )
+  {
+    float C = HSV.z*HSV.y;
+    float X = C*(1.0f-fabs(fmod(HSV.x*6.0f,2.0f)-1.0f));
+    float m = HSV.z-C;
+
+    float3 RGB;
+    RGB.x = (HSV.x<1.0f/6.0f?  C :HSV.x<2.0f/6.0f?  X :HSV.x<3.0f/6.0f?0.0f:HSV.x<4.0f/6.0f?0.0f:HSV.x<5.0f/6.0f?  X :  C )+m;
+    RGB.y = (HSV.x<1.0f/6.0f?  X :HSV.x<2.0f/6.0f?  C :HSV.x<3.0f/6.0f?  C :HSV.x<4.0f/6.0f?  X :HSV.x<5.0f/6.0f?0.0f:0.0f)+m;
+    RGB.z = (HSV.x<1.0f/6.0f?0.0f:HSV.x<2.0f/6.0f?0.0f:HSV.x<3.0f/6.0f?  X :HSV.x<4.0f/6.0f?  C :HSV.x<5.0f/6.0f?  C :  X )+m;
+    return RGB;
+  }
+
+
+  // convert RGB to HSV cylindrical projection values
+  float3 RGB_to_HSV( float3 RGB )
+  {
+    float cmax = max(RGB.x,max(RGB.y,RGB.z));
+    float cmin = min(RGB.x,min(RGB.y,RGB.z));
+    float delta = cmax-cmin;
+
+    float3 HSV;
+    HSV.x = delta==0.0f?0.0f:cmax==RGB.x?(fmod((RGB.y-RGB.z)/delta+6.0f,6.0f))/6.0f:cmax==RGB.y?(((RGB.z-RGB.x)/delta+2.0f)/6.0f):(((RGB.x-RGB.y)/delta+4.0f)/6.0f);
+    HSV.y = cmax == 0.0f ? 0.0f : delta / cmax;
+    HSV.z = cmax;
+    return HSV;
+  }
+
+  // Compress/expand a range of values from 0 to limit (0 being the achromatic).  Doesn't
+  // affect anything beyond the limit.  The k1 parameter affects the strength of the curve,
+  // the k2 parameter affects the expansion rate of the curve.
+  // https://www.desmos.com/calculator/vqxgfzzyvx
+  float chroma_range(float x, float limit, float k1, float k2, int inverse)
+  {
+    if (x > limit)
+      return x;
+
+    k2 = max(k2, 0.002f);
+    k1 = sqrt(k1 * k1 + k2 * k2);
+    float k3 = (limit + k1) / (limit + k2);
+
+    if (!inverse)
+      return 0.5f * (k3 * x - k1 + sqrt((k3 * x - k1) * (k3 * x - k1) + 4 * k2 * k3 * x));
+    else
+      return (x * x + k1 * x) / (k3 * (x + k2));
+  }
+
+  // Smooth minimum of a and b
+  float smin(float a, float b, float s)
+  {
+    float h = max(s - fabs(a - b), 0.0) / s;
+    return min(a, b) - h * h * h * s * (1.0f / 6.0f);
+  }
+
+  // reimplemented from https://github.com/nick-shaw/aces-ot-vwg-experiments/blob/master/python/intersection_approx.py
+  float solve_J_intersect(float2 JM, float focusJ, float maxJ, float slope_gain)
+  {
+    float a = JM.y / (focusJ * slope_gain);
+    float b = 0.0f;
+    float c = 0.0f;
+    float intersectJ = 0.0f;
+    
+    if (JM.x < focusJ)
+    {
+        b = 1.0f - JM.y / slope_gain;
+    } 
+    else
+    {
+        b= -(1.0f + JM.y / slope_gain + maxJ * JM.y / (focusJ * slope_gain));
+    } 
+
+    if (JM.x < focusJ)
+    {
+        c = -JM.x;
+    } 
+    else
+    {
+        c = maxJ * JM.y / slope_gain + JM.x;
+    }
+
+    float root = sqrt(b*b - 4.0f * a * c);
+
+    if (JM.x < focusJ)
+    {
+//         intersectJ = (-b + root) / (2.0f * a);
+        intersectJ = 2.0f * c / (-b - root);
+    } 
+    else
+    {
+//         intersectJ = (-b - root) / (2.0f * a);
+        intersectJ = 2.0f * c / (-b + root);
+    } 
+
+    return intersectJ;
+  }
+
+    // check if the 3D point 'v' is inside a cube with the dimensions cubeSize x cubeSize x cubeSize 
+  // the 'smoothing' parameter rounds off the edges and corners of the cube with the exception of the 0,0,0 and cubeSize x cubeSize x cubeSize corners
+  // a smoothing value of 0.0 applies no smoothing and 1.0 the maximum amount (smoothing values > 1.0 result in undefined behavior )
+  int isInsideCube( float3 v, float cubeSize, float smoothing)
+  {
+    float3 normv = v / cubeSize;
+
+    float minv = min(normv.x, min(normv.y, normv.z));
+    float maxv = max(normv.x, max(normv.y, normv.z));
+
+    if( smoothing <= 0.0f )
+    {
+      // when not smoothing we can use a much simpler test
+      if(minv < 0.0f || maxv > 1.0f)
+      {
+        return 0;
+      }
+
+      return 1;
+    }
+
+    float3 clamped = normv;
+
+    float radius = smoothing/2.0f;
+
+    radius = clamp(radius*maxv*(1.0f-minv), 0.0f, radius);
+
+    clamped.x = clamp(normv.x, radius, 1.0f-radius);
+    clamped.y = clamp(normv.y, radius, 1.0f-radius);
+    clamped.z = clamp(normv.z, radius, 1.0f-radius);
+
+
+    if( length(normv - clamped ) > radius)
+    {
+      return 0;
+    }
+
+    return 1;
+  }
