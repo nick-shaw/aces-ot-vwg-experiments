@@ -388,7 +388,8 @@ float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, float L_A, float Y_b, f
 	if (HK_mode)
 	{
 // 	  return float3(J_HK,M,h);
-	  return float3(J_HK,M,hr);
+// 	  return float3(J_HK,M,hr);
+	  return float3(J, a, b);
 	}
 	else
 	{
