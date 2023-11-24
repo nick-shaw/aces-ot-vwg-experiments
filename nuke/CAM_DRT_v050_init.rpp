@@ -1,0 +1,475 @@
+    HALF_MINIMUM = 0.0000000596046448f;
+    HALF_MAXIMUM = 65504.0f;
+
+    st2084_m_1=2610.0f / 4096.0f * (1.0f / 4.0f);
+    st2084_m_2=2523.0f / 4096.0f * 128.0f;
+    st2084_c_1=3424.0f / 4096.0f;
+    st2084_c_2=2413.0f / 4096.0f * 32.0f;
+    st2084_c_3=2392.0f / 4096.0f * 32.0f;
+    st2084_m_1_d = 1.0f / st2084_m_1;
+    st2084_m_2_d = 1.0f / st2084_m_2;
+    st2084_L_p = 10000.0f;
+
+    // pre-calculate Daniele Evo constants
+    daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (log(daniele_n / daniele_n_r) / log(10000.0f / 100.0f));
+    daniele_m_0 = daniele_n / daniele_n_r;
+    daniele_m_1 = 0.5f * (daniele_m_0 + sqrt(daniele_m_0 * (daniele_m_0 + 4.0f * daniele_t_1)));
+    daniele_u = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0f), daniele_g);
+    daniele_m = daniele_m_1 / daniele_u;
+    daniele_w_i = log(daniele_n / 100.0f) / log(2.0f);
+    daniele_c_t = daniele_c_d * (1.0f + daniele_w_i * daniele_w_g) / daniele_n_r;
+    daniele_g_ip = 0.5f * (daniele_c_t + sqrt(daniele_c_t * (daniele_c_t + 4.0f * daniele_t_1)));
+    daniele_g_ipp2 = -daniele_m_1 * pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) / (pow(daniele_g_ip / daniele_m, 1.0f / daniele_g) - 1.0f);
+    daniele_w_2 = daniele_c / daniele_g_ipp2;
+    daniele_s_2 = daniele_w_2 * daniele_m_1;
+    daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g);
+    daniele_m_2 = daniele_m_1 / daniele_u_2;
+
+    // 1.0f / (c * z)
+    model_gamma = 1.0f / (viewingConditionsToSurround(outputViewingConditions).y * (1.48f + sqrt(Y_b_out / L_A_out)));
+
+    // In-gamut compression scaling for HDR/SDR appearance match
+    float log_peak = log10(daniele_n / daniele_n_r);
+    sat = max(0.2f, 1.9f - 1.55f * log_peak);
+    sat_thr = max(0.00007f, 0.017f - 0.015f * log_peak);
+    ccParams.y = chromaCParams.y + 15.0f * log_peak;
+    ccParams.z = 1.0f / max(0.5f, chromaCParams.z - 0.2f * log_peak);
+
+    // Noise reduction
+    toe = max(0.0001f, 0.002f - 0.0003f * log_peak);
+
+    float identity_matrix_data[]={ 1.0f, 0.0f, 0.0f,
+                                   0.0f, 1.0f, 0.0f,
+                                   0.0f, 0.0f, 1.0f };
+    identity_matrix.setArray(identity_matrix_data);
+
+    // Blink does not seem to support initialising multidimensional arrays
+    // So instead of being able to index the matrix data directly from one
+    // we need to use long if/else statements to populate the
+    // input, limit & output primary matrices
+    // (maybe there is a better way?)
+
+    float XYZ_to_AP0_ACES_matrix_data[]=
+    {
+       1.0498110175f,  0.0000000000f, -0.0000974845f,
+      -0.4959030231f,  1.3733130458f,  0.0982400361f,
+       0.0000000000f,  0.0000000000f,  0.9912520182f
+    };
+
+    float XYZ_to_AP1_ACES_matrix_data[]=
+    {
+       1.6410233797f, -0.3248032942f, -0.2364246952f,
+      -0.6636628587f,  1.6153315917f,  0.0167563477f,
+       0.0117218943f, -0.0082844420f,  0.9883948585f,
+    };
+
+    float XYZ_to_Rec709_D65_matrix_data[]=
+    {
+       3.2409699419f, -1.5373831776f, -0.4986107603f,
+      -0.9692436363f,  1.8759675015f,  0.0415550574f,
+       0.0556300797f, -0.2039769589f,  1.0569715142f,
+    };
+
+    float XYZ_to_Rec2020_D65_matrix_data[]=
+    {
+       1.7166511880f, -0.3556707838f, -0.2533662814f,
+      -0.6666843518f,  1.6164812366f,  0.0157685458f,
+       0.0176398574f, -0.0427706133f,  0.9421031212f,
+    };
+
+    float XYZ_to_P3_D65_matrix_data[]=
+    {
+       2.4934969119f, -0.9313836179f, -0.4027107845f,
+      -0.8294889696f,  1.7626640603f,  0.0236246858f,
+       0.0358458302f, -0.0761723893f,  0.9568845240f,
+    };
+
+    float XYZ_to_P3_DCI_matrix_data[]=
+    {
+       2.7253940305f, -1.0180030062f, -0.4401631952f,
+      -0.7951680258f,  1.6897320548f,  0.0226471906f,
+       0.0412418914f, -0.0876390192f,  1.1009293786f
+    };
+
+    float CAT_CAT16_data[]=
+    {
+      0.401288, 0.650173, -0.051461,
+      -0.250268, 1.204414, 0.045854,
+      -0.002079, 0.048952, 0.953127,
+    };
+
+    float Modified_CAT16_data[]=
+    {
+      0.656619, 0.342071, 0.00131062,
+      -0.222571, 1.10658, 0.115987,
+      -0.000634146, 0.05855, 0.942084,
+    };
+
+    // M Max data generated via an external Nukescript at a J value of 100
+    float LocusLimitMTable_data[]=
+    {
+      244.8230133, 245.4952393, 246.4431458, 247.1381531, 247.2368927, 246.8459778, 245.7083588, 244.2591095, 242.5463409, 240.4208374, 238.0180511, 235.4039917, 233.010849, 230.4004669, 227.8723602, 225.2279968, 222.7197876, 214.8562622, 206.1778564, 198.0664215, 190.9799347, 184.005127, 177.7472992, 172.2332611, 166.6447754, 161.64534, 156.9872284, 152.6203003, 148.3236084, 144.2987976, 140.8540192, 137.4315033, 134.3281555, 131.2306366, 128.3477631, 125.8098145, 123.1305542, 120.5120163, 118.3302231, 116.127861, 114.0526428, 112.1633072, 110.2943344, 108.4250336, 106.711853, 105.188797, 103.6860809, 102.2319641, 100.8348923, 99.51873779, 98.26163483, 97.04810333, 95.90451813, 94.84623718, 93.86389923, 92.9352951, 92.03639984, 91.15013885, 90.27630615, 89.43255615, 88.63536072, 87.8986969, 87.23329163, 86.63896942, 86.09989166, 85.60071564, 85.12715912, 84.66781616, 84.21458435, 83.76491547, 83.30849457, 82.86478424, 82.46378326, 82.11483002, 81.82078552, 81.58016968, 81.37005615, 81.18525696, 81.01979065, 80.86772156, 80.72546387, 80.59381104, 80.48122406, 80.40287018, 80.33755493, 80.30010986, 80.28891754, 80.28807831, 80.33933258, 80.44513702, 80.57379913, 80.71469879, 80.86810303, 81.03874207, 81.23072052, 81.44044495, 81.6555481, 81.901474, 82.20778656, 82.67211151, 83.1408844, 83.62628174, 84.0898056, 84.53721619, 84.99518585, 85.49137878, 86.03423309, 86.58794403, 87.16802979, 87.72124481, 88.51965332, 89.35781097, 90.16739655, 90.94639587, 91.75927734, 92.65882111, 93.6033783, 94.64561462, 95.68405914, 96.84765625, 97.98625183, 99.09587097, 100.2806396, 101.5832748, 103.0694122, 104.6378632, 106.2420197, 107.8503952, 109.5214844, 111.3000031, 113.1901169, 115.1414337, 117.1432114, 119.3193054, 121.7141724, 124.2319031, 126.4584961, 128.9876556, 131.6906891, 134.7160034, 137.8343048, 140.7224121, 143.7820892, 147.23909, 150.6812439, 154.0381317, 157.1765747, 160.5133972, 164.2957306, 168.1366272, 171.8247986, 175.4206543, 179.2828827, 182.0374146, 185.0783844, 188.2106171, 190.9611206, 193.3639221, 195.5132294, 197.58255, 199.4234161, 201.3786011, 203.1474609, 205.016037, 206.6236725, 208.1813812, 209.8205719, 211.2774353, 212.8192749, 214.4571686, 215.6442261, 216.4818726, 217.1617279, 217.7372131, 218.2023926, 218.4073486, 218.4278564, 217.6643677, 216.4666748, 215.1212463, 213.8158264, 212.5012817, 210.8331757, 208.8956146, 206.9006958, 204.9239197, 203.0310059, 201.2084045, 199.3484344, 197.3464355, 195.217453, 193.0449677, 190.9578705, 188.9528656, 187.0009918, 185.0068817, 182.9402924, 180.8367767, 178.7057037, 176.5325165, 174.445282, 172.4908905, 170.5744934, 168.5490723, 166.459259, 164.4333649, 162.5092621, 160.4579468, 158.491806, 156.6880035, 155.0045624, 153.295166, 151.4545441, 149.5910492, 147.7821808, 146.4078522, 144.8022614, 143.2662506, 141.8236542, 140.5029602, 139.225174, 137.8959045, 136.4792175, 135.0780334, 133.7389374, 132.7613525, 131.6787109, 130.6356354, 129.64328, 128.7269897, 127.8450623, 126.9439697, 126.0015182, 125.0760727, 124.1718826, 123.4704056, 122.8062363, 122.1408768, 121.501358, 120.9004822, 120.3225555, 119.7514191, 119.2011871, 118.7055511, 118.2950592, 117.9416199, 117.5793762, 117.2029953, 116.8356552, 116.4874039, 116.1693954, 115.9030762, 115.6935577, 115.5213852, 115.3659363, 115.2032318, 115.0445251, 114.9317932, 114.8815384, 114.8605118, 114.8510284, 114.8482819, 114.848465, 114.8521805, 114.8999329, 115.0081787, 115.1483612, 115.2983322, 115.511528, 115.7195816, 115.9448853, 116.2098999, 116.5264893, 116.8126144, 117.1579666, 117.5379944, 117.9048004, 118.3263168, 118.8006821, 119.2988586, 119.8310318, 120.3776703, 121.0383987, 121.6810684, 122.4489899, 123.207077, 124.071022, 124.9082108, 125.74823, 126.6865311, 127.4425888, 127.8552094, 128.1067963, 128.3630676, 128.6606598, 128.9203491, 129.2632141, 129.708252, 130.1131287, 130.5647278, 130.9923553, 131.5979462, 132.2623444, 132.8651428, 133.4651947, 134.1470337, 134.8683624, 135.683609, 136.6136017, 137.5203552, 138.3826599, 139.2931976, 140.2762299, 141.2150574, 142.3930054, 143.7060547, 145.0472565, 146.3404083, 147.6144257, 148.9406586, 150.3545532, 151.8509674, 153.4246826, 155.0567017, 156.7265472, 158.4546509, 160.2428131, 162.1348267, 164.1415863, 166.2302551, 168.4024506, 170.5583649, 172.6457672, 174.9460449, 177.2792664, 179.6472473, 182.1867218, 184.5882721, 187.3068848, 189.8807373, 192.5116577, 195.5551453, 198.5196381, 201.3429413, 203.941452, 206.8439484, 209.5599213, 212.4866943, 215.0750885, 217.929306, 220.6668701, 223.364151, 226.2115479, 228.9524536, 231.5583954, 234.405304, 237.0275879, 239.5091705, 242.0047455, 242.0177155
+    };
+
+
+    // populate the input primaries matrix
+    if( primariesIn == 0 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesIn == 1 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesIn == 2 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesIn == 3 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesIn == 4 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesIn == 5 )
+    {
+      XYZ_to_RGB_input.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_input.setArray(identity_matrix_data);
+    }
+
+    // populate the limiting primaries matrix
+    // RGBPrimsToXYZMatrix
+    float2 limitWhiteForMatrix;
+    float2 limitRedForMatrix;
+    float2 limitGreenForMatrix;
+    float2 limitBlueForMatrix;
+    if( whiteLimit == 0)
+    {
+      limitWhiteForMatrix = float2(0.32168f, 0.33767f);
+    }
+    else if( whiteLimit == 1)
+    {
+      limitWhiteForMatrix = float2(0.3127f, 0.3290f);
+    }
+    else
+    {
+      limitWhiteForMatrix = float2(0.333333f, 0.333333f);
+    }
+
+    if( primariesLimit == 0 )
+    {
+//       XYZ_to_RGB_limit.setArray(XYZ_to_AP0_ACES_matrix_data);
+      limitRedForMatrix = float2(0.7347f, 0.2653);
+      limitGreenForMatrix = float2(0.0f, 1.0f);
+      limitBlueForMatrix = float2(0.0001, -0.077);
+    }
+    else if( primariesLimit == 1 )
+    {
+//       XYZ_to_RGB_limit.setArray(XYZ_to_AP1_ACES_matrix_data);
+      limitRedForMatrix = float2(0.713f, 0.293f);
+      limitGreenForMatrix = float2(0.165f, 0.830f);
+      limitBlueForMatrix = float2(0.128f, 0.044f);
+    }
+    else if( primariesLimit == 2 )
+    {
+//       XYZ_to_RGB_limit.setArray(XYZ_to_Rec709_D65_matrix_data);
+      limitRedForMatrix = float2(0.64f, 0.33f);
+      limitGreenForMatrix = float2(0.3f, 0.6f);
+      limitBlueForMatrix = float2(0.15f, 0.06f);
+    }
+    else if( primariesLimit == 3 )
+    {
+//       XYZ_to_RGB_limit.setArray(XYZ_to_Rec2020_D65_matrix_data);
+      limitRedForMatrix = float2(0.708f, 0.292f);
+      limitGreenForMatrix = float2(0.170f, 0.797f);
+      limitBlueForMatrix = float2(0.131f, 0.046f);
+    }
+    else if( primariesLimit == 4 )
+    {
+//       XYZ_to_RGB_limit.setArray(XYZ_to_P3_D65_matrix_data);
+      limitRedForMatrix = float2(0.680f, 0.320f);
+      limitGreenForMatrix = float2(0.265f, 0.690f);
+      limitBlueForMatrix = float2(0.150f, 0.060f);
+    }
+    else
+    {
+//       XYZ_to_RGB_limit.setArray(identity_matrix_data);
+      limitRedForMatrix = float2(1.0f, 0.0f);
+      limitGreenForMatrix = float2(0.0f, 1.0f);
+      limitBlueForMatrix = float2(0.0f, 0.0f);
+    }
+
+    XYZ_to_RGB_limit = RGBPrimsToXYZMatrix(limitRedForMatrix, limitGreenForMatrix, limitBlueForMatrix, limitWhiteForMatrix, 1.0f, 1);
+
+    // populate the reach primaries matrix
+    if( primariesReach == 0 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesReach == 1 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesReach == 2 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesReach == 3 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesReach == 4 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesReach == 5 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+        XYZ_to_RGB_reach.setArray(identity_matrix_data);
+    }
+
+    // populate the output primaries matrix
+    if( primariesOut == 0 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( primariesOut == 1 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else if( primariesOut == 2 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_Rec709_D65_matrix_data);
+    }
+    else if( primariesOut == 3 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    else if( primariesOut == 4 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_P3_D65_matrix_data);
+    }
+    else if( primariesOut == 5 )
+    {
+      XYZ_to_RGB_output.setArray(XYZ_to_P3_DCI_matrix_data);
+    }
+    else
+    {
+      XYZ_to_RGB_output.setArray(identity_matrix_data);
+    }
+
+    RGB_to_XYZ_input  = XYZ_to_RGB_input.invert();
+    RGB_to_XYZ_limit  = XYZ_to_RGB_limit.invert();
+    RGB_to_XYZ_reach = XYZ_to_RGB_reach.invert();
+    RGB_to_XYZ_output = XYZ_to_RGB_output.invert();
+
+    XYZ_to_AP1.setArray(XYZ_to_AP1_ACES_matrix_data);
+    AP1_to_XYZ = XYZ_to_AP1.invert();
+
+    float3x3 XYZ_to_RGB_sRGB;
+    XYZ_to_RGB_sRGB.setArray(XYZ_to_Rec709_D65_matrix_data);
+    float3 white(1.0f, 1.0f, 1.0f);
+
+    d65White = vector_dot(XYZ_to_RGB_sRGB.invert(), white);
+    inWhite = vector_dot(RGB_to_XYZ_input, white);
+    outWhite = vector_dot(RGB_to_XYZ_output, white);
+    refWhite = vector_dot(RGB_to_XYZ_limit, white);
+    limitWhite = vector_dot(RGB_to_XYZ_limit, white);
+
+    boundaryRGB = peakLuminance / referenceLuminance;
+
+    if (catDataSelection == 0)
+    {
+        CAT_CAT16.setArray(CAT_CAT16_data);
+    }
+    else if (catDataSelection == 1)
+    {
+        CAT_CAT16.setArray(Modified_CAT16_data);
+    }
+    else if (catDataSelection == 2)
+    {
+        CAT_CAT16 = RGBPrimsToXYZMatrix(rxy,gxy,bxy,wxy,1.0f,1);
+    }
+
+    generate_panlrcm();
+
+    //
+    // solving the RGB cusp from JMh is very expensive
+    // instead we go the other way and start with a RGB cusp sweep
+    // which is easily calculated by converting via HSV (Hue, 1.0, 1.0)
+    // we then convert each cusp to JMh and add them to a table 
+    //
+
+    gamutCuspTableSize = 360;
+
+    // LocusLimitMTable = LocusLimitMTable_data;
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      LocusLimitMTable[i] = LocusLimitMTable_data[i];
+    }
+
+    // calculate the maximum expected J & M values for the given limit gamut
+    // these are used as limiting values for the gamut boundary searches
+    // limitJmax (asumed to match limitRGB white)
+    limitJmax = limit_RGB_to_JMh(float3(1.0f)).x;
+
+    // limitMmax (assumed to coincide with one of the RGBCMY corners of the limitRGB cube)
+    float3 gamutCornersTable[6];
+    gamutCornersTable[0] = limit_RGB_to_JMh(float3(1.0f, 0.0f, 0.0f));
+    gamutCornersTable[1] = limit_RGB_to_JMh(float3(1.0f, 1.0f, 0.0f));
+    gamutCornersTable[2] = limit_RGB_to_JMh(float3(0.0f, 1.0f, 0.0f));
+    gamutCornersTable[3] = limit_RGB_to_JMh(float3(0.0f, 1.0f, 1.0f));
+    gamutCornersTable[4] = limit_RGB_to_JMh(float3(0.0f, 0.0f, 1.0f));
+    gamutCornersTable[5] = limit_RGB_to_JMh(float3(1.0f, 0.0f, 1.0f));
+
+    limitMmax = 0.0f;
+    for( int i = 0; i < 6; ++i )
+    {
+        limitMmax = max(limitMmax, gamutCornersTable[i].y);
+    }
+    // add a little bit of margin to deal with some reddish pinks having a higher M than pure Red
+    limitMmax = limitMmax * 1.2f;
+
+  // Cusp table for chroma compression gamut
+  {
+    float3x3 tmpx = XYZ_to_RGB_limit;
+    float3x3 tmpr = RGB_to_XYZ_limit;
+    float3x3 tmpR = XYZ_to_RGB_reach;
+
+    if( ccReach == 0 ) // Chroma Compression Space (primaries defined in kernel params)
+    {
+        XYZ_to_RGB_limit = RGBPrimsToXYZMatrix(crxy, cgxy, cbxy, cwxy, 1.0f, 1);
+        XYZ_to_RGB_reach = XYZ_to_RGB_limit;
+    }
+    else if( ccReach == 1 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_AP0_ACES_matrix_data);
+    }
+    else if( ccReach == 2 )
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_AP1_ACES_matrix_data);
+    }
+    else
+    {
+        XYZ_to_RGB_reach.setArray(XYZ_to_Rec2020_D65_matrix_data);
+    }
+    RGB_to_XYZ_limit = XYZ_to_RGB_reach.invert();
+
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB);
+    }
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsorted[i].z <  gamutCuspTableUnsorted[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+    }
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      cgamutReachTable[i].z = i;
+      for( int M = 0; M < 1300; ++M )
+      {
+        float sampleM = float(M);
+        float3 newLimitRGB = JMh_to_reach_RGB(float3(limitJmax,sampleM,i));
+        if (newLimitRGB.x < 0.0f || newLimitRGB.y < 0.0f || newLimitRGB.z < 0.0f)
+        {
+          cgamutReachTable[i].y = sampleM;
+          break;
+        }
+      }
+    }
+
+    XYZ_to_RGB_limit = tmpx;
+    RGB_to_XYZ_limit = tmpr;
+
+    // With gamut mapper reach mode 7, use the chroma compression reach space with the
+    // gamut mapper.
+    if (primariesReach != 7)
+      XYZ_to_RGB_reach = tmpR;
+  }
+ 
+  // Cusp table for limiting gamut
+
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB);
+    }
+
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsorted[i].z <  gamutCuspTableUnsorted[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+    }
+
+    // Cusp table for limiting reach gamut, values at a J of 100.  Covers M values
+    // up to 10000 nits.
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+     gamutCuspTableReach[i].z = i;
+     for( int M = 0; M < 1300; ++M )
+      {
+        float sampleM = float(M);
+        float3 newLimitRGB = JMh_to_reach_RGB(float3(limitJmax,sampleM,i));
+        if (newLimitRGB.x < 0.0f || newLimitRGB.y < 0.0f || newLimitRGB.z < 0.0f)
+        {
+          gamutCuspTableReach[i].x = sampleM;
+          break;
+        }
+      }
+    }
+
+    // limitJmax (asumed to match limitRGB white)
+    limitJmax = limit_RGB_to_JMh(float3(1.0f)).x;
+
+    midJ = XYZ_to_JMh(refWhite * daniele_c_t * mmScaleFactor, refWhite, d65White, outputViewingConditions, L_A_out, Y_b_out, discountIlluminant_mid, HK_mode_mid).x;
+    
+    // Cusp table for AP1 gamut
+    {
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      float hNorm = float(i) / (gamutCuspTableSize);
+      float3 RGB = HSV_to_RGB(float3(hNorm, 1.0f, 1.0f));
+      gamutCuspTableUnsortedAP1[i] = AP1_RGB_to_JMh(RGB);
+    }
+
+    int minhIndex = 0;
+    for( int i = 1; i < gamutCuspTableSize; ++i )
+    {
+      if( gamutCuspTableUnsortedAP1[i].z <  gamutCuspTableUnsortedAP1[minhIndex].z)
+      {
+        minhIndex = i;
+      }
+    }
+
+    for( int i = 0; i < gamutCuspTableSize; ++i )
+    {
+      gamutCuspTableAP1[i] = gamutCuspTableUnsortedAP1[(minhIndex+i)%gamutCuspTableSize];
+    }
+  }

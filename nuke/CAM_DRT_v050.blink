@@ -1,0 +1,376 @@
+
+kernel DRT_CAM_Kernel : ImageComputationKernel<ePixelWise>
+{
+  Image<eRead, eAccessPoint, eEdgeClamped> src; // the input image
+//   Image<eRead, eAccessPoint, eEdgeClamped> extra; // the input image
+  Image<eWrite> dst; // the output image
+
+  param:
+    //
+    // Input Parameters
+    //
+
+    // Encoding of the Input Image
+    // 0: Linear
+    // 1: ACEScct
+    // 2: sRGB
+    // 3: BT.1886 (Gamma 2.4)
+    // 4: Gamma 2.6
+    // 5: ST2084
+    int encodingIn;
+
+    // Primaries of the Input Image
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    int primariesIn;
+
+    // Tonescale mode
+    // 0: Linear
+    // 1: Daniele Evo Curve
+    int toneScaleMode;
+
+    // Disable Degree of Adaptation Model for Zhai2018 CAT
+    // This is only effective if the limit primaries have a non-D65 white point
+    // since the input conversion is assumed to be fully adapted
+    // and the output conversion does not apply a CAT
+    bool discountIlluminant_in;
+    bool discountIlluminant_mid;
+    bool discountIlluminant_out;
+
+    // Toggles for Hellwig 2022 specific params
+    bool HK_mode_in;
+    bool HK_mode_mid;
+    bool HK_mode_out;
+    int compressMode;
+
+    // Reference Luminance in Cd/sqm
+    float referenceLuminance;
+
+    // Background Luminance in Cd/sqm
+    float backgroundLuminance;
+
+    // Viewing Conditions (for output)
+    // 0: Dark
+    // 1: Dim
+    // 2: Average
+    int viewingConditions;
+    int outputViewingConditions;
+
+    // Toggle  Tone Mapping
+    bool applyTonecurve;
+    
+    // Target Peak Luminance
+    float peakLuminance;
+
+    // Toggle chroma compression
+    bool applyChromaCompression;
+    bool applyInGamutExpansion;
+    bool applyInGamutCompression;
+    bool applydeNoise;
+    bool monochrome;
+
+    // Chroma compression params (limit, k1, k2)
+    float3 chromaCParams;
+    int cc_et;
+    int ccReach;
+    // xy coordintes for chroma compression gamut
+    float2 crxy;
+    float2 cgxy;
+    float2 cbxy;
+    float2 cwxy;
+
+    //
+    // Gamut Mapping Parameters
+    //
+
+    // Primaries of the Target Gamut
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65 # now just Rec.709
+    // 3: Rec.2020-D65 # now just Rec.2020
+    // 4: P3-D65 # now just P3
+    // 5: P3-DCI # no longer included
+    int primariesLimit;
+    
+    // White point of the limiting gamut
+    // effectively the "creative white"
+    // 0: ACES white
+    // 1: D65
+    // Could add others, or user white point
+    int whiteLimit;
+
+    // Primaries of the Gamut reached by the gamut compressor
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    // 6: Spectral Locus
+    // 7: Chroma Compression Space
+    int primariesReach;
+
+
+    // Toggle Gamut Compression
+    bool applyGamutCompression;
+
+    // Blend Between Compressing towards
+    // Target Gamut Cusp Luminance (0.0)
+    // and Mid Luminance (1.0)
+    float cuspMidBlend;
+
+    // Focus distance of the compression focal point from the achromatic axis
+    float focusDistance;
+
+    // Gamut Compression Fuction Parameters
+    // Threshold / min Limit / max Limit / Power
+    float4 compressionFuncParams;
+    bool sixAxisCompressionMode;
+    float4 compressionFuncParamsR;
+    float4 compressionFuncParamsY;
+    float4 compressionFuncParamsG;
+    float4 compressionFuncParamsC;
+    float4 compressionFuncParamsB;
+    float4 compressionFuncParamsM;
+    bool Reachcompressmode;
+    bool Locuscompressmode;
+    bool iterativeGamutCompressor;
+    int iterativeGamutCompressorIterations;
+
+    int boundryIntersectionMethod;
+    // 36 gamut parameters
+    float upperHullGamma[36];
+    bool disableUpperHullGamma;
+    float lowerHullGamma;
+
+    // How much the edges of the target RGB cube are smoothed when finding the gamut boundary 
+    // in order to reduce visible contours at the gamut cusps
+    float smoothCusps;
+
+    //
+    // Output Parameters
+    //
+
+    // Encoding of the Output Image
+    // 0: Linear
+    // 1: ACEScct
+    // 2: sRGB
+    // 3: BT.1886 (Gamma 2.4)
+    // 4: Gamma 2.6
+    // 5: ST2084
+    int encodingOut;
+
+    // Primaries of the Output Image
+    // 0: AP0-ACES
+    // 1: AP1-ACES
+    // 2: sRGB/Rec.709-D65
+    // 3: Rec.2020-D65
+    // 4: P3-D65
+    // 5: P3-DCI
+    int primariesOut;
+
+    // Clamp output values to 0.0 - 1.0
+    bool fitWhite;
+    bool clampOutput;
+    bool softclampOutput;
+    float clamp_thr;
+    float clamp_dist;
+
+    //
+    // Extra Parameters
+    //
+
+    // Toggle Inverse Transform
+    bool invert;
+    // Diagnostic path modes
+    int diagnosticMode;
+
+    // DanieleEvoCurve (ACES2 candidate) parameters
+    float mmScaleFactor;
+    float daniele_n; // peak white  
+    float daniele_n_r;    // Normalized white in nits (what 1.0 should be)
+    float daniele_g;      // surround / contrast
+    float daniele_c;      // scene-referred grey
+    float daniele_c_d;    // display-referred grey (in nits)
+    float daniele_w_g;    // grey change between different peak luminance
+    float daniele_t_1;     // shadow toe, flare/glare compensation - how ever you want to call it
+    float daniele_r_hit_min;  // Scene-referred value "hitting the roof" at 100 nits
+    float daniele_r_hit_max;  // Scene-referred value "hitting the roof" at 10,000 nits
+
+    // Hellwig 2022 CAM params
+    // the kernel parameters
+
+    // 0 = Stock CAT16
+    // 1 = Thomas's custom primaries
+    // 2 = live from params below
+    int catDataSelection; // original vs modified CAT16 matrix
+    // xy coordintes for custom CAT matrix
+    float2 rxy;
+    float2 gxy;
+    float2 bxy;
+    float2 wxy;
+    float ra;
+    float ba;
+ 
+    // Input vars
+    float3 XYZ_w;
+    float XYZ_w_scaler;
+    float L_A;
+    float Y_b;
+    float3 L_B;
+    float3 userSurround;
+    bool discount_illuminant;
+    // Output vars
+    float L_A_out;
+    float Y_b_out;
+
+
+  local:
+
+    // constants
+    float HALF_MINIMUM;
+    float HALF_MAXIMUM;
+
+    // Hellwig 2022 constants
+    float3x3 CAT_CAT16;
+    float3x3 panlrcm;
+
+    float daniele_r_hit;
+    float daniele_m_0;
+    float daniele_m_1;
+    float daniele_u;
+    float daniele_m;
+    float daniele_w_i;
+    float daniele_c_t;
+    float daniele_g_ip;
+    float daniele_g_ipp2;
+    float daniele_w_2;
+    float daniele_s_2;
+    float daniele_u_2;
+    float daniele_m_2;
+
+    // Chroma compression pre-calculated constants
+    float3 ccParams;  // Limit, strength, high-light attenuation
+    float sat;        // Saturation
+    float sat_thr;    // Threshold to start expanding saturation
+    float toe;        // Noise reduction
+
+    // ST2084 vars
+    float st2084_m_1;
+    float st2084_m_2;
+    float st2084_c_1;
+    float st2084_c_2;
+    float st2084_c_3;
+    float st2084_m_1_d;
+    float st2084_m_2_d;
+    float st2084_L_p;
+
+    // using the float3x3 type to store the array of 6 coefficients
+    // because Blink does not support generic array assignments
+
+    // matrix vars
+    float3x3 identity_matrix;
+
+    float3x3 XYZ_to_RGB_input;
+    float3x3 XYZ_to_RGB_limit;
+    float3x3 XYZ_to_RGB_reach;
+    float3x3 XYZ_to_RGB_output;
+
+    float3x3 RGB_to_XYZ_input;
+    float3x3 RGB_to_XYZ_limit;
+    float3x3 RGB_to_XYZ_reach;
+    float3x3 RGB_to_XYZ_output;
+
+    float3x3 AP1_to_XYZ;
+    float3x3 XYZ_to_AP1;
+
+    // white points
+    float3 d65White;
+    float3 inWhite;
+    float3 outWhite;
+    float3 refWhite;
+    float3 limitWhite;
+
+    // the maximum RGB value of the limiting gamut
+    float boundaryRGB;
+
+    // the maximum lightness value of the limiting gamut
+    float limitJmax;
+
+    // the maximum colorfulness value of the limiting gamut
+    float limitMmax;
+
+    // Middle gray J
+    float midJ;
+
+    // Hellwig model's gamma (1 / cz)
+    float model_gamma;
+
+    // the 1D LUT used for quickly findig the approximate limiting gamut cusp JMh coordinates
+    // the samples are spaced by HSV hue increments of the limiting RGB gamut
+    // so to find the correct entry for a given CAM hue (h) value 
+    // one must search the table entries for the matching entry.z component
+    int gamutCuspTableSize;
+
+    // the 'gamutCuspTableUnsorted' table is populated
+    // in increments of H of the limiting gamut HSV space starting at H=0.0
+    // since it is unlikely that HSV.H=0 and JMh.h=0 line up
+    // the entries are then wrap-around shifted
+    // so that the 'gamutCuspTable' starts with the lowest JMh.h value
+    // both tables need to be declared here since temporary array variables
+    // in the init() fuction seem to crash Nuke on some systems
+    float3 gamutCuspTableUnsorted[360];
+    float3 gamutCuspTable[360];
+    float3 gamutCuspTableUnsortedAP1[360];
+    float3 gamutCuspTableAP1[360];
+    float3 gamutCuspTableReach[360];
+    float3 cgamutCuspTable[360];
+    float3 cgamutReachTable[360];
+    float LocusLimitMTable[360];
+
+  void define()
+  {
+
+  }
+
+#include "/Users/nick/github/aces-ot-vwg-experiments/nuke/CAM_DRT_v050_funcs.rpp"
+
+  void init()
+  {
+#include "/Users/nick/github/aces-ot-vwg-experiments/nuke/CAM_DRT_v050_init.rpp"
+}
+
+
+  void process()
+  {
+    SampleType(src) source = src();
+    // SampleType(extra) sourceExtra = src();
+    float3 srcRGB(source.x, source.y, source.z);
+    // float3 extraRGB(sourceExtra.x, sourceExtra.y, sourceExtra.z);
+    float3 dstRGB;
+    float3 compressedJMh;
+    float3 tonemappedJMh;
+    float3 JMh;
+
+    if( invert )
+    {
+      compressedJMh = output_RGB_to_JMh(srcRGB);
+      tonemappedJMh = compressGamut(compressedJMh, 1);
+      JMh = inverseTonescale(tonemappedJMh);
+      dstRGB = JMh_to_input_RGB(JMh);
+    }
+    else
+    {
+      JMh = input_RGB_to_JMh(srcRGB);
+      tonemappedJMh = forwardTonescale(JMh);
+      compressedJMh = compressGamut(tonemappedJMh, 0);
+      dstRGB = JMh_to_output_RGB(compressedJMh);
+    }
+
+    dst() = float4(dstRGB.x, dstRGB.y, dstRGB.z, source.w ); 
+  }
+};
