@@ -3,11 +3,10 @@ version 15.0 v1
 push $cut_paste_input
 Group {
  name DRT_CAMv050
- label "Input: \[value encoding_in] / \[value primaries_in]\nLimit: \[value primaries_limit] / \[value ssts_luminance.2]nits\nOutput: \[value encoding_out] / \[value primaries_out]\n\[value toneScaleMode]\n\[file tail \[value BlinkScript1.kernelSourceFile]]"
+ label "Input: \[value encoding_in]  / \[value primaries_in]\nLimit: \[value primaries_limit] / \[value white_limit] / \[value peak_luminance]nits\nOutput: \[value encoding_out] / \[value primaries_out]\n\[value toneScaleMode]\n\[file tail \[value BlinkScript1.kernelSourceFile]]"
  note_font "Bitstream Vera Sans"
  selected true
- xpos -49
- ypos -15
+ xpos 262
  addUserKnob {20 User}
  addUserKnob {26 input_div l Input}
  addUserKnob {4 encoding_in l encoding t "the input log or gamma encoding" M {Linear ACEScct sRGB BT.1886 "Gamma 2.6" ST2084 "" ""}}
@@ -54,7 +53,7 @@ Group {
  addUserKnob {6 apply_gamut_compression l "apply out of gamut compression " t "toggle the gamut compression towards the limiting primaries" +STARTLINE}
  apply_gamut_compression true
  addUserKnob {6 iterativeGamutCompressor +STARTLINE}
- addUserKnob {4 primaries_limit l "limiting primaries" t "the limiting primaries of the gamut to which to compress to" M {AP0-ACES AP1-ACES sRGB/Rec.709 Rec.2020 P3 "" ""}}
+ addUserKnob {4 primaries_limit l "limiting primaries" t "the limiting primaries of the gamut to which to compress to" M {AP0-ACES AP1-ACES sRGB/Rec.709 Rec.2020 P3 "" "" ""}}
  primaries_limit sRGB/Rec.709
  addUserKnob {4 white_limit l "white point" t "The white point of the limiting gamut. Also used as the reference white for the output XYZ conversion, independent of the white point of the final encoding. This makes it effectively the creative white." -STARTLINE M {"ACES White" D65 "" "" ""}}
  white_limit D65
@@ -236,7 +235,6 @@ Group {
   rebuild_finalise ""
   name BlinkScript1
   note_font "Bitstream Vera Sans"
-  selected true
   xpos -908
   ypos -199
   addUserKnob {20 User}
