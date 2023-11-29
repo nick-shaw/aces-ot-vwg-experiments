@@ -355,15 +355,8 @@ kernel DRT_CAM_Kernel : ImageComputationKernel<ePixelWise>
     float3 tonemappedJMh;
     float3 JMh;
 
-    dstRGB = vector_dot(XYZ_to_RGB_output, srcRGB);
 
-    if( fitWhite)
-    {
-      float3 creativeWhiteXYZ = vector_dot(RGB_to_XYZ_limit, float3(1.0f, 1.0f, 1.0f));
-      float3 creativeWhiteRGB = vector_dot(XYZ_to_RGB_output, creativeWhiteXYZ);
-      dstRGB  *= 1.0f / max(creativeWhiteRGB.x, max(creativeWhiteRGB.y, creativeWhiteRGB.z));
-    }
-//    dstRGB = luminanceToEncoding3( encodingOut, dstRGB);
+    dstRGB = luminanceToEncoding3( encodingOut, srcRGB);
 
 
     dst() = float4(dstRGB.x, dstRGB.y, dstRGB.z, source.w ); 
