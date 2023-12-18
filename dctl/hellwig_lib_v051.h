@@ -300,16 +300,16 @@ __DEVICE__ inline float3 post_adaptation_non_linear_response_compression_forward
 {
     float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);
     float3 RGB_c;
-    RGB_c.x = (400.0f * _copysignf(1.0f, RGB.x) * F_L_RGB.x) / (27.13f + F_L_RGB.x) + 0.1f;
-    RGB_c.y = (400.0f * _copysignf(1.0f, RGB.y) * F_L_RGB.y) / (27.13f + F_L_RGB.y) + 0.1f;
-    RGB_c.z = (400.0f * _copysignf(1.0f, RGB.z) * F_L_RGB.z) / (27.13f + F_L_RGB.z) + 0.1f;
+    RGB_c.x = (400.0f * _copysignf(1.0f, RGB.x) * F_L_RGB.x) / (27.13f + F_L_RGB.x);
+    RGB_c.y = (400.0f * _copysignf(1.0f, RGB.y) * F_L_RGB.y) / (27.13f + F_L_RGB.y);
+    RGB_c.z = (400.0f * _copysignf(1.0f, RGB.z) * F_L_RGB.z) / (27.13f + F_L_RGB.z);
 
     return RGB_c;
 }
 
 __DEVICE__ inline float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB,float F_L)
 {
-    float3 RGB_p =  (float3sign(RGB - 0.1f) * 100.0f / F_L * float3spow((27.13f * float3abs(RGB - 0.1f)) / (400.0f - float3abs(RGB - 0.1f)), 1.0f / 0.42f) );
+    float3 RGB_p =  (float3sign(RGB) * 100.0f / F_L * float3spow((27.13f * float3abs(RGB)) / (400.0f - float3abs(RGB)), 1.0f / 0.42f) );
 
     return RGB_p;
 }
@@ -340,7 +340,7 @@ __DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
 
     // # Computing achromatic responses for the whitepoint.
-    float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;
+    float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB);
 
     // # Computing achromatic responses for the whitepoint.
     float R_aw = RGB_aw.x ;
@@ -432,7 +432,7 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     float3 F_L_RGB = float3spow(F_L * float3abs(RGB_wc) / 100.0f, 0.42f);
 
     // # Computing achromatic responses for the whitepoint.
-    float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB) + 0.1f;
+    float3 RGB_aw = (400.0f * float3sign(RGB_wc) * F_L_RGB) / (27.13f + F_L_RGB);
 
     // # Computing achromatic responses for the whitepoint.
     float R_aw = RGB_aw.x ;
@@ -472,7 +472,7 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     // Always compressMode
     RGB_a = compress(RGB_a);
 
-    float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a + 0.1f, F_L);
+    float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L);
 
     RGB_c = uncompress(RGB_c);
 
