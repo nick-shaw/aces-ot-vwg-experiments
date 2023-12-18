@@ -1,16 +1,3 @@
-// Matrices calculated from {4200, -1050} white point used in Blink v30
-// __CONSTANT__ float3x3 MATRIX_16 = {
-//     {-0.32119474f, -0.23319618f, -0.01719972f},
-//     {-0.0910343f ,  0.44249129f,  0.06447764f},
-//     { 0.02945856f, -0.10641155f,  0.40821152f}
-// };
-
-// __CONSTANT__ float3x3 MATRIX_INVERSE_16 = {
-//     {-2.70657868f, -1.40060996f,  0.10718864f},
-//     {-0.56387056f,  1.88543648f, -0.32156592f},
-//     { 0.04833176f,  0.59256575f,  2.35815011f}
-// };
-
 // Matrices calculated from Equal Energy white
 __CONSTANT__ float3x3 MATRIX_16 = {
     { 0.56193142f,  0.40797761f,  0.03009097f},
@@ -59,15 +46,6 @@ __CONSTANT__ float3 surround = {0.9f, 0.59f, 0.9f};
 
 __CONSTANT__ float3 d65White = {95.0455927052f, 100.0f, 108.9057750760f};
 
-// Chroma compress parameters
-// __CONSTANT__ float hoff = 0.835f;
-// __CONSTANT__ float hmul = 14.0f;
-// __CONSTANT__ float2 a = {-0.18f, -0.42f};
-// __CONSTANT__ float2 b = {0.135f, 0.13f};
-// __CONSTANT__ float2 c = {-0.08f, 0.0f};
-// __CONSTANT__ float chromaCompress = 1.0f;
-// __CONSTANT__ float2 chromaCompressParams = {2.1f, 0.85f};
-
 // __CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
 __CONSTANT__ float gamut_gamma = 0.879464f; // reciprocal of above
 __CONSTANT__ float lowerHullGamma = 1.18;
@@ -113,7 +91,7 @@ __DEVICE__ inline float3 vector_dot( float3x3 m, float3 v)
 }
 
   // clamp the components of a 3D vector between a min & max value
-  float3 clamp3(float3 v, float min, float max)
+__DEVICE__ inline float3 clamp3(float3 v, float min, float max)
   {
     v.x = _clampf(v.x, min, max);
     v.y = _clampf(v.y, min, max);
@@ -509,23 +487,6 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     return XYZ;
 }
 
-// convert JMh correlates to  RGB values in the output colorspace
-// __DEVICE__ inline float3 JMh_to_luminance_RGB(float3 JMh)
-// {
-//     float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( JMh, d65White);
-//     float3 luminanceRGB = vector_dot(XYZ_to_RGB_output, luminanceXYZ);
-// 
-//     return luminanceRGB;
-// }
-
-// convert RGB values in the output colorspace to the Hellwig J (lightness), M (colorfulness) and h (hue) correlates
-// __DEVICE__ inline float3 luminance_RGB_to_JMh(float3 luminanceRGB)
-// {
-//     float3 XYZ = vector_dot(RGB_to_XYZ_output, luminanceRGB);
-//     float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
-//     return JMh;
-// }
-
 __DEVICE__ inline float daniele_evo_fwd(float Y)
 {
     const float daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (_logf(daniele_n / daniele_n_r) / _logf(10000.0f / 100.0f));
@@ -571,52 +532,6 @@ __DEVICE__ inline float daniele_evo_rev(float Y)
     return f;
 }
 
-__DEVICE__ inline float ptanh(float x, float p, float t, float pt)
-{
-    return x <= 10.0f ? _powf(_tanhf(_powf(x, p) / t), 1.0f / pt) : 1.0f;
-}
-
-// convert linear RGB values with the limiting primaries to Hellwig J (lightness), M (colorfulness) and h (hue) correlates
-// __DEVICE__ inline float3 limit_RGB_to_JMh(float3 RGB)
-// {
-//     float3 luminanceRGB = RGB * boundaryRGB * referenceLuminance;
-//     float3 XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB);
-//     float3 JMh = XYZ_to_Hellwig2022_JMh(XYZ, d65White);
-//     return JMh;
-// }
-
-// Scaled power(p)
-__DEVICE__ inline float spowerp(float x, float l, float p)
-{
-    x = x / l;
-    x = x != 0.0f ? x / _powf(1.0f + spow(x, p), 1.0f / p) : 0.0f;
-    return x * l;
-}
-
-// __DEVICE__ inline float desat_curve(float x)
-//   {
-//     float m = daniele_n / daniele_n_r;
-//     float w = 1.18f * m;
-//     return (_fmaxf(0.0f, x) / (x + w)) * m;
-//   }
-
-//   // Hue-dependent curve used in chroma compression
-//   // https://www.desmos.com/calculator/lmbbu8so4c
-// __DEVICE__ inline float compr_hue_depend(float h)
-// {
-//     float hr = degrees_to_radians(h);
-//     float hr2 = hr * 2.0f;
-//     float hr3 = hr * 3.0f;
-// 
-//     return (a.x * _cosf(hr) +
-//             b.x * _cosf(hr2) +
-//             c.x * _cosf(hr3) +
-//             a.y * _sinf(hr) +
-//             b.y * _sinf(hr2) +
-//             c.y * _sinf(hr3) +
-//             hoff) * hmul;
-// }
-
 __DEVICE__ inline float2 cuspFromTable(float h)
 {
     float3 lo;
@@ -655,7 +570,7 @@ __DEVICE__ inline float2 cuspFromTable(float h)
     return float2(cuspJ,cuspM);
 }
 
-__DEVICE__ inline float cReachFromTable(float h)
+__DEVICE__ inline float reachFromTableAP1(float h)
 {
     int lo = (int)_floorf(mod(h, 360.0f));
     int hi = (int)_ceilf(mod(h, 360.0f));
@@ -713,7 +628,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     float snJ = _powf(max(0.0f, 1.0f - nJ), ccParams.z);
     float scaling = _powf(JMh.x / origJ, gamut_gamma);
     float Mcusp = cuspFromTable(JMh.z).y;
-    float limit = _powf(nJ, gamut_gamma) * cReachFromTable(JMh.z) / Mcusp;
+    float limit = _powf(nJ, gamut_gamma) * reachFromTableAP1(JMh.z) / Mcusp;
 //     float shd = compress_noise(nJ);
 
     if (!invert)
@@ -723,7 +638,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
 //       {
         M /= Mcusp;
 //         if (applyInGamutExpansion)
-          M = chroma_range(M, limit, snJ * sat, sqrt(nJ * nJ + sat_thr), 1);
+          M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 1);
         M = chroma_range(M, limit, nJ * ccParams.y, snJ, 0);
         M *= Mcusp;
 //         M *= shd;
@@ -737,7 +652,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
         M /= Mcusp;
         M = chroma_range(M, limit, nJ * ccParams.y, snJ, 1);
 //         if (applyInGamutExpansion)
-          M = chroma_range(M, limit, snJ * sat, sqrt(nJ * nJ + sat_thr), 0);
+          M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 0);
         M *= Mcusp;
 //       }
       M /= scaling;
@@ -749,18 +664,13 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
 __DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma)
 {
     float3 outputJMh;
-//     float3 monoJMh = make_float3(_fminf(inputJMh.x, daniele_r_hit_max), 0.0f, 0.0f);
     float3 monoJMh = make_float3(inputJMh.x, 0.0f, 0.0f);
-//     float3 linearJMh = JMh_to_luminance_RGB(monoJMh);
     float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoJMh, d65White);
-//     float linear = linearJMh.x / referenceLuminance;
     float linear = luminanceXYZ.y / referenceLuminance;
 
     // only Daniele Evo tone scale
-//     float luminanceTS = daniele_evo_fwd(linear) * mmScaleFactor;
     float luminanceTS = daniele_evo_fwd(linear);
 
-//     float3 tonemappedmonoJMh = luminance_RGB_to_JMh(make_float3(luminanceTS,luminanceTS,luminanceTS));
     float3 tonemappedmonoJMh = XYZ_to_Hellwig2022_JMh(d65White * luminanceTS, d65White);
     float3 tonemappedJMh = make_float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
 
@@ -782,23 +692,17 @@ __DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma)
     float3 untonemappedColourJMh = tonemappedJMh;
     
     float3 monoTonemappedJMh = make_float3(tonemappedJMh.x, 0.0f, 0.0f);
-//     float3 monoTonemappedRGB = JMh_to_luminance_RGB(monoTonemappedJMh);
-//     float3 newMonoTonemappedJMh = luminance_RGB_to_JMh(monoTonemappedRGB);
-//     float luminance = monoTonemappedRGB.x;
+
     float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoTonemappedJMh, d65White);
     float luminance = luminanceXYZ.y;
 
     float linear = daniele_evo_rev(luminance / mmScaleFactor);
 
-//     linear = linear * referenceLuminance;
-  
-//     float3 untonemappedMonoJMh = luminance_RGB_to_JMh(make_float3(linear,linear,linear));
     float3 untonemappedMonoJMh = XYZ_to_Hellwig2022_JMh(d65White * linear, d65White);
     untonemappedColourJMh = make_float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
 
     if (compressChroma)
     {
-//       untonemappedColourJMh.y = chromaCompression(tonemappedJMh, linear/referenceLuminance, 1);
       untonemappedColourJMh.y = chromaCompression(tonemappedJMh, untonemappedColourJMh.x, linear, 1);
     }
 
@@ -810,32 +714,6 @@ __DEVICE__ inline float smin(float a, float b, float s)
 {
     float h = _fmaxf(s - _fabs(a - b), 0.0f) / s;
     return _fminf(a, b) - h * h * h * s * (1.0f / 6.0f);
-}
-
-// Approximation of the gamut intersection to a curved and smoothened triangle
-// along the projection line 'from -> to'. 
-__DEVICE__ inline float2 find_gamut_intersection(float2 cusp, float2 from, float2 to, float smoothing)
-{
-    float t0, t1;
-
-    // Scale the cusp outward when smoothing to avoid reducing the gamut.  Reduce
-    // smoothing for high cusps because smin() will bias it too much for the longer line.
-    float s = _fmaxf(lerp(smoothing, smoothing * 0.01f, cusp.x / limitJmax), 0.0001f);
-    cusp.y += 15.0f * s;
-    cusp.x += 5.0f * s;
-
-    // Line below the cusp is curved with gamut_gamma
-    float toJ_gamma = cusp.x * spow(to.x / cusp.x, gamut_gamma);
-    float fromJ_gamma = cusp.x * spow(from.x / cusp.x, gamut_gamma);
-    t0 = cusp.y * toJ_gamma / (from.y * cusp.x + cusp.y * (toJ_gamma - fromJ_gamma));
-
-    // Line above the cusp
-    t1 = cusp.y * (to.x - limitJmax) / (from.y * (cusp.x - limitJmax) + cusp.y * (to.x - from.x));
-
-    // Smooth minimum to smooth the cusp
-    t1 = smin(_fabs(t0), _fabs(t1), s);
-
-    return make_float2(to.x * (1.0f - t1) + t1 * from.x, t1 * from.y);
 }
 
 __DEVICE__ inline float hueDependantUpperHullGamma(float h)
@@ -882,7 +760,7 @@ __DEVICE__ inline float solve_J_intersect(float2 JM, float focusJ, float maxJ, f
         c = maxJ * JM.y / slope_gain + JM.x;
     }
 
-    float root = sqrt(b*b - 4.0f * a * c);
+    float root = _sqrtf(b*b - 4.0f * a * c);
 
     if (JM.x < focusJ)
     {
@@ -922,9 +800,9 @@ __DEVICE__ inline float3 findGamutBoundaryIntersection(float3 JMh_s, float2 JM_c
 
     } 
 
-    float M_boundary_lower = J_intersect_cusp * pow(J_intersect_source / J_intersect_cusp, 1 / gamma_bottom) / (JM_cusp.x / JM_cusp.y - slope);
+    float M_boundary_lower = J_intersect_cusp * _powf(J_intersect_source / J_intersect_cusp, 1 / gamma_bottom) / (JM_cusp.x / JM_cusp.y - slope);
 
-    float M_boundary_upper = JM_cusp.y * (J_max - J_intersect_cusp) * pow((J_max - J_intersect_source) / (J_max - J_intersect_cusp), 1.0f / gamma_top) / (slope * JM_cusp.y + J_max - JM_cusp.x);
+    float M_boundary_upper = JM_cusp.y * (J_max - J_intersect_cusp) * _powf((J_max - J_intersect_source) / (J_max - J_intersect_cusp), 1.0f / gamma_top) / (slope * JM_cusp.y + J_max - JM_cusp.x);
 
     float M_boundary = JM_cusp.y * smin(M_boundary_lower / JM_cusp.y, M_boundary_upper / JM_cusp.y, s);
 
@@ -944,53 +822,28 @@ __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
     // Calculate where the out of gamut color is projected to
     float focusJ = lerp(JMcusp.x, midJ, cuspMidBlend);
 
-    // https://www.desmos.com/calculator/9u0wiiz9ys
-    float Mratio = project_from.y / (focusDistance * JMcusp.y);
-    float a = _fmaxf(0.001f, Mratio / focusJ);
-    float b0 = 1.0f - Mratio;
-    float b1 = -(1.0f + Mratio + (a * limitJmax));
-    float b = project_from.x < focusJ ? b0 : b1;
-    float c0 = -project_from.x;
-    float c1 = project_from.x + limitJmax * Mratio;
-    float c = project_from.x < focusJ ? c0 : c1;
-
-    float J0 = _sqrtf(b * b - 4.0f * a * c);
-    float J1 = (-b - J0) / (2.0f * a);
-          J0 = (-b + J0) / (2.0f * a);
-    float projectJ = project_from.x < focusJ ? J0 : J1;
-
     float slope_gain = limitJmax * focusDistance;
 
     // Find gamut intersection
-    float2 project_to = make_float2(projectJ, 0.0f);
-    float2 JMboundary = float2(1.0f,1.0f);
-    
-	float3 nickBoundryReturn =  findGamutBoundaryIntersection(JMh, JMcusp, focusJ, limitJmax, slope_gain, smoothCusps);
-	JMboundary = float2(nickBoundryReturn.x,nickBoundryReturn.y);
-	project_to = float2(nickBoundryReturn.z,0.0f);
-	projectJ = nickBoundryReturn.z;
+    float3 nickBoundryReturn =  findGamutBoundaryIntersection(JMh, JMcusp, focusJ, limitJmax, slope_gain, smoothCusps);
+    float2 JMboundary = float2(nickBoundryReturn.x,nickBoundryReturn.y);
+    float2 project_to = float2(nickBoundryReturn.z,0.0f);
+    float projectJ = nickBoundryReturn.z;
 
-    int lo = (int)_floorf(mod(JMh.z, 360.0f));
-    int hi = (int)_ceilf(mod(JMh.z, 360.0f));
-    if (hi == 360)
-    {
-        hi = 0;
-    }
-    float t = _fmod(JMh.z, 1.0f);
-    float reachMaxM;
-    reachMaxM = lerp(gamutCuspTableAP1[lo], gamutCuspTableAP1[hi], t);
+    // Calculate AP1 Reach boundary
+    float reachMaxM = reachFromTableAP1(JMh.z);
 
     float slope;
     if (projectJ < focusJ)
     {
-  		slope = projectJ * (projectJ - focusJ) / (focusJ * slope_gain);
+        slope = projectJ * (projectJ - focusJ) / (focusJ * slope_gain);
     }
     else
     {
-		slope = (limitJmax - projectJ) * (projectJ - focusJ) / (focusJ * slope_gain);
+        slope = (limitJmax - projectJ) * (projectJ - focusJ) / (focusJ * slope_gain);
     } 
     
-    float boundaryNick = limitJmax * pow(projectJ/limitJmax, gamut_gamma) * reachMaxM / (limitJmax - slope * reachMaxM);
+    float boundaryNick = limitJmax * _powf(projectJ/limitJmax, gamut_gamma) * reachMaxM / (limitJmax - slope * reachMaxM);
     
     float difference = max(1.0001f, boundaryNick / JMboundary.y);
     float threshold = max(compressionFuncParams.x, 1.0f / difference);

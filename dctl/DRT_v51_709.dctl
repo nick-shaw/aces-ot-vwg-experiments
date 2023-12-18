@@ -32,10 +32,6 @@ __CONSTANT__ float3x3 RGB_to_XYZ_limit = {
     {  0.0193308187f,  0.1191947798f,  0.9505321522f}
 };
 
-// __CONSTANT__ float3 shadowCompressParams = {0.54f, 0.13f, 0.545f}; // 0.13 = max(0.121, 0.132 - 0.00002 * parent.ssts_luminance.z)
-// __CONSTANT__ float sat = 1.2f;
-// __CONSTANT__ float shadow_boost = 1.195f; // max(1.08, 1.21 - 0.00015 * parent.ssts_luminance.z)
-
 __CONSTANT__ float limitJmax = 100.0f;
 
 __CONSTANT__ float daniele_n = 100.0f; // peak white  
@@ -880,10 +876,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         {
             XYZ = Hellwig2022_JMh_to_XYZ(JMh , d65White) / referenceLuminance;
             out = vector_dot(XYZ_to_RGB_output, XYZ);
+
             // Soft clamp by compressing negative display linear values
-	  	    float3 compr = float3(clamp_thr, clamp_dist, 1.2f);
-  		    out = compress_aces(out, compr, compr, compr, 0);
+            float3 compr = float3(clamp_thr, clamp_dist, 1.2f);
+            out = compress_aces(out, compr, compr, compr, 0);
             out = float3spow(out, 1.0f / 2.4f);
+
+            // hard clip 0-1
             out = clamp3(out, 0.0f, 1.0f);
         }
         else
