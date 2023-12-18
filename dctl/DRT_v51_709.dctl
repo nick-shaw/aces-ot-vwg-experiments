@@ -1,8 +1,10 @@
 DEFINE_UI_PARAMS(toneCurve, Tone Curve, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(asPQ, Encode as BT.2100 PQ, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
+
 
 typedef struct
 {
@@ -30,6 +32,12 @@ __CONSTANT__ float3x3 RGB_to_XYZ_limit = {
     {  0.4123907993f,  0.3575843394f,  0.1804807884f},
     {  0.2126390059f,  0.7151686788f,  0.0721923154f},
     {  0.0193308187f,  0.1191947798f,  0.9505321522f}
+};
+
+__CONSTANT__ float3x3 BT709_to_BT2020 = {
+    {  0.6274038959, 0.3292830384, 0.0433130657},
+    {  0.0690972894, 0.9195403951, 0.0113623156},
+    {  0.0163914389, 0.0880133079, 0.8955952532}
 };
 
 __CONSTANT__ float limitJmax = 100.0f;
@@ -880,10 +888,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             // Soft clamp by compressing negative display linear values
             float3 compr = float3(clamp_thr, clamp_dist, 1.2f);
             out = compress_aces(out, compr, compr, compr, 0);
-            out = float3spow(out, 1.0f / 2.4f);
 
             // hard clip 0-1
             out = clamp3(out, 0.0f, 1.0f);
+            
+            if (asPQ)
+            {
+                out = 100.0f * vector_dot(BT709_to_BT2020, out);
+                out.x = linear_to_ST2084(out.x);
+                out.y = linear_to_ST2084(out.y);
+                out.z = linear_to_ST2084(out.z);
+            }
+            else
+            {
+                out = float3spow(out, 1.0f / 2.4f);
+            }
         }
         else
         {

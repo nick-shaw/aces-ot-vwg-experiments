@@ -58,7 +58,6 @@ __CONSTANT__ float focusDistance = 3.5f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.1f, 1.05f, 1.2f};
 
 // DanieleEvoCurve (ACES2 candidate) parameters
-__CONSTANT__ float mmScaleFactor = 100.0f; 
 __CONSTANT__ float daniele_n_r = 100.0f;    // Normalized white in nits (what 1.0 should be)
 __CONSTANT__ float daniele_g = 1.15f;      // surround / contrast
 __CONSTANT__ float daniele_c = 0.18f;      // scene-referred grey
@@ -383,7 +382,7 @@ __DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float G_a2 = RGB_a.y ;
     float B_a2 = RGB_a.z ;
     // A = 2 * R_a + G_a + 0.05 * B_a - 0.305
-    float A = 2.0f * R_a2 + G_a2 + 0.05f * B_a2 - 0.305f;
+    float A = 2.0f * R_a2 + G_a2 + 0.05f * B_a2;
 
     // # Step 7
     // # Computing the correlate of *Lightness* :math:`J`.
@@ -439,7 +438,7 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     float R_aw = RGB_aw.x ;
     float G_aw = RGB_aw.y ;
     float B_aw = RGB_aw.z ;
-    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw - 0.305f;
+    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw;
 
     float hr = degrees_to_radians(h);
 
@@ -629,32 +628,21 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     float scaling = _powf(JMh.x / origJ, gamut_gamma);
     float Mcusp = cuspFromTable(JMh.z).y;
     float limit = _powf(nJ, gamut_gamma) * reachFromTableAP1(JMh.z) / Mcusp;
-//     float shd = compress_noise(nJ);
 
     if (!invert)
     {
       M *= scaling;
-//       if (applyInGamutCompression)
-//       {
         M /= Mcusp;
-//         if (applyInGamutExpansion)
           M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 1);
         M = chroma_range(M, limit, nJ * ccParams.y, snJ, 0);
         M *= Mcusp;
-//         M *= shd;
-//       }
     }
     else
     {
-//       if (applyInGamutCompression)
-//       {
-//         M /= shd;
         M /= Mcusp;
         M = chroma_range(M, limit, nJ * ccParams.y, snJ, 1);
-//         if (applyInGamutExpansion)
           M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 0);
         M *= Mcusp;
-//       }
       M /= scaling;
     }
 
@@ -696,7 +684,7 @@ __DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma)
     float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoTonemappedJMh, d65White);
     float luminance = luminanceXYZ.y;
 
-    float linear = daniele_evo_rev(luminance / mmScaleFactor);
+    float linear = daniele_evo_rev(luminance / referenceLuminance);
 
     float3 untonemappedMonoJMh = XYZ_to_Hellwig2022_JMh(d65White * linear, d65White);
     untonemappedColourJMh = make_float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
@@ -833,6 +821,7 @@ __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
     // Calculate AP1 Reach boundary
     float reachMaxM = reachFromTableAP1(JMh.z);
 
+    // slope is recalculated here because it was a local variable in findGamutBoundaryIntersection
     float slope;
     if (projectJ < focusJ)
     {
