@@ -572,7 +572,7 @@ __DEVICE__ inline float2 cuspFromTable(float h)
     float cuspJ = lerp(lo.x, hi.x, t);
     float cuspM = lerp(lo.y, hi.y, t);
 
-    return float2(cuspJ,cuspM);
+    return make_float2(cuspJ,cuspM);
 }
 
 __DEVICE__ inline float reachFromTableAP1(float h)
@@ -771,7 +771,7 @@ __DEVICE__ inline float solve_J_intersect(float2 JM, float focusJ, float maxJ, f
 // reimplemented from https://github.com/nick-shaw/aces-ot-vwg-experiments/blob/master/python/intersection_approx.py
 __DEVICE__ inline float3 findGamutBoundaryIntersection(float3 JMh_s, float2 JM_cusp, float J_focus, float J_max, float slope_gain, float smoothness)
   {
-    float2 JM_source = float2(JMh_s.x, JMh_s.y);
+    float2 JM_source = make_float2(JMh_s.x, JMh_s.y);
     float gamma_top = hueDependantUpperHullGamma(JMh_s.z);
     float gamma_bottom = lowerHullGamma;
 
@@ -802,7 +802,7 @@ __DEVICE__ inline float3 findGamutBoundaryIntersection(float3 JMh_s, float2 JM_c
 
     float J_boundary = J_intersect_source + slope * M_boundary;
 
-    return float3(J_boundary, M_boundary,J_intersect_source);  
+    return make_float3(J_boundary, M_boundary,J_intersect_source);  
 }
 
 __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
@@ -820,8 +820,8 @@ __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
 
     // Find gamut intersection
     float3 nickBoundryReturn =  findGamutBoundaryIntersection(JMh, JMcusp, focusJ, limitJmax, slope_gain, smoothCusps);
-    float2 JMboundary = float2(nickBoundryReturn.x,nickBoundryReturn.y);
-    float2 project_to = float2(nickBoundryReturn.z,0.0f);
+    float2 JMboundary = make_float2(nickBoundryReturn.x,nickBoundryReturn.y);
+    float2 project_to = make_float2(nickBoundryReturn.z,0.0f);
     float projectJ = nickBoundryReturn.z;
 
     // Calculate AP1 Reach boundary
