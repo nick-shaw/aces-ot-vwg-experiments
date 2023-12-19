@@ -558,11 +558,11 @@ __DEVICE__ inline float2 cuspFromTable(float h)
     {
       for(int i = 1; i < 360; ++i)
       {
-        if( h <= gamutCuspTable[i].z )
+        if( h <= gamutCuspTable[i].z && h > gamutCuspTable[i-1].z )
         {
           lo = gamutCuspTable[i-1];
           hi = gamutCuspTable[i];
-          break;
+//           break;
         }
       }
     }
