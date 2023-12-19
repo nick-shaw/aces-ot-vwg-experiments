@@ -47,7 +47,7 @@ __CONSTANT__ float3 surround = {0.9f, 0.59f, 0.9f};
 __CONSTANT__ float3 d65White = {95.0455927052f, 100.0f, 108.9057750760f};
 
 // __CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
-__CONSTANT__ float gamut_gamma = 0.879464f; // reciprocal of above
+__CONSTANT__ float model_gamma = 0.879464f; // reciprocal of above
 __CONSTANT__ float lowerHullGamma = 1.18;
 
 // Gamut Compression parameters
@@ -625,15 +625,15 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
 
     float nJ = JMh.x / limitJmax;
     float snJ = _powf(max(0.0f, 1.0f - nJ), ccParams.z);
-    float scaling = _powf(JMh.x / origJ, gamut_gamma);
+    float scaling = _powf(JMh.x / origJ, model_gamma);
     float Mcusp = cuspFromTable(JMh.z).y;
-    float limit = _powf(nJ, gamut_gamma) * reachFromTableAP1(JMh.z) / Mcusp;
+    float limit = _powf(nJ, model_gamma) * reachFromTableAP1(JMh.z) / Mcusp;
 
     if (!invert)
     {
-      M *= scaling;
+        M *= scaling;
         M /= Mcusp;
-          M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 1);
+        M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 1);
         M = chroma_range(M, limit, nJ * ccParams.y, snJ, 0);
         M *= Mcusp;
     }
@@ -641,9 +641,9 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     {
         M /= Mcusp;
         M = chroma_range(M, limit, nJ * ccParams.y, snJ, 1);
-          M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 0);
+        M = chroma_range(M, limit, snJ * sat, _sqrtf(nJ * nJ + sat_thr), 0);
         M *= Mcusp;
-      M /= scaling;
+        M /= scaling;
     }
 
     return M;
@@ -832,7 +832,7 @@ __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
         slope = (limitJmax - projectJ) * (projectJ - focusJ) / (focusJ * slope_gain);
     } 
     
-    float boundaryNick = limitJmax * _powf(projectJ/limitJmax, gamut_gamma) * reachMaxM / (limitJmax - slope * reachMaxM);
+    float boundaryNick = limitJmax * _powf(projectJ/limitJmax, model_gamma) * reachMaxM / (limitJmax - slope * reachMaxM);
     
     float difference = max(1.0001f, boundaryNick / JMboundary.y);
     float threshold = max(compressionFuncParams.x, 1.0f / difference);
