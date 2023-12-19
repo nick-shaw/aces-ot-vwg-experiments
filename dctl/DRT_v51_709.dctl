@@ -886,7 +886,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             out = vector_dot(XYZ_to_RGB_output, XYZ);
 
             // Soft clamp by compressing negative display linear values
-            float3 compr = maked_float3(clamp_thr, clamp_dist, 1.2f);
+            float3 compr = make_float3(clamp_thr, clamp_dist, 1.2f);
             out = compress_aces(out, compr, compr, compr, 0);
 
             // hard clip 0-1
