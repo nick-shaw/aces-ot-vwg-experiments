@@ -42,6 +42,7 @@ __CONSTANT__ float3x3 P3D65_to_BT2020 = {
 };
 
 __CONSTANT__ float limitJmax = 283.25f;
+__CONSTANT__ float midJ = 40.8169f; // ~15 nits in Hellwig J
 
 __CONSTANT__ float daniele_n = 1000.0f; // peak white  
 
@@ -1264,18 +1265,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             out = compress_aces(out, compr, compr, compr, 0);
 
             // hard clip 0-peak
-            out = clamp3(out, 0.0f, daniele_n);
+            out = clamp3(referenceLuminance * out, 0.0f, daniele_n);
             
             if (asPQ)
             {
-                out = 100.0f * vector_dot(P3D65_to_BT2020, out);
+                out = vector_dot(P3D65_to_BT2020, out);
                 out.x = linear_to_ST2084(out.x);
                 out.y = linear_to_ST2084(out.y);
                 out.z = linear_to_ST2084(out.z);
             }
             else
             {
-                out = float3spow(out, 1.0f / 2.4f);
+                out = float3spow(out / referenceLuminance, 1.0f / 2.4f);
             }
         }
         else

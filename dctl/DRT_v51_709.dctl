@@ -42,6 +42,7 @@ __CONSTANT__ float3x3 BT709_to_BT2020 = {
 };
 
 __CONSTANT__ float limitJmax = 100.0f;
+__CONSTANT__ float midJ = 34.0965f; // ~10 nits in Hellwig J
 
 __CONSTANT__ float daniele_n = 100.0f; // peak white  
 
@@ -1268,7 +1269,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             
             if (asPQ)
             {
-                out = 100.0f * vector_dot(BT709_to_BT2020, out);
+                out = referenceLuminance * vector_dot(BT709_to_BT2020, out);
                 out.x = linear_to_ST2084(out.x);
                 out.y = linear_to_ST2084(out.y);
                 out.z = linear_to_ST2084(out.z);

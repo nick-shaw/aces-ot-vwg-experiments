@@ -53,7 +53,6 @@ __CONSTANT__ float lowerHullGamma = 1.18;
 // Gamut Compression parameters
 __CONSTANT__ float cuspMidBlend = 0.5f;
 __CONSTANT__ float smoothCusps = 0.0f;
-__CONSTANT__ float midJ = 34.0965f; // ~10 nits in Hellwig J
 __CONSTANT__ float focusDistance = 3.5f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.1f, 1.05f, 1.2f};
 
