@@ -4,6 +4,7 @@ DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(d60Sim, D60 Sim, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(asPQ, Encode as PQ P3-D65 48nits, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(simpleToneMap, Simple Tone Map Test, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
 
 
@@ -1212,7 +1213,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         JMh = XYZ_to_Hellwig2022_JMh(XYZ, inWhite);
         if (toneCurve)
         {
-            JMh = forwardTonescale(JMh, compressChroma);
+            JMh = forwardTonescale(JMh, compressChroma, simpleToneMap);
         }
         if (gamutCompress)
         {
@@ -1228,7 +1229,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         }
         if (toneCurve)
         {
-            JMh = inverseTonescale(JMh, compressChroma);
+            JMh = inverseTonescale(JMh, compressChroma, simpleToneMap);
         }
     }
     if (JMhOut)

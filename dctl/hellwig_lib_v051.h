@@ -485,6 +485,38 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     return XYZ;
 }
 
+__DEVICE__ inline float Y_to_J( float Y )
+  {
+      // # Viewing conditions dependent parameters (could be pre-calculated)
+      float k = 1.0f / (5.0f * L_A + 1.0f);
+      float k4 = k*k*k*k;
+      float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * _powf((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
+      float n = Y_b / 100.0f;
+      float z = 1.48f + _sqrtf(n);
+      float F_L_W = _powf(F_L, 0.42f);
+      float A_w = (400.0f * F_L_W) / (27.13f + F_L_W);
+
+      float F_L_Y = _powf(F_L * _fabs(Y) / 100.0f, 0.42f);
+
+      return _copysignf(100.0f * _powf(((400.0f * F_L_Y) / (27.13f + F_L_Y)) / A_w, surround.y * z), Y);
+  }
+
+__DEVICE__ inline float J_to_Y( float J )
+  {
+      // # Viewing conditions dependent parameters (could be pre-calculated)
+      float k = 1.0f / (5.0f * L_A + 1.0f);
+      float k4 = k*k*k*k;
+      float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * _powf((1.0f - k4), 2.0f) * spow(5.0f * L_A, 1.0f / 3.0f) ;
+      float n = Y_b / 100.0f;
+      float z = 1.48f + _sqrtf(n);
+      float F_L_W = _powf(F_L, 0.42f);
+      float A_w = (400.0f * F_L_W) / (27.13f + F_L_W);
+
+      float A = _copysignf(A_w * _powf(_fabs(J) / 100.0f, 1.0f / (surround.y * z)), J);
+
+      return _copysignf(100.0f / F_L * _powf((27.13f * _fabs(A)) / (400.0f - _fabs(A)), 1.0f / 0.42f), A);
+  }
+
 __DEVICE__ inline float daniele_evo_fwd(float Y)
 {
     const float daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (_logf(daniele_n / daniele_n_r) / _logf(10000.0f / 100.0f));
@@ -686,20 +718,37 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     return M;
   }
 
-__DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma)
+__DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma, int simpleToneMap)
 {
     float3 outputJMh;
-    float3 monoJMh = make_float3(inputJMh.x, 0.0f, 0.0f);
-    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoJMh, d65White);
-    float linear = luminanceXYZ.y / referenceLuminance;
+    float linear;
+    if (simpleToneMap)
+    {
+        linear = J_to_Y(inputJMh.x) / referenceLuminance;
+    }
+    else
+    {
+        float3 monoJMh = make_float3(inputJMh.x, 0.0f, 0.0f);
+        float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoJMh, d65White);
+        linear = luminanceXYZ.y / referenceLuminance;
+    }
 
     // only Daniele Evo tone scale
     float luminanceTS = daniele_evo_fwd(linear);
 
-    float3 tonemappedmonoJMh = XYZ_to_Hellwig2022_JMh(d65White * luminanceTS, d65White);
-    float3 tonemappedJMh = make_float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
+    if (simpleToneMap)
+    {
+        float tonemappedJ = Y_to_J(luminanceTS * referenceLuminance);
 
-    outputJMh = tonemappedJMh;
+        outputJMh = make_float3(tonemappedJ, inputJMh.y, inputJMh.z);
+    }
+    else
+    {
+        float3 tonemappedmonoJMh = XYZ_to_Hellwig2022_JMh(d65White * luminanceTS, d65White);
+        float3 tonemappedJMh = make_float3(tonemappedmonoJMh.x, inputJMh.y, inputJMh.z);
+
+        outputJMh = tonemappedJMh;
+    }
 
     // Chroma Compression)
     if (compressChroma)
@@ -710,21 +759,36 @@ __DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma)
     return outputJMh;
 }
 
-__DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma)
+__DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma, int simpleToneMap)
   {
+    float luminance;
+    float3 untonemappedColourJMh = JMh;
     float3 tonemappedJMh = JMh;
-
-    float3 untonemappedColourJMh = tonemappedJMh;
     
-    float3 monoTonemappedJMh = make_float3(tonemappedJMh.x, 0.0f, 0.0f);
+    if (simpleToneMap)
+    {
+      luminance = J_to_Y(JMh.x);
+    }
+    else
+    {
+      float3 monoTonemappedJMh = make_float3(tonemappedJMh.x, 0.0f, 0.0f);
 
-    float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoTonemappedJMh, d65White);
-    float luminance = luminanceXYZ.y;
+      float3 luminanceXYZ = Hellwig2022_JMh_to_XYZ( monoTonemappedJMh, d65White);
+      luminance = luminanceXYZ.y;
+    }
 
     float linear = daniele_evo_rev(luminance / referenceLuminance);
 
-    float3 untonemappedMonoJMh = XYZ_to_Hellwig2022_JMh(d65White * linear, d65White);
-    untonemappedColourJMh = make_float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
+    if (simpleToneMap)
+    {
+      float untonemappedJ = Y_to_J(linear * referenceLuminance);
+      untonemappedColourJMh = make_float3(untonemappedJ,tonemappedJMh.y,tonemappedJMh.z);
+    }
+    else
+    {
+      float3 untonemappedMonoJMh = XYZ_to_Hellwig2022_JMh(d65White * linear, d65White);
+      untonemappedColourJMh = make_float3(untonemappedMonoJMh.x,tonemappedJMh.y,tonemappedJMh.z); 
+    }
 
     if (compressChroma)
     {
