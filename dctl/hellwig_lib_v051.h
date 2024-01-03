@@ -808,7 +808,7 @@ __DEVICE__ inline float smin(float a, float b, float s)
 __DEVICE__ inline float hueDependantUpperHullGamma(float h)
 {
     // take float h, divide by 10, and lerp between index values from upperHullGamma_0
-    int index = int(h/10.0f);
+    int index = (int)_floorf(h/10.0f);
     float t = (h - index*10.0f) / 10.0f;
     float gamma = 1.0f;
     if (index < 35)
