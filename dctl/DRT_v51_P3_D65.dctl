@@ -29,13 +29,11 @@ __CONSTANT__ float3x3 RGB_to_XYZ_output = {
     { -0.0000000000f,  0.0451133819f,  1.0439443689f}
 };
 
-__CONSTANT__ float3x3 RGB_to_XYZ_limit = {
-// P3-D65 to XYZ matrix
-    {  0.4865709486f,  0.2656676932f,  0.1982172852f},
-    {  0.2289745641f,  0.6917385218f,  0.0792869141f},
-    { -0.0000000000f,  0.0451133819f,  1.0439443689f}
+__CONSTANT__ float3x3 RGB_to_XYZ_P3D60 = {
+    {  0.5049495342f,  0.2646814889f,  0.1830150515},
+    {  0.2376233102f,  0.6891706692f,  0.0732060206},
+    { -0.0000000000f,  0.0449459132f,  0.9638792711}
 };
-
 __CONSTANT__ float limitJmax = 100.0f;
 __CONSTANT__ float midJ = 34.0965f; // ~10 nits in Hellwig J
 
@@ -1249,7 +1247,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             else
             {
                 XYZ = Hellwig2022_JMh_to_XYZ(JMh , inWhite) / referenceLuminance;
-                float3 creativeWhiteXYZ = vector_dot(RGB_to_XYZ_limit, make_float3(1.0f, 1.0f, 1.0f));
+                float3 creativeWhiteXYZ = vector_dot(RGB_to_XYZ_P3D60, make_float3(1.0f, 1.0f, 1.0f));
                 float3 creativeWhiteRGB = vector_dot(XYZ_to_RGB_output, creativeWhiteXYZ);
                 XYZ *= 1.0f / max(creativeWhiteRGB.x, max(creativeWhiteRGB.y, creativeWhiteRGB.z));
             }
