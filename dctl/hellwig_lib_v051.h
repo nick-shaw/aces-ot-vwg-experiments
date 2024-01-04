@@ -905,8 +905,10 @@ __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
     float2 project_from = make_float2(JMh.x, JMh.y);
     float2 JMcusp = cuspFromTable(JMh.z);
 
-    if (project_from.y == 0.0f)
-      return JMh;
+    if (JMh.y == 0.0f || JMh.x > limitJmax)
+    {
+      return make_float3(JMh.x, 0.0f, JMh.z);
+    }
 
     // Calculate where the out of gamut color is projected to
     float focusJ = lerp(JMcusp.x, midJ, cuspMidBlend);
