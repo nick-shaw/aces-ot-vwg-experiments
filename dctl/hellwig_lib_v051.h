@@ -638,7 +638,7 @@ __DEVICE__ inline float2 cCuspFromTable(float h)
     return make_float2(cuspJ,cuspM);
 }
 
-__DEVICE__ inline float reachFromTableAP1(float h)
+__DEVICE__ inline float reachFromTable(float h)
 {
     int lo = (int)_floorf(mod(h, 360.0f));
     int hi = (int)_ceilf(mod(h, 360.0f));
@@ -648,7 +648,20 @@ __DEVICE__ inline float reachFromTableAP1(float h)
     }
     float t = _fmod(h, 1.0f);
 
-    return lerp(gamutCuspTableAP1[lo], gamutCuspTableAP1[hi], t);
+    return lerp(gamutCuspTableReach[lo], gamutCuspTableReach[hi], t);
+}
+
+__DEVICE__ inline float cReachFromTable(float h)
+{
+    int lo = (int)_floorf(mod(h, 360.0f));
+    int hi = (int)_ceilf(mod(h, 360.0f));
+    if (hi == 360)
+    {
+        hi = 0;
+    }
+    float t = _fmod(h, 1.0f);
+
+    return lerp(cGamutReachTable[lo], cGamutReachTable[hi], t);
 }
 
   // Compress/expand a range of values from 0 to limit (0 being the achromatic).  Doesn't
@@ -696,7 +709,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     float snJ = _powf(max(0.0f, 1.0f - nJ), ccParams.z);
     float scaling = _powf(JMh.x / origJ, model_gamma);
     float Mcusp = cCuspFromTable(JMh.z).y;
-    float limit = _powf(nJ, model_gamma) * reachFromTableAP1(JMh.z) / Mcusp;
+    float limit = _powf(nJ, model_gamma) * cReachFromTable(JMh.z) / Mcusp;
 
     if (!invert)
     {
@@ -922,7 +935,7 @@ __DEVICE__ inline float3 compressGamut(float3 JMh, int invert)
     float projectJ = nickBoundryReturn.z;
 
     // Calculate AP1 Reach boundary
-    float reachMaxM = reachFromTableAP1(JMh.z);
+    float reachMaxM = reachFromTable(JMh.z);
 
     // slope is recalculated here because it was a local variable in findGamutBoundaryIntersection
     float slope;
