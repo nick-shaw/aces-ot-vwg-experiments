@@ -199,7 +199,7 @@ __DEVICE__ inline float3 compress_bjorn(float3 xyz)
     return xyz_temp;
   }
 
-float3 uncompress_bjorn(float3 xyz)
+__DEVICE__ inline float3 uncompress_bjorn(float3 xyz)
 {
     float C = (xyz.x + xyz.y + xyz.z) / 3.0f;
 
@@ -664,7 +664,7 @@ __DEVICE__ inline float toe(float x, float limit, float k1, float k2, int invers
   // appropriate rate of change from display black to display white, and from
   // achromatic outward to purer colors.
   //
-__DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear, int invert)
+__DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear, int invert, int mClip)
   {
     float M = JMh.y;
     if (M == 0.0f)
@@ -705,7 +705,10 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
       M = toe(M, limit, nJ * compr, snJ, 0);
 
       // Clamp M to the rendering space
-      M = min(limit, M);
+      if (mClip)
+      {
+          M = min(limit, M);
+      }
 
       // Denormalize
       M *= Mnorm;
@@ -723,7 +726,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     return M;
   }
 
-__DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma, int simpleToneMap)
+__DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma, int simpleToneMap, int mClip)
 {
     float3 outputJMh;
     float linear;
@@ -758,7 +761,7 @@ __DEVICE__ inline float3 forwardTonescale( float3 inputJMh, int compressChroma, 
     // Chroma Compression)
     if (compressChroma)
     {
-        outputJMh.y = chromaCompression(outputJMh, inputJMh.x, linear, 0);
+        outputJMh.y = chromaCompression(outputJMh, inputJMh.x, linear, 0, mClip);
     }
 
     return outputJMh;
@@ -797,7 +800,7 @@ __DEVICE__ inline float3 inverseTonescale( float3 JMh, int compressChroma, int s
 
     if (compressChroma)
     {
-      untonemappedColourJMh.y = chromaCompression(tonemappedJMh, untonemappedColourJMh.x, linear, 1);
+      untonemappedColourJMh.y = chromaCompression(tonemappedJMh, untonemappedColourJMh.x, linear, 1, 0);
     }
 
     return  untonemappedColourJMh;

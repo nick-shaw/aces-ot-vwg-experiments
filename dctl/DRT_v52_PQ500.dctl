@@ -3,6 +3,9 @@ DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(d60Sim, D60 Sim, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(asPQ, Encode as BT.2100 PQ, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(mClip, M Clamp, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(softClip, Soft Clip, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(hardClip, Clamp, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(simpleToneMap, Simple Tone Map Test, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
@@ -1942,7 +1945,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         JMh = XYZ_to_Hellwig2022_JMh(XYZ, inWhite);
         if (toneCurve)
         {
-            JMh = forwardTonescale(JMh, compressChroma, simpleToneMap);
+            JMh = forwardTonescale(JMh, compressChroma, simpleToneMap, mClip);
         }
         if (gamutCompress)
         {
@@ -1985,11 +1988,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             out = vector_dot(XYZ_to_RGB_output, XYZ);
 
             // Soft clamp by compressing negative display linear values
-            float3 compr = make_float3(clamp_thr, clamp_dist, 1.2f);
-            out = compress_aces(out, compr, compr, compr, 0);
+            if (softClip)
+            {
+                float3 compr = make_float3(clamp_thr, clamp_dist, 1.2f);
+                out = compress_aces(out, compr, compr, compr, 0);
+            }
 
             // hard clip 0-peak
-            out = clamp3(referenceLuminance * out, 0.0f, daniele_n);
+            if (hardClip)
+            {
+                out = clamp3(referenceLuminance * out, 0.0f, daniele_n);
+            }
+            else
+            {
+                out *= referenceLuminance;
+            }
             
             if (asPQ)
             {
