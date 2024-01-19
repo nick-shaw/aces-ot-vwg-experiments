@@ -8,10 +8,10 @@ P3_D65 = colour.models.RGB_COLOURSPACE_P3_D65
 P3_DCI = colour.models.RGB_COLOURSPACE_DCI_P3
 
 def format_matrix(M, indent1=4, indent2=2):
-    out = " "*4 + "{\n"
+    out = " " * indent1 + "{\n"
     for i in range(3):
-        out = out + " "*(indent1+indent2) + "{: 0.10f}f, {: 0.10f}f, {: 0.10f}f".format(M[i][0], M[i][1], M[i][2]) + ("," if i < 2 else "") + "\n"
-    out = out + " "*4 + "};\n"
+        out = out + " " * (indent1+indent2) + "{: 0.10f}f, {: 0.10f}f, {: 0.10f}f".format(M[i][0], M[i][1], M[i][2]) + ("," if i < 2 else "") + "\n"
+    out = out + " " * indent1 + "};\n"
     return out
 
 spaces = [AP0_ACES, AP1_ACES, Rec709_D65, Rec2020_D65, P3_D65, P3_DCI]
