@@ -43,7 +43,9 @@ __CONSTANT__ float referenceLuminance = 100.0f;
 
 __CONSTANT__ float3 surround = {0.9f, 0.59f, 0.9f};
 
-__CONSTANT__ float3 d65White = {95.0456f, 100.0f, 108.906f};
+__CONSTANT__ float3 d65White = {95.0455927052f, 100.0f, 108.9057750760f};
+
+__CONSTANT__ float3 inWhite = {95.2646074500f, 100.0f, 100.8825184400f};
 
 // __CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
 __CONSTANT__ float model_gamma = 0.879464f; // reciprocal of above
@@ -64,6 +66,10 @@ __CONSTANT__ float daniele_w_g = 0.14f;    // grey change between different peak
 __CONSTANT__ float daniele_t_1 = 0.04f;     // shadow toe, flare/glare compensation - how ever you want to call it
 __CONSTANT__ float daniele_r_hit_min = 128.0f;  // Scene-referred value "hitting the roof" at 100 nits
 __CONSTANT__ float daniele_r_hit_max = 896.0f;  // Scene-referred value "hitting the roof" at 10,000 nits
+
+// Soft clip parameters
+__CONSTANT__ float clamp_thr = 0.999f;
+__CONSTANT__ float clamp_dist = 1.1f;
 
 // ST2084 constants
 __CONSTANT__ float st2084_m_1=2610.0f / 4096.0f * (1.0f / 4.0f);

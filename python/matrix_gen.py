@@ -1,4 +1,7 @@
 import colour
+import numpy as np
+
+np.set_printoptions(suppress=True, formatter={'float_kind':'{:0.10f}'.format})
 
 AP0_ACES = colour.models.RGB_COLOURSPACE_ACES2065_1
 AP1_ACES = colour.models.RGB_COLOURSPACE_ACESCG
@@ -20,3 +23,6 @@ for space in spaces:
     name = [ i for i, j in locals().items() if j == space][0]
     print("    float XYZ_to_" + name + "_matrix_data[]=")
     print(format_matrix(space.matrix_XYZ_to_RGB))
+
+print("D65 White", colour.algebra.vector_dot(Rec709_D65.matrix_RGB_to_XYZ, [100, 100, 100]))
+print("ACES White", colour.algebra.vector_dot(AP0_ACES.matrix_RGB_to_XYZ, [100, 100, 100]))

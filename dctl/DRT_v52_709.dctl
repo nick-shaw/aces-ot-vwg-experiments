@@ -58,8 +58,6 @@ __CONSTANT__ float daniele_n = 100.0f; // peak white
 __CONSTANT__ float sat = 1.9f;
 __CONSTANT__ float sat_thr = 0.005f;
 __CONSTANT__ float compr = 4.0f;
-__CONSTANT__ float clamp_thr = 0.999f;
-__CONSTANT__ float clamp_dist = 1.1f;
 
 // cusp values saved using debugPrint in Blink implementation
 __CONSTANT__ float3 gamutCuspTable[360] = {
@@ -1887,7 +1885,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     in.y = _clampf(in.y, -HALF_MAXIMUM, HALF_MAXIMUM);
     in.z = _clampf(in.z, -HALF_MAXIMUM, HALF_MAXIMUM);
 
-    float3 inWhite = vector_dot(AP0_ACES_to_XYZ_matrix, make_float3(100.0f, 100.0f, 100.0f));
     float3 XYZ;
 
     if (!invert)
