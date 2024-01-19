@@ -47,7 +47,7 @@ __CONSTANT__ float3 d65White = {95.0456f, 100.0f, 108.906f};
 
 // __CONSTANT__ float gamut_gamma = 1.137f; // surround.y * (1.48 + sqrt(Y_b / Y_w)))
 __CONSTANT__ float model_gamma = 0.879464f; // reciprocal of above
-__CONSTANT__ float lowerHullGamma = 1.1145;
+__CONSTANT__ float lowerHullGamma = 1.145f;
 
 // Gamut Compression parameters
 __CONSTANT__ float cuspMidBlend = 0.7f;
