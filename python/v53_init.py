@@ -94,6 +94,7 @@ def format_array3(M, name, decimals=10, indent1=0, indent2=4):
     out = out + " " * indent1 + "{\n"
     n = M.shape[0]
     for i in range(n):
+#         print(M[i])
         out = out + " " * indent2 + format_vector(M[i], decimals) + ("," if i < n - 1  else "") + "\n"
     out = out + " " * indent1 + "};\n"
     return out
@@ -481,18 +482,18 @@ def cuspFromTable(h):
   hi = np.zeros(3)
 
   if( h <= gamutCuspTable[0][2] ):
-    lo = gamutCuspTable[gamutCuspTableSize-1]
+    lo = gamutCuspTable[gamutCuspTableSize-1].copy()
     lo[2] = lo[2]-360.0
-    hi = gamutCuspTable[0]
+    hi = gamutCuspTable[0].copy()
   elif( h >= gamutCuspTable[gamutCuspTableSize-1][2] ):
-    lo = gamutCuspTable[gamutCuspTableSize-1]
-    hi = gamutCuspTable[0]
+    lo = gamutCuspTable[gamutCuspTableSize-1].copy()
+    hi = gamutCuspTable[0].copy()
     hi[2] = hi[2]+360.0
   else:
     for i in range(gamutCuspTableSize):
       if( h <= gamutCuspTable[i][2] ):
-        lo = gamutCuspTable[i-1]
-        hi = gamutCuspTable[i]
+        lo = gamutCuspTable[i-1].copy()
+        hi = gamutCuspTable[i].copy()
         break
 
   t = (h - lo[2]) / (hi[2] - lo[2])
@@ -756,7 +757,7 @@ for i in range(gamutCuspTableSize):
   gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
 
 minhIndex = 0
-for i in range(gamutCuspTableSize):
+for i in range(1, gamutCuspTableSize):
   if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
     minhIndex = i
 
@@ -786,7 +787,7 @@ for i in range(gamutCuspTableSize):
   gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
 
 minhIndex = 0
-for i in range(gamutCuspTableSize):
+for i in range(1, gamutCuspTableSize):
   if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
     minhIndex = i
 
