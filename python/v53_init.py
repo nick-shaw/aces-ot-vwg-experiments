@@ -5,6 +5,7 @@ import numpy as np
 # These first four are the only ones that need to be changed depending on the target
 
 peakLuminance = 100.0
+
 # Primaries of the limiting gamut
 # 0: AP0-ACES"
 # 1: AP1-ACES
@@ -12,11 +13,13 @@ peakLuminance = 100.0
 # 3: Rec.2020
 # 4: P3
 primariesLimit = 2
+
 # White point of the limiting gamut
 # effectively the 'creative white'
 # 0: ACES white")
 # 1: D65")
 whiteLimit = 1
+
 # Primaries of the Output Encoding
 # 0: AP0-ACES
 # 1: AP1-ACES
@@ -26,8 +29,8 @@ whiteLimit = 1
 # 5: P3-DCI
 primariesOut = 2
 
-gamutCuspTableSize = 360
 referenceLuminance = 100.0
+
 # Primaries of the Gamut reached by the gamut compressor
 # 0: AP0-ACES
 # 1: AP1-ACES
@@ -38,22 +41,33 @@ referenceLuminance = 100.0
 # 6: Spectral Locus
 # 7: Chroma Compression Space
 primariesReach = 1
+
 # Chroma compression params (limit, k1, k2)
 chroma_compress = 3.5
 chroma_expand = 1.56
 chroma_expand_thr = 0.4
+
+# Gamut compression params
+gamutCuspTableSize = 360
 # Blend Between Compressing towards
 # Target Gamut Cusp Luminance (0.0)
 # and Mid Luminance (1.0)
-cuspMidBlend = 1.3
+cuspMidBlend = 1.2
 # Focus distance of the compression focal point from the achromatic axis
-focusDist = 1.1
+focusDistance = 1.5
 focusAdjustGain = 0.35
 focusAdjustPeakGain = 1.0
 focusGainBlend = 0.3
 # How much the edges of the target RGB cube are smoothed when finding the gamut boundary
 # in order to reduce visible contours at the gamut cusps
 smoothCusps = 0.26
+lowerHullGamma = 1.15
+compressionFuncParams = [0.75, 1.1, 1.3, 1.2]
+
+# Soft clip parameters
+clamp_thr = 0.999
+clamp_dist = 1.1
+
 # Hellwig 2022 CAM params
 ac_resp = 1.0
 surround = (0.9, 0.59, 0.9)
@@ -69,10 +83,7 @@ XYZ_w = (95.05, 100.0, 108.88)  # not used?
 XYZ_w_scaler = 100.0
 L_A = 100.0
 Y_b = 20.0
-discount_illuminant = False
-# Output vars
-L_A_out = 100.0
-Y_b_out = 20.0
+
 # DanieleEvoCurve (ACES2 candidate) parameters
 mmScaleFactor = 100.0      # redundant and equivalent to daniele_n_r
 daniele_n = peakLuminance  # peak white
@@ -541,8 +552,8 @@ def findGamutBoundaryIntersection(JMh_s, JM_cusp, J_focus, J_max, slope_gain, sm
     slope = 0.0
 
     s = max(0.000001, smoothness)
-    JM_cusp[0] *= 1.0 + 0.06 * s   # J
-    JM_cusp[1] *= 1.0 + 0.18 * s   # M
+    JM_cusp[0] *= 1.0 + 0.055 * s   # J
+    JM_cusp[1] *= 1.0 + 0.183 * s   # M
 
     J_intersect_source = solve_J_intersect(JM_source, J_focus, J_max, slope_gain)
     J_intersect_cusp = solve_J_intersect(JM_cusp, J_focus, J_max, slope_gain)
@@ -583,13 +594,19 @@ daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1)
 daniele_m_2 = daniele_m_1 / daniele_u_2
 
 # 1.0 / (c * z)
-model_gamma = 1.0 / (surround[1] * (1.48 + np.sqrt(Y_b_out / L_A_out)))
+model_gamma = 1.0 / (surround[1] * (1.48 + np.sqrt(Y_b / L_A)))
 
 # Chroma compression scaling for HDR/SDR appearance match
 log_peak = np.log10(daniele_n / daniele_n_r)
 compr = chroma_compress + (chroma_compress * 5.0) * log_peak
 sat = max(0.15, chroma_expand - (chroma_expand * 0.78) * log_peak)
 sat_thr = chroma_expand_thr / daniele_n
+
+# Gamut mapper focus distance scaling with peak luminance for
+# HDR/SDR appearance match.  The projection gets slightly less
+# steep with higher peak luminance.
+# https:#www.desmos.com/calculator/bnfhjcq5vf
+focusDist = min(10.0, focusDistance + focusDistance * 1.65 * log_peak)
 
 identity_matrix = np.identity(3)
 
@@ -855,11 +872,33 @@ print(format_array3(XYZ_to_AP1, "__CONSTANT__ float3x3 XYZ_to_AP1"))
 print(format_array3(AP1_to_XYZ, "__CONSTANT__ float3x3 AP1_to_XYZ"))
 print(format_array3(CAT_CAT16, "__CONSTANT__ float3x3 CAT_CAT16"))
 print(format_array3(panlrcm, "__CONSTANT__ float3x3 panlrcm", 1))
+print("__CONSTANT__ float daniele_m_2 = {:.10f}f;".format(daniele_m_2))
+print("__CONSTANT__ float daniele_s_2 = {:.10f}f;".format(daniele_s_2))
+print("__CONSTANT__ float daniele_g = {:.2f}f;".format(daniele_g))
+print("__CONSTANT__ float daniele_t_1 = {:.2f}f;".format(daniele_t_1))
+print("__CONSTANT__ float daniele_n = {:.1f}f;".format(daniele_n))
+print("__CONSTANT__ float daniele_u_2 = {:.10f}f;".format(daniele_u_2))
+print("__CONSTANT__ float daniele_n_r = {:.1f}f;".format(daniele_n_r))
+print()
+print("__CONSTANT__ float compr = {:.6f}f;".format(compr))
+print("__CONSTANT__ float sat = {:.10f}f;".format(sat))
+print("__CONSTANT__ float sat_thr = {:.4f}f;".format(sat_thr))
+print("__CONSTANT__ float limitJmax = {:.6f}f;".format(limitJmax))
+print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
+print("__CONSTANT__ float focusDist = {:.10f}f;".format(focusDist))
+print("__CONSTANT__ float cuspMidBlend = {:.2f}f;".format(cuspMidBlend))
+print("__CONSTANT__ float model_gamma = {:.10f}f;".format(model_gamma))
+print("__CONSTANT__ float lowerHullGamma = {:.3f}f;".format(lowerHullGamma))
+print("__CONSTANT__ float smoothCusps = {:.3f}f;".format(smoothCusps))
+print("__CONSTANT__ float clamp_thr = {:.3f}f;".format(clamp_thr))
+print("__CONSTANT__ float clamp_dist = {:.1f}f;".format(clamp_dist))
+print()
+print("__CONSTANT__ float4 compressionFuncParams = {" + "{:.2f}f, {:.1f}f, {:.1f}f, {:.1f}f".format(compressionFuncParams[0], compressionFuncParams[1], compressionFuncParams[2], compressionFuncParams[3]) + "};")
+print()
+print("__CONSTANT__ float3 surround = " + format_vector(surround) + ";")
 print("__CONSTANT__ float3 inWhite = " + format_vector(inWhite) + ";")
 print("__CONSTANT__ float3 outWhite = " + format_vector(outWhite) + ";")
 print("__CONSTANT__ float3 refWhite = " + format_vector(refWhite) + ";")
-print("__CONSTANT__ float limitJmax = {:.2f}f;".format(limitJmax))
-print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
 print()
 print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[360]"))
 print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[360]", 1))
