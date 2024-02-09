@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 
 # Parameters passed to Blink from the UI
@@ -52,7 +51,7 @@ focusDist = 1.1
 focusAdjustGain = 0.35
 focusAdjustPeakGain = 1.0
 focusGainBlend = 0.3
-# How much the edges of the target RGB cube are smoothed when finding the gamut boundary 
+# How much the edges of the target RGB cube are smoothed when finding the gamut boundary
 # in order to reduce visible contours at the gamut cusps
 smoothCusps = 0.26
 # Hellwig 2022 CAM params
@@ -66,7 +65,7 @@ wxy = (0.333, 0.333)
 ra = ac_resp * 2
 ba = 0.05 + (2.0 - ra)
 # Input vars
-XYZ_w = (95.05, 100.0, 108.88) # not used?
+XYZ_w = (95.05, 100.0, 108.88)  # not used?
 XYZ_w_scaler = 100.0
 L_A = 100.0
 Y_b = 20.0
@@ -76,7 +75,7 @@ L_A_out = 100.0
 Y_b_out = 20.0
 # DanieleEvoCurve (ACES2 candidate) parameters
 mmScaleFactor = 100.0      # redundant and equivalent to daniele_n_r
-daniele_n = peakLuminance  # peak white  
+daniele_n = peakLuminance  # peak white
 daniele_n_r = 100.0        # Normalized white in nits (what 1.0 should be)
 daniele_g = 1.15           # surround / contrast
 daniele_c = 0.18           # scene-referred grey
@@ -90,7 +89,7 @@ daniele_r_hit_max = 896.0  # Scene-referred value "hitting the roof" at 10,000 n
 def format_vector(v, decimals=10):
     return "{" + "{: 0.{}f}f, {: 0.{}f}f, {: 0.{}f}f".format(v[0], decimals, v[1], decimals,  v[2], decimals) + " }"
 
-def format_array(M, name, decimals=10, indent1=0, indent2=4):
+def format_array3(M, name, decimals=10, indent1=0, indent2=4):
     out = " " * indent1 + "{} = ".format(name) + "\n"
     out = out + " " * indent1 + "{\n"
     n = M.shape[0]
@@ -99,12 +98,19 @@ def format_array(M, name, decimals=10, indent1=0, indent2=4):
     out = out + " " * indent1 + "};\n"
     return out
 
+def format_array(M, name, decimals=10, indent1=0, indent2=4):
+    out = " " * indent1 + "{} = ".format(name) + "\n"
+    out = out + " " * indent1 + "{\n"
+    n = M.shape[0]
+    for i in range(n):
+        out = out + " " * indent2 + "{:0.{}f}".format(M[i], decimals) + ("f," if i < n - 1  else "f") + "\n"
+    out = out + " " * indent1 + "};\n"
+    return out
+
 # Function definitions from Blink
 def RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, Y, direction):
 # given r g b chromaticities and whitepoint, convert RGB colors to XYZ
 # based on CtlColorSpace.cpp from the CTL source code : 77
-# param: xy - dict of chromaticity xy coordinates: rxy: float2(x, y) etc
-# param: Y - luminance of "white" - defaults to 1.0
 # param: inverse - calculate XYZ to RGB instead
 
     r = rxy
@@ -122,19 +128,19 @@ def RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, Y, direction):
             g[0] * (Y * (b[1] - 1.0) +
             b[1]  * (X + Z)) +
             b[0]  * (Y * (g[1] - 1.0) +
-            g[1] * (X + Z))) / d 
+            g[1] * (X + Z))) / d
 
     Sg =    (X * (r[1] - b[1]) +
             r[0] * (Y * (b[1] - 1.0) +
             b[1] * (X + Z)) -
             b[0] * (Y * (r[1] - 1.0) +
-            r[1] * (X + Z))) / d 
+            r[1] * (X + Z))) / d
 
     Sb =    (X * (g[1] - r[1]) -
             r[0] * (Y * (g[1] - 1.0) +
             g[1] * (X + Z)) +
             g[0] * (Y * (r[1] - 1.0) +
-            r[1] * (X + Z))) / d 
+            r[1] * (X + Z))) / d
 
     # Assemble the matrix
     Mdata = np.array([
@@ -175,14 +181,14 @@ def Y_to_J(Y, L_A, Y_b, surround_y):
     F_L_W = np.power(F_L, 0.42)
     A_w = (400.0 * F_L_W) / (27.13 + F_L_W)
 
-    F_L_Y = np.power(F_L * np.abs(Y) / 100.0, 0.42)
+    F_L_Y = np.power(F_L * abs(Y) / 100.0, 0.42)
 
     return np.sign(Y) * (100.0 * np.power(((400.0 * F_L_Y) / (27.13 + F_L_Y)) / A_w, surround_y * z))
 
 # convert HSV cylindrical projection values to RGB
 def HSV_to_RGB( HSV ):
   C = HSV[2] * HSV[1]
-  X = C * (1.0 - np.abs((HSV[0] * 6.0) % 2.0 - 1.0))
+  X = C * (1.0 - abs((HSV[0] * 6.0) % 2.0 - 1.0))
   m = HSV[2] - C
 
   RGB = np.zeros(3)
@@ -221,6 +227,14 @@ def limit_RGB_to_JMh(RGB):
 
   return JMh
 
+# convert CAM J (lightness), M (colorfulness) and h (hue) correlates to linear RGB values with the limiting primaries
+def JMh_to_limit_RGB(JMh):
+  luminanceXYZ = Hellwig2022_JMh_to_XYZ( JMh, refWhite, surround, L_A, Y_b)
+  luminanceRGB = vector_dot(XYZ_to_RGB_limit, luminanceXYZ)
+  RGB = luminanceRGB / boundaryRGB / referenceLuminance
+
+  return RGB;
+
 # basic 3D hypotenuse function, does not deal with under/overflow
 def hypot_float3(xyz):
     return np.sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2])
@@ -248,14 +262,14 @@ def compress_bjorn(xyz):
     t = 0.5 + np.sqrt(s*s + r*r / 4.0)
     t = C / t                                 # t is always >= 0.5
 
-    xyz_temp = xyz_temp * t + C;
+    xyz_temp = xyz_temp * t + C
 
     return xyz_temp
 
 def uncompress_bjorn(xyz):
     C = (xyz[0]+xyz[1]+xyz[2])/3
 
-    xyz_temp = xyz - C;
+    xyz_temp = xyz - C
     R = hypot_float3(xyz_temp)
 
     if (R == 0.0 or C == 0.0):
@@ -265,7 +279,7 @@ def uncompress_bjorn(xyz):
 
     xyz_temp = xyz_temp / R
 
-    t = C/R;
+    t = C/R
     t = t - 0.5
 
     s = -min(xyz_temp[0], min(xyz_temp[1], xyz_temp[2]))
@@ -377,7 +391,7 @@ def JMh_to_reach_RGB(JMh):
 
 def post_adaptation_non_linear_response_compression_inverse(RGB, F_L):
   RGB_p =  (np.sign(RGB) * 100.0 / F_L * float3spow((27.13 * np.abs(RGB)) / (400.0 - np.abs(RGB)), 1.0 / 0.42) )
-  return RGB_p;
+  return RGB_p
 
 def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
   J = JMh[0]
@@ -416,7 +430,7 @@ def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
   # HK effect block omitted, aas we always have that off
 
   # Computing achromatic response :math:`A` for the stimulus.
-  A = A_w * spow(J / 100.0, 1.0 / (surround[1] * z));
+  A = A_w * spow(J / 100.0, 1.0 / (surround[1] * z))
 
   # Computing *P_p_1* to *P_p_2*.
   P_p_1 = 43.0 * surround[2]
@@ -450,6 +464,103 @@ def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
   XYZ = vector_dot(MATRIX_INVERSE_16, RGB)
 
   return XYZ
+
+# linear interpolation between two values a & b with the bias t
+def lerp(a, b, t):
+  return a + t * (b - a)
+
+# retrieve the JM coordinates of the limiting gamut cusp at the hue slice 'h'
+# cusps are very expensive to compute
+# and the DRT is only using them for lightness mapping
+# which does not require a high degree of accuracy
+# so instead we use a pre-computed table of cusp points
+# sampled at 1 degree hue intervals of the the RGB target gamut
+# and lerp between them to get the approximate J & M values
+def cuspFromTable(h):
+  lo = np.zeros(3)
+  hi = np.zeros(3)
+
+  if( h <= gamutCuspTable[0][2] ):
+    lo = gamutCuspTable[gamutCuspTableSize-1]
+    lo[2] = lo[2]-360.0
+    hi = gamutCuspTable[0]
+  elif( h >= gamutCuspTable[gamutCuspTableSize-1][2] ):
+    lo = gamutCuspTable[gamutCuspTableSize-1]
+    hi = gamutCuspTable[0]
+    hi[2] = hi[2]+360.0
+  else:
+    for i in range(gamutCuspTableSize):
+      if( h <= gamutCuspTable[i][2] ):
+        lo = gamutCuspTable[i-1]
+        hi = gamutCuspTable[i]
+        break
+
+  t = (h - lo[2]) / (hi[2] - lo[2])
+
+  cuspJ = lerp(lo[0], hi[0], t)
+  cuspM = lerp(lo[1], hi[1], t)
+
+  return np.array([cuspJ, cuspM])
+
+# Smooth minimum of a and b
+def smin(a, b, s):
+    h = max(s - abs(a - b), 0.0) / s
+    return min(a, b) - h * h * h * s * (1.0 / 6.0)
+
+# reimplemented from https:#github.com/nick-shaw/aces-ot-vwg-experiments/blob/master/python/intersection_approx.py
+def solve_J_intersect(JM, focusJ, maxJ, slope_gain):
+  a = JM[1] / (focusJ * slope_gain)
+  b = 0.0
+  c = 0.0
+  intersectJ = 0.0
+
+  if (JM[0] < focusJ):
+    b = 1.0 - JM[1] / slope_gain
+  else:
+    b = -(1.0 + JM[1] / slope_gain + maxJ * JM[1] / (focusJ * slope_gain))
+
+  if (JM[0] < focusJ):
+    c = -JM[0]
+  else:
+    c = maxJ * JM[1] / slope_gain + JM[0]
+
+  root = np.sqrt(b*b - 4.0 * a * c)
+
+  if (JM[0] < focusJ):
+    intersectJ = 2.0 * c / (-b - root)
+  else:
+    intersectJ = 2.0 * c / (-b + root)
+
+  return intersectJ
+
+# reimplemented from https:#github.com/nick-shaw/aces-ot-vwg-experiments/blob/master/python/intersection_approx.py
+def findGamutBoundaryIntersection(JMh_s, JM_cusp, J_focus, J_max, slope_gain, smoothness, gamma_top, gamma_bottom):
+    JM_source = [JMh_s[0], JMh_s[1]]
+
+    slope = 0.0
+
+    s = max(0.000001, smoothness)
+    JM_cusp[0] *= 1.0 + 0.06 * s   # J
+    JM_cusp[1] *= 1.0 + 0.18 * s   # M
+
+    J_intersect_source = solve_J_intersect(JM_source, J_focus, J_max, slope_gain)
+    J_intersect_cusp = solve_J_intersect(JM_cusp, J_focus, J_max, slope_gain)
+
+    if (J_intersect_source < J_focus):
+        slope = J_intersect_source * (J_intersect_source - J_focus) / (J_focus * slope_gain)
+    else:
+        slope = (J_max - J_intersect_source) * (J_intersect_source - J_focus) / (J_focus * slope_gain)
+
+    M_boundary_lower = J_intersect_cusp * pow(J_intersect_source / J_intersect_cusp, 1 / gamma_bottom) / (JM_cusp[0] / JM_cusp[1] - slope)
+
+    M_boundary_upper = JM_cusp[1] * (J_max - J_intersect_cusp) * pow((J_max - J_intersect_source) / (J_max - J_intersect_cusp), 1.0 / gamma_top) / (slope * JM_cusp[1] + J_max - JM_cusp[0])
+
+    M_boundary = JM_cusp[1] * smin(M_boundary_lower / JM_cusp[1], M_boundary_upper / JM_cusp[1], s)
+
+    J_boundary = J_intersect_source + slope * M_boundary
+
+    return np.array([J_boundary, M_boundary, J_intersect_source])
+
 
 # Blink init() block
 HALF_MINIMUM = 0.0000000596046448
@@ -602,9 +713,9 @@ CAT_CAT16 = RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, 1.0, 1)
 
 white = np.array([1.0, 1.0, 1.0])
 
-inWhite = vector_dot(RGB_to_XYZ_input, white);
-outWhite = vector_dot(RGB_to_XYZ_output, white);
-refWhite = vector_dot(RGB_to_XYZ_limit, white);
+inWhite = vector_dot(RGB_to_XYZ_input, white)
+outWhite = vector_dot(RGB_to_XYZ_output, white)
+refWhite = vector_dot(RGB_to_XYZ_limit, white)
 
 boundaryRGB = peakLuminance / referenceLuminance
 
@@ -631,9 +742,9 @@ for i in range(3):
 limitJmax = Y_to_J(peakLuminance, L_A, Y_b, surround[1])
 
 # Cusp table for chroma compression gamut
-tmpx = XYZ_to_RGB_limit;
-tmpr = RGB_to_XYZ_limit;
-tmpR = XYZ_to_RGB_reach;
+tmpx = XYZ_to_RGB_limit
+tmpr = RGB_to_XYZ_limit
+tmpR = XYZ_to_RGB_reach
 
 XYZ_to_RGB_reach = XYZ_to_AP1_ACES_matrix
 RGB_to_XYZ_limit = np.linalg.inv(XYZ_to_RGB_reach)
@@ -647,18 +758,19 @@ for i in range(gamutCuspTableSize):
 minhIndex = 0
 for i in range(gamutCuspTableSize):
   if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
-    minhIndex = i;
+    minhIndex = i
 
 cgamutCuspTable = np.zeros((gamutCuspTableSize, 3))
 for i in range(gamutCuspTableSize):
-  cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize];
+  cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
 
-cgamutReachTable = np.zeros((gamutCuspTableSize, 3)) # float3 table for parity with Blink. Could just be a float table
+# Reach table for the chroma compression reach. If AP1 this is the same as gamutCuspTableReach
+cgamutReachTable = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
 for i in range(gamutCuspTableSize):
-  cgamutReachTable[i][2] = i;
+  cgamutReachTable[i][2] = i
   for M in range(1300):
-    sampleM = float(M);
-    newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]));
+    sampleM = float(M)
+    newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
     if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
       cgamutReachTable[i][1] = sampleM
       break
@@ -666,24 +778,90 @@ for i in range(gamutCuspTableSize):
 XYZ_to_RGB_limit = tmpx
 RGB_to_XYZ_limit = tmpr
 
+# Cusp table for limiting gamut
+gamutCuspTableUnsorted = np.zeros((gamutCuspTableSize, 3))
+for i in range(gamutCuspTableSize):
+  hNorm = float(i) / gamutCuspTableSize
+  RGB = HSV_to_RGB([hNorm, 1.0, 1.0])
+  gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
+
+minhIndex = 0
+for i in range(gamutCuspTableSize):
+  if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
+    minhIndex = i
+
+gamutCuspTable = np.zeros((gamutCuspTableSize, 3))
+for i in range(gamutCuspTableSize):
+  gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
+
+# Cusp table for limiting reach gamut, values at a J of 100.  Covers M values
+# up to 10000 nits.
+gamutCuspTableReach = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+for i in range(gamutCuspTableSize):
+  gamutCuspTableReach[i][2] = i
+  for M in range(1300):
+    sampleM = float(M)
+    newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
+    if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
+      gamutCuspTableReach[i][1] = sampleM
+      break
+
+midJ = Y_to_J(daniele_c_t * mmScaleFactor, L_A, Y_b, surround[1])
+
+# Find upper hull gamma values for the gamut mapper
+# start by taking a h angle
+# get the cusp J value for that angle
+# find a J value halfway to the Jmax
+# iterate through gamma values until the approxilate max M is negative through the actual boundry
+gamutTopGamma = np.zeros(gamutCuspTableSize)
+for i in range(gamutCuspTableSize):
+  # get cusp from cusp table at hue position
+  JMcusp = cuspFromTable(float(i))
+  # create test value halfway betwen the cusp and the Jmax
+  # positions between the cusp and Jmax we will check
+  testPositions = [0.01, 0.5, 0.99]
+  # variables that get set as we iterate through, once all 3 are set to true we break the loop
+  gammaFound = [False, False, False]
+  # limit value, once we cross this value, we are outside of the top gamut shell 
+  maxRGBtestVal = 1.0
+  # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
+  for Tg in range(70, 170):
+    # topGamma value created from the Tg variable
+    topGamma = float(Tg) / 100.0
+    # loop to run through each of the positions defined in the testPositions list
+    for testIndex in range(3):
+      testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i)])
+      approxLimit  =  findGamutBoundaryIntersection(testJmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+      newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i)]))
+      # if any channel has broken through the top gamut hull, break
+      if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
+        gamutTopGamma[i] = topGamma
+        gammaFound[testIndex] = True
+    # once all 3 of the test
+    if (gammaFound[0] and gammaFound[1] and gammaFound[2]):
+      break
+
 print()
-print(format_array(XYZ_to_RGB_input, "__CONSTANT__ float3x3 XYZ_to_RGB_input"))
-print(format_array(XYZ_to_RGB_limit, "__CONSTANT__ float3x3 XYZ_to_RGB_limit"))
-print(format_array(XYZ_to_RGB_reach, "__CONSTANT__ float3x3 XYZ_to_RGB_reach"))
-print(format_array(XYZ_to_RGB_output, "__CONSTANT__ float3x3 XYZ_to_RGB_output"))
-print(format_array(RGB_to_XYZ_input, "__CONSTANT__ float3x3 RGB_to_XYZ_input"))
-print(format_array(RGB_to_XYZ_limit, "__CONSTANT__ float3x3 RGB_to_XYZ_limit"))
-print(format_array(RGB_to_XYZ_reach, "__CONSTANT__ float3x3 RGB_to_XYZ_reach"))
-print(format_array(RGB_to_XYZ_output, "__CONSTANT__ float3x3 RGB_to_XYZ_output"))
-print(format_array(XYZ_to_AP1, "__CONSTANT__ float3x3 XYZ_to_AP1"))
-print(format_array(AP1_to_XYZ, "__CONSTANT__ float3x3 AP1_to_XYZ"))
-print(format_array(CAT_CAT16, "__CONSTANT__ float3x3 CAT_CAT16"))
-print(format_array(panlrcm, "__CONSTANT__ float3x3 panlrcm", 1))
+print(format_array3(XYZ_to_RGB_input, "__CONSTANT__ float3x3 XYZ_to_RGB_input"))
+print(format_array3(XYZ_to_RGB_limit, "__CONSTANT__ float3x3 XYZ_to_RGB_limit"))
+print(format_array3(XYZ_to_RGB_reach, "__CONSTANT__ float3x3 XYZ_to_RGB_reach"))
+print(format_array3(XYZ_to_RGB_output, "__CONSTANT__ float3x3 XYZ_to_RGB_output"))
+print(format_array3(RGB_to_XYZ_input, "__CONSTANT__ float3x3 RGB_to_XYZ_input"))
+print(format_array3(RGB_to_XYZ_limit, "__CONSTANT__ float3x3 RGB_to_XYZ_limit"))
+print(format_array3(RGB_to_XYZ_reach, "__CONSTANT__ float3x3 RGB_to_XYZ_reach"))
+print(format_array3(RGB_to_XYZ_output, "__CONSTANT__ float3x3 RGB_to_XYZ_output"))
+print(format_array3(XYZ_to_AP1, "__CONSTANT__ float3x3 XYZ_to_AP1"))
+print(format_array3(AP1_to_XYZ, "__CONSTANT__ float3x3 AP1_to_XYZ"))
+print(format_array3(CAT_CAT16, "__CONSTANT__ float3x3 CAT_CAT16"))
+print(format_array3(panlrcm, "__CONSTANT__ float3x3 panlrcm", 1))
 print("__CONSTANT__ float3 inWhite = " + format_vector(inWhite) + ";")
 print("__CONSTANT__ float3 outWhite = " + format_vector(outWhite) + ";")
 print("__CONSTANT__ float3 refWhite = " + format_vector(refWhite) + ";")
 print("__CONSTANT__ float limitJmax = {:.2f}f;".format(limitJmax))
+print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
 print()
-print(format_array(cgamutCuspTable, "__CONSTANT__ float3x3 cgamutCuspTable[360]"))
-print(format_array(cgamutReachTable, "__CONSTANT__ float3x3 cgamutReachTable[360]", 1))
-
+print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[360]"))
+print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[360]", 1))
+print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[360]"))
+print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[360]", 1))
+print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[360]", 2))
