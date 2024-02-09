@@ -296,7 +296,8 @@ def XYZ_to_Hellwig2022_JMh(XYZ, XYZ_w, L_A, Y_b, surround):
   MATRIX_16 = CAT_CAT16
   RGB_w = vector_dot(MATRIX_16, XYZ_w)
 
-  # Always discount illuminant
+  # Always discount illuminant so this calculation is omitted
+  # D of 1.0 actually cancels out, so could be removed entirely
   D = 1.0
 
   # Viewing conditions dependent parameters
@@ -363,6 +364,8 @@ def XYZ_to_Hellwig2022_JMh(XYZ, XYZ_w, L_A, Y_b, surround):
   # Computing the correlate of *colourfulness* :math:`M`.
   M = 43.0 * surround[2] * np.sqrt(a * a + b * b)
 
+  # HK effect block omitted, aas we always have that off
+
   return np.array([J, M, h])
 
 # convert CAM J (lightness), M (colorfulness) and h (hue) correlates to linear RGB values with the reach primaries
@@ -386,7 +389,8 @@ def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
   MATRIX_16 = CAT_CAT16
   RGB_w = vector_dot(MATRIX_16, XYZ_w)
 
-  # Always discount illuminant
+  # Always discount illuminant so this calculation is omitted
+  # D of 1.0 actually cancels out, so could be removed entirely
   D = 1.0
 
   # Viewing conditions dependent parameters
@@ -408,6 +412,8 @@ def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
   A_w = ra * R_aw + G_aw + ba * B_aw
 
   hr = radians(h)
+
+  # HK effect block omitted, aas we always have that off
 
   # Computing achromatic response :math:`A` for the stimulus.
   A = A_w * spow(J / 100.0, 1.0 / (surround[1] * z));
