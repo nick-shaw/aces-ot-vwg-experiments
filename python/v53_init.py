@@ -1,24 +1,7 @@
+import sys
 import numpy as np
 
 # Parameters passed to Blink from the UI
-
-# These first four are the only ones that need to be changed depending on the target
-
-peakLuminance = 100.0
-
-# Primaries of the limiting gamut
-# 0: AP0-ACES"
-# 1: AP1-ACES
-# 2: sRGB/Rec.709
-# 3: Rec.2020
-# 4: P3
-primariesLimit = 2
-
-# White point of the limiting gamut
-# effectively the 'creative white'
-# 0: ACES white")
-# 1: D65")
-whiteLimit = 1
 
 # Primaries of the Output Encoding
 # 0: AP0-ACES
@@ -83,18 +66,6 @@ XYZ_w = (95.05, 100.0, 108.88)  # not used?
 XYZ_w_scaler = 100.0
 L_A = 100.0
 Y_b = 20.0
-
-# DanieleEvoCurve (ACES2 candidate) parameters
-mmScaleFactor = 100.0      # redundant and equivalent to daniele_n_r
-daniele_n = peakLuminance  # peak white
-daniele_n_r = 100.0        # Normalized white in nits (what 1.0 should be)
-daniele_g = 1.15           # surround / contrast
-daniele_c = 0.18           # scene-referred grey
-daniele_c_d = 10.013       # display-referred grey (in nits)
-daniele_w_g = 0.14         # grey change between different peak luminance
-daniele_t_1 = 0.04         # shadow toe, flare/glare compensation - how ever you want to call it
-daniele_r_hit_min = 128.0  # Scene-referred value "hitting the roof" at 100 nits
-daniele_r_hit_max = 896.0  # Scene-referred value "hitting the roof" at 10,000 nits
 
 # helper functions for code generation
 def format_vector(v, decimals=10):
@@ -574,334 +545,378 @@ def findGamutBoundaryIntersection(JMh_s, JM_cusp, J_focus, J_max, slope_gain, sm
     return np.array([J_boundary, M_boundary, J_intersect_source])
 
 
-# Blink init() block
-HALF_MINIMUM = 0.0000000596046448
-HALF_MAXIMUM = 65504.0
+def init():
+  global peakLuminance, primariesLimit, whiteLimit, inWhite, outWhite, boundaryRGB, RGB_to_XYZ_limit, refWhite
+  global gamutCuspTable, gamutCuspTableReach, cgamutCuspTable, cgamutReachTable, gamutTopGamma
+  global XYZ_to_RGB_limit, XYZ_to_RGB_input, RGB_to_XYZ_input, XYZ_to_RGB_output, RGB_to_XYZ_output, XYZ_to_RGB_reach, RGB_to_XYZ_reach, XYZ_to_AP1, AP1_to_XYZ, CAT_CAT16, panlrcm
+  global daniele_m_2, daniele_s_2, daniele_g, daniele_t_1, daniele_n, daniele_u_2, daniele_n_r
+  global compr, sat, sat_thr, limitJmax, midJ, focusDist, cuspMidBlend, model_gamma, lowerHullGamma, smoothCusps, clamp_thr, clamp_dist
 
-# pre-calculate Daniele Evo constants
-daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (np.log(daniele_n / daniele_n_r) / np.log(10000.0 / 100.0))
-daniele_m_0 = daniele_n / daniele_n_r
-daniele_m_1 = 0.5 * (daniele_m_0 + np.sqrt(daniele_m_0 * (daniele_m_0 + 4.0 * daniele_t_1)))
-daniele_u = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0), daniele_g)
-daniele_m = daniele_m_1 / daniele_u
-daniele_w_i = np.log(daniele_n / 100.0) / np.log(2.0)
-daniele_c_t = daniele_c_d * (1.0 + daniele_w_i * daniele_w_g) / daniele_n_r
-daniele_g_ip = 0.5 * (daniele_c_t + np.sqrt(daniele_c_t * (daniele_c_t + 4.0 * daniele_t_1)))
-daniele_g_ipp2 = -daniele_m_1 * pow(daniele_g_ip / daniele_m, 1.0 / daniele_g) / (pow(daniele_g_ip / daniele_m, 1.0 / daniele_g) - 1.0)
-daniele_w_2 = daniele_c / daniele_g_ipp2
-daniele_s_2 = daniele_w_2 * daniele_m_1
-daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g)
-daniele_m_2 = daniele_m_1 / daniele_u_2
+  HALF_MINIMUM = 0.0000000596046448
+  HALF_MAXIMUM = 65504.0
 
-# 1.0 / (c * z)
-model_gamma = 1.0 / (surround[1] * (1.48 + np.sqrt(Y_b / L_A)))
+  # DanieleEvoCurve (ACES2 candidate) parameters
+  mmScaleFactor = 100.0      # redundant and equivalent to daniele_n_r
+  daniele_n = peakLuminance  # peak white
+  daniele_n_r = 100.0        # Normalized white in nits (what 1.0 should be)
+  daniele_g = 1.15           # surround / contrast
+  daniele_c = 0.18           # scene-referred grey
+  daniele_c_d = 10.013       # display-referred grey (in nits)
+  daniele_w_g = 0.14         # grey change between different peak luminance
+  daniele_t_1 = 0.04         # shadow toe, flare/glare compensation - how ever you want to call it
+  daniele_r_hit_min = 128.0  # Scene-referred value "hitting the roof" at 100 nits
+  daniele_r_hit_max = 896.0  # Scene-referred value "hitting the roof" at 10,000 nits
 
-# Chroma compression scaling for HDR/SDR appearance match
-log_peak = np.log10(daniele_n / daniele_n_r)
-compr = chroma_compress + (chroma_compress * 5.0) * log_peak
-sat = max(0.15, chroma_expand - (chroma_expand * 0.78) * log_peak)
-sat_thr = chroma_expand_thr / daniele_n
+  # pre-calculate Daniele Evo constants
+  daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (np.log(daniele_n / daniele_n_r) / np.log(10000.0 / 100.0))
+  daniele_m_0 = daniele_n / daniele_n_r
+  daniele_m_1 = 0.5 * (daniele_m_0 + np.sqrt(daniele_m_0 * (daniele_m_0 + 4.0 * daniele_t_1)))
+  daniele_u = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + 1.0), daniele_g)
+  daniele_m = daniele_m_1 / daniele_u
+  daniele_w_i = np.log(daniele_n / 100.0) / np.log(2.0)
+  daniele_c_t = daniele_c_d * (1.0 + daniele_w_i * daniele_w_g) / daniele_n_r
+  daniele_g_ip = 0.5 * (daniele_c_t + np.sqrt(daniele_c_t * (daniele_c_t + 4.0 * daniele_t_1)))
+  daniele_g_ipp2 = -daniele_m_1 * pow(daniele_g_ip / daniele_m, 1.0 / daniele_g) / (pow(daniele_g_ip / daniele_m, 1.0 / daniele_g) - 1.0)
+  daniele_w_2 = daniele_c / daniele_g_ipp2
+  daniele_s_2 = daniele_w_2 * daniele_m_1
+  daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g)
+  daniele_m_2 = daniele_m_1 / daniele_u_2
 
-# Gamut mapper focus distance scaling with peak luminance for
-# HDR/SDR appearance match.  The projection gets slightly less
-# steep with higher peak luminance.
-# https:#www.desmos.com/calculator/bnfhjcq5vf
-focusDist = min(10.0, focusDistance + focusDistance * 1.65 * log_peak)
+  # 1.0 / (c * z)
+  model_gamma = 1.0 / (surround[1] * (1.48 + np.sqrt(Y_b / L_A)))
 
-identity_matrix = np.identity(3)
+  # Chroma compression scaling for HDR/SDR appearance match
+  log_peak = np.log10(daniele_n / daniele_n_r)
+  compr = chroma_compress + (chroma_compress * 5.0) * log_peak
+  sat = max(0.15, chroma_expand - (chroma_expand * 0.78) * log_peak)
+  sat_thr = chroma_expand_thr / daniele_n
 
-XYZ_to_AP0_ACES_matrix = np.array([
-[ 1.0498110175,  0.0000000000, -0.0000974845],
-[-0.4959030231,  1.3733130458,  0.0982400361],
-[ 0.0000000000,  0.0000000000,  0.9912520182]
-])
+  # Gamut mapper focus distance scaling with peak luminance for
+  # HDR/SDR appearance match.  The projection gets slightly less
+  # steep with higher peak luminance.
+  # https:#www.desmos.com/calculator/bnfhjcq5vf
+  focusDist = min(10.0, focusDistance + focusDistance * 1.65 * log_peak)
 
-XYZ_to_AP1_ACES_matrix = np.array([
-[ 1.6410233797, -0.3248032942, -0.2364246952],
-[-0.6636628587,  1.6153315917,  0.0167563477],
-[ 0.0117218943, -0.0082844420,  0.9883948585]
-])
+  identity_matrix = np.identity(3)
 
-XYZ_to_Rec709_D65_matrix = np.array([
-[ 3.2409699419, -1.5373831776, -0.4986107603],
-[-0.9692436363,  1.8759675015,  0.0415550574],
-[ 0.0556300797, -0.2039769589,  1.0569715142]
-])
+  XYZ_to_AP0_ACES_matrix = np.array([
+  [ 1.0498110175,  0.0000000000, -0.0000974845],
+  [-0.4959030231,  1.3733130458,  0.0982400361],
+  [ 0.0000000000,  0.0000000000,  0.9912520182]
+  ])
 
-XYZ_to_Rec2020_D65_matrix = np.array([
-[ 1.7166511880, -0.3556707838, -0.2533662814],
-[-0.6666843518,  1.6164812366,  0.0157685458],
-[ 0.0176398574, -0.0427706133,  0.9421031212]
-])
+  XYZ_to_AP1_ACES_matrix = np.array([
+  [ 1.6410233797, -0.3248032942, -0.2364246952],
+  [-0.6636628587,  1.6153315917,  0.0167563477],
+  [ 0.0117218943, -0.0082844420,  0.9883948585]
+  ])
 
-XYZ_to_P3_D65_matrix = np.array([
-[ 2.4934969119, -0.9313836179, -0.4027107845],
-[-0.8294889696,  1.7626640603,  0.0236246858],
-[ 0.0358458302, -0.0761723893,  0.9568845240]
-])
+  XYZ_to_Rec709_D65_matrix = np.array([
+  [ 3.2409699419, -1.5373831776, -0.4986107603],
+  [-0.9692436363,  1.8759675015,  0.0415550574],
+  [ 0.0556300797, -0.2039769589,  1.0569715142]
+  ])
 
-XYZ_to_P3_DCI_matrix = np.array([
-[ 2.7253940305, -1.0180030062, -0.4401631952],
-[-0.7951680258,  1.6897320548,  0.0226471906],
-[ 0.0412418914, -0.0876390192,  1.1009293786]
-])
+  XYZ_to_Rec2020_D65_matrix = np.array([
+  [ 1.7166511880, -0.3556707838, -0.2533662814],
+  [-0.6666843518,  1.6164812366,  0.0157685458],
+  [ 0.0176398574, -0.0427706133,  0.9421031212]
+  ])
 
-# populate the input primaries matrix
-XYZ_to_RGB_input = XYZ_to_AP0_ACES_matrix
+  XYZ_to_P3_D65_matrix = np.array([
+  [ 2.4934969119, -0.9313836179, -0.4027107845],
+  [-0.8294889696,  1.7626640603,  0.0236246858],
+  [ 0.0358458302, -0.0761723893,  0.9568845240]
+  ])
 
-# populate the limiting primaries matrix
-# RGBPrimsToXYZMatrix
-limitWhiteForMatrix = (0.0, 0.0)
-limitRedForMatrix = (0.0, 0.0)
-limitGreenForMatrix = (0.0, 0.0)
-limitBlueForMatrix = (0.0, 0.0)
-if( whiteLimit == 0):
-  limitWhiteForMatrix = (0.32168, 0.33767)
-elif( whiteLimit == 1):
-  limitWhiteForMatrix = (0.3127, 0.3290)
-else:
-  limitWhiteForMatrix = (0.333333, 0.333333)
+  XYZ_to_P3_DCI_matrix = np.array([
+  [ 2.7253940305, -1.0180030062, -0.4401631952],
+  [-0.7951680258,  1.6897320548,  0.0226471906],
+  [ 0.0412418914, -0.0876390192,  1.1009293786]
+  ])
 
-if( primariesLimit == 0 ):
-  limitRedForMatrix = (0.7347, 0.2653)
-  limitGreenForMatrix = (0.0, 1.0)
-  limitBlueForMatrix = (0.0001, -0.077)
-elif( primariesLimit == 1 ):
-  limitRedForMatrix = (0.713, 0.293)
-  limitGreenForMatrix = (0.165, 0.830)
-  limitBlueForMatrix = (0.128, 0.044)
-elif( primariesLimit == 2 ):
-  limitRedForMatrix = (0.64, 0.33)
-  limitGreenForMatrix = (0.3, 0.6)
-  limitBlueForMatrix = (0.15, 0.06)
-elif( primariesLimit == 3 ):
-  limitRedForMatrix = (0.708, 0.292)
-  limitGreenForMatrix = (0.170, 0.797)
-  limitBlueForMatrix = (0.131, 0.046)
-elif( primariesLimit == 4 ):
-  limitRedForMatrix = (0.680, 0.320)
-  limitGreenForMatrix = (0.265, 0.690)
-  limitBlueForMatrix = (0.150, 0.060)
-else:
-  limitRedForMatrix = (1.0, 0.0)
-  limitGreenForMatrix = (0.0, 1.0)
+  # populate the input primaries matrix
+  XYZ_to_RGB_input = XYZ_to_AP0_ACES_matrix
+
+  # populate the limiting primaries matrix
+  # RGBPrimsToXYZMatrix
+  limitWhiteForMatrix = (0.0, 0.0)
+  limitRedForMatrix = (0.0, 0.0)
+  limitGreenForMatrix = (0.0, 0.0)
   limitBlueForMatrix = (0.0, 0.0)
+  if( whiteLimit == 0):
+    limitWhiteForMatrix = (0.32168, 0.33767)
+  elif( whiteLimit == 1):
+    limitWhiteForMatrix = (0.3127, 0.3290)
+  else:
+    limitWhiteForMatrix = (0.333333, 0.333333)
 
-XYZ_to_RGB_limit = RGBPrimsToXYZMatrix(limitRedForMatrix, limitGreenForMatrix, limitBlueForMatrix, limitWhiteForMatrix, 1.0, 1)
+  if( primariesLimit == 0 ):
+    limitRedForMatrix = (0.7347, 0.2653)
+    limitGreenForMatrix = (0.0, 1.0)
+    limitBlueForMatrix = (0.0001, -0.077)
+  elif( primariesLimit == 1 ):
+    limitRedForMatrix = (0.713, 0.293)
+    limitGreenForMatrix = (0.165, 0.830)
+    limitBlueForMatrix = (0.128, 0.044)
+  elif( primariesLimit == 2 ):
+    limitRedForMatrix = (0.64, 0.33)
+    limitGreenForMatrix = (0.3, 0.6)
+    limitBlueForMatrix = (0.15, 0.06)
+  elif( primariesLimit == 3 ):
+    limitRedForMatrix = (0.708, 0.292)
+    limitGreenForMatrix = (0.170, 0.797)
+    limitBlueForMatrix = (0.131, 0.046)
+  elif( primariesLimit == 4 ):
+    limitRedForMatrix = (0.680, 0.320)
+    limitGreenForMatrix = (0.265, 0.690)
+    limitBlueForMatrix = (0.150, 0.060)
+  else:
+    limitRedForMatrix = (1.0, 0.0)
+    limitGreenForMatrix = (0.0, 1.0)
+    limitBlueForMatrix = (0.0, 0.0)
 
-# populate the reach primaries matrix
-XYZ_to_RGB_reach = identity_matrix
-if( primariesReach == 0 ):
-  XYZ_to_RGB_reach = XYZ_to_AP0_ACES_matrix
-elif( primariesReach == 1 ):
+  XYZ_to_RGB_limit = RGBPrimsToXYZMatrix(limitRedForMatrix, limitGreenForMatrix, limitBlueForMatrix, limitWhiteForMatrix, 1.0, 1)
+
+  # populate the reach primaries matrix
+  XYZ_to_RGB_reach = identity_matrix
+  if( primariesReach == 0 ):
+    XYZ_to_RGB_reach = XYZ_to_AP0_ACES_matrix
+  elif( primariesReach == 1 ):
+    XYZ_to_RGB_reach = XYZ_to_AP1_ACES_matrix
+  elif( primariesReach == 2 ):
+    XYZ_to_RGB_reach = XYZ_to_Rec709_D65_matrix
+  elif( primariesReach == 3 ):
+    XYZ_to_RGB_reach = XYZ_to_Rec2020_D65_matrix
+  elif( primariesReach == 4 ):
+    XYZ_to_RGB_reach = XYZ_to_P3_D65_matrix
+  elif( primariesReach == 5 ):
+    XYZ_to_RGB_reach = XYZ_to_P3_DCI_matrix
+
+  # populate the output primaries matrix
+  XYZ_to_RGB_output = identity_matrix
+  if( primariesOut == 0 ):
+    XYZ_to_RGB_output = XYZ_to_AP0_ACES_matrix
+  elif( primariesOut == 1 ):
+    XYZ_to_RGB_output = XYZ_to_AP1_ACES_matrix
+  elif( primariesOut == 2 ):
+    XYZ_to_RGB_output = XYZ_to_Rec709_D65_matrix
+  elif( primariesOut == 3 ):
+    XYZ_to_RGB_output = XYZ_to_Rec2020_D65_matrix
+  elif( primariesOut == 4 ):
+    XYZ_to_RGB_output = XYZ_to_P3_D65_matrix
+  elif( primariesOut == 5 ):
+    XYZ_to_RGB_output = XYZ_to_P3_DCI_matrix
+
+  RGB_to_XYZ_input = np.linalg.inv(XYZ_to_RGB_input)
+  RGB_to_XYZ_limit = np.linalg.inv(XYZ_to_RGB_limit)
+  RGB_to_XYZ_reach = np.linalg.inv(XYZ_to_RGB_reach)
+  RGB_to_XYZ_output = np.linalg.inv(XYZ_to_RGB_output)
+
+  XYZ_to_AP1 = XYZ_to_AP1_ACES_matrix
+  AP1_to_XYZ = np.linalg.inv(XYZ_to_AP1)
+
+  CAT_CAT16 = RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, 1.0, 1)
+
+  white = np.array([1.0, 1.0, 1.0])
+
+  inWhite = vector_dot(RGB_to_XYZ_input, white)
+  outWhite = vector_dot(RGB_to_XYZ_output, white)
+  refWhite = vector_dot(RGB_to_XYZ_limit, white)
+
+  boundaryRGB = peakLuminance / referenceLuminance
+
+  # Generate the Hellwig2022 post adaptation non-linear compression matrix
+  # that is used in the inverse of the model (JMh-to-XYZ).
+  #
+  # Original:
+  #  460.0f, 451.0f, 288.0f,
+  #  460.0f, -891.0f, -261.0f,
+  #  460.0f, -220.0f, -6300.0f
+  panlrcm = np.array([
+    [ra, 1.0, ba],
+    [1.0, -12.0 / 11.0, 1.0 / 11.0],
+    [1.0 / 9.0, 1.0 / 9.0, -2.0 / 9.0]
+  ])
+  panlrcm = np.linalg.inv(panlrcm)
+
+  # Normalize rows so that first column is 460
+  for i in range(3):
+    n = 460.0 / panlrcm[i][0]
+    panlrcm[i] *= n
+
+  # limitJmax (asumed to match limitRGB white)
+  limitJmax = Y_to_J(peakLuminance, L_A, Y_b, surround[1])
+
+  # Cusp table for chroma compression gamut
+  tmpx = XYZ_to_RGB_limit
+  tmpr = RGB_to_XYZ_limit
+  tmpR = XYZ_to_RGB_reach
+
   XYZ_to_RGB_reach = XYZ_to_AP1_ACES_matrix
-elif( primariesReach == 2 ):
-  XYZ_to_RGB_reach = XYZ_to_Rec709_D65_matrix
-elif( primariesReach == 3 ):
-  XYZ_to_RGB_reach = XYZ_to_Rec2020_D65_matrix
-elif( primariesReach == 4 ):
-  XYZ_to_RGB_reach = XYZ_to_P3_D65_matrix
-elif( primariesReach == 5 ):
-  XYZ_to_RGB_reach = XYZ_to_P3_DCI_matrix
+  RGB_to_XYZ_limit = np.linalg.inv(XYZ_to_RGB_reach)
 
-# populate the output primaries matrix
-XYZ_to_RGB_output = identity_matrix
-if( primariesOut == 0 ):
-  XYZ_to_RGB_output = XYZ_to_AP0_ACES_matrix
-elif( primariesOut == 1 ):
-  XYZ_to_RGB_output = XYZ_to_AP1_ACES_matrix
-elif( primariesOut == 2 ):
-  XYZ_to_RGB_output = XYZ_to_Rec709_D65_matrix
-elif( primariesOut == 3 ):
-  XYZ_to_RGB_output = XYZ_to_Rec2020_D65_matrix
-elif( primariesOut == 4 ):
-  XYZ_to_RGB_output = XYZ_to_P3_D65_matrix
-elif( primariesOut == 5 ):
-  XYZ_to_RGB_output = XYZ_to_P3_DCI_matrix
+  gamutCuspTableUnsorted = np.zeros((gamutCuspTableSize, 3))
+  for i in range(gamutCuspTableSize):
+    hNorm = float(i) / gamutCuspTableSize
+    RGB = HSV_to_RGB([hNorm, 1.0, 1.0])
+    gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
 
-RGB_to_XYZ_input = np.linalg.inv(XYZ_to_RGB_input)
-RGB_to_XYZ_limit = np.linalg.inv(XYZ_to_RGB_limit)
-RGB_to_XYZ_reach = np.linalg.inv(XYZ_to_RGB_reach)
-RGB_to_XYZ_output = np.linalg.inv(XYZ_to_RGB_output)
+  minhIndex = 0
+  for i in range(1, gamutCuspTableSize):
+    if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
+      minhIndex = i
 
-XYZ_to_AP1 = XYZ_to_AP1_ACES_matrix
-AP1_to_XYZ = np.linalg.inv(XYZ_to_AP1)
+  cgamutCuspTable = np.zeros((gamutCuspTableSize, 3))
+  for i in range(gamutCuspTableSize):
+    cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
 
-CAT_CAT16 = RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, 1.0, 1)
+  # Reach table for the chroma compression reach. If AP1 this is the same as gamutCuspTableReach
+#   cgamutReachTable = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+#   for i in range(gamutCuspTableSize):
+#     cgamutReachTable[i][2] = i
+#     for M in range(1300):
+#       sampleM = float(M)
+#       newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
+#       if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
+#         cgamutReachTable[i][1] = sampleM
+#         break
 
-white = np.array([1.0, 1.0, 1.0])
+  XYZ_to_RGB_limit = tmpx
+  RGB_to_XYZ_limit = tmpr
 
-inWhite = vector_dot(RGB_to_XYZ_input, white)
-outWhite = vector_dot(RGB_to_XYZ_output, white)
-refWhite = vector_dot(RGB_to_XYZ_limit, white)
+  # Cusp table for limiting gamut
+  gamutCuspTableUnsorted = np.zeros((gamutCuspTableSize, 3))
+  for i in range(gamutCuspTableSize):
+    hNorm = float(i) / gamutCuspTableSize
+    RGB = HSV_to_RGB([hNorm, 1.0, 1.0])
+    gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
 
-boundaryRGB = peakLuminance / referenceLuminance
+  minhIndex = 0
+  for i in range(1, gamutCuspTableSize):
+    if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
+      minhIndex = i
 
-# Generate the Hellwig2022 post adaptation non-linear compression matrix
-# that is used in the inverse of the model (JMh-to-XYZ).
-#
-# Original:
-#  460.0f, 451.0f, 288.0f,
-#  460.0f, -891.0f, -261.0f,
-#  460.0f, -220.0f, -6300.0f
-panlrcm = np.array([
-  [ra, 1.0, ba],
-  [1.0, -12.0 / 11.0, 1.0 / 11.0],
-  [1.0 / 9.0, 1.0 / 9.0, -2.0 / 9.0]
-])
-panlrcm = np.linalg.inv(panlrcm)
+  gamutCuspTable = np.zeros((gamutCuspTableSize, 3))
+  for i in range(gamutCuspTableSize):
+    gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
 
-# Normalize rows so that first column is 460
-for i in range(3):
-  n = 460.0 / panlrcm[i][0]
-  panlrcm[i] *= n
+  # Cusp table for limiting reach gamut, values at a J of 100.  Covers M values
+  # up to 10000 nits.
+#   gamutCuspTableReach = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+#   for i in range(gamutCuspTableSize):
+#     gamutCuspTableReach[i][2] = i
+#     for M in range(1300):
+#       sampleM = float(M)
+#       newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
+#       if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
+#         gamutCuspTableReach[i][1] = sampleM
+#         break
 
-# limitJmax (asumed to match limitRGB white)
-limitJmax = Y_to_J(peakLuminance, L_A, Y_b, surround[1])
+  midJ = Y_to_J(daniele_c_t * mmScaleFactor, L_A, Y_b, surround[1])
 
-# Cusp table for chroma compression gamut
-tmpx = XYZ_to_RGB_limit
-tmpr = RGB_to_XYZ_limit
-tmpR = XYZ_to_RGB_reach
+  # Find upper hull gamma values for the gamut mapper
+  # start by taking a h angle
+  # get the cusp J value for that angle
+  # find a J value halfway to the Jmax
+  # iterate through gamma values until the approxilate max M is negative through the actual boundry
+  gamutTopGamma = np.zeros(gamutCuspTableSize)
+  for i in range(gamutCuspTableSize):
+    # get cusp from cusp table at hue position
+    JMcusp = cuspFromTable(float(i))
+    # create test value halfway betwen the cusp and the Jmax
+    # positions between the cusp and Jmax we will check
+    testPositions = [0.01, 0.5, 0.99]
+    # variables that get set as we iterate through, once all 3 are set to true we break the loop
+    gammaFound = [False, False, False]
+    # limit value, once we cross this value, we are outside of the top gamut shell 
+    maxRGBtestVal = 1.0
+    # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
+    for Tg in range(70, 170):
+      # topGamma value created from the Tg variable
+      topGamma = float(Tg) / 100.0
+      # loop to run through each of the positions defined in the testPositions list
+      for testIndex in range(3):
+        testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i)])
+        approxLimit  =  findGamutBoundaryIntersection(testJmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i)]))
+        # if any channel has broken through the top gamut hull, break
+        if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
+          gamutTopGamma[i] = topGamma
+          gammaFound[testIndex] = True
+      # once all 3 of the test
+      if (gammaFound[0] and gammaFound[1] and gammaFound[2]):
+        break
 
-XYZ_to_RGB_reach = XYZ_to_AP1_ACES_matrix
-RGB_to_XYZ_limit = np.linalg.inv(XYZ_to_RGB_reach)
+def print_constants():
+  print()
+  print(format_array3(XYZ_to_RGB_input, "__CONSTANT__ float3x3 XYZ_to_RGB_input"))
+  print(format_array3(XYZ_to_RGB_limit, "__CONSTANT__ float3x3 XYZ_to_RGB_limit"))
+  print(format_array3(XYZ_to_RGB_reach, "__CONSTANT__ float3x3 XYZ_to_RGB_reach"))
+  print(format_array3(XYZ_to_RGB_output, "__CONSTANT__ float3x3 XYZ_to_RGB_output"))
+  print(format_array3(RGB_to_XYZ_input, "__CONSTANT__ float3x3 RGB_to_XYZ_input"))
+  print(format_array3(RGB_to_XYZ_limit, "__CONSTANT__ float3x3 RGB_to_XYZ_limit"))
+  print(format_array3(RGB_to_XYZ_reach, "__CONSTANT__ float3x3 RGB_to_XYZ_reach"))
+  print(format_array3(RGB_to_XYZ_output, "__CONSTANT__ float3x3 RGB_to_XYZ_output"))
+  print(format_array3(XYZ_to_AP1, "__CONSTANT__ float3x3 XYZ_to_AP1"))
+  print(format_array3(AP1_to_XYZ, "__CONSTANT__ float3x3 AP1_to_XYZ"))
+  print(format_array3(CAT_CAT16, "__CONSTANT__ float3x3 CAT_CAT16"))
+  print(format_array3(panlrcm, "__CONSTANT__ float3x3 panlrcm", 1))
+  print("__CONSTANT__ float daniele_m_2 = {:.10f}f;".format(daniele_m_2))
+  print("__CONSTANT__ float daniele_s_2 = {:.10f}f;".format(daniele_s_2))
+  print("__CONSTANT__ float daniele_g = {:.2f}f;".format(daniele_g))
+  print("__CONSTANT__ float daniele_t_1 = {:.2f}f;".format(daniele_t_1))
+  print("__CONSTANT__ float daniele_n = {:.1f}f;".format(daniele_n))
+  print("__CONSTANT__ float daniele_u_2 = {:.10f}f;".format(daniele_u_2))
+  print("__CONSTANT__ float daniele_n_r = {:.1f}f;".format(daniele_n_r))
+  print()
+  print("__CONSTANT__ float compr = {:.6f}f;".format(compr))
+  print("__CONSTANT__ float sat = {:.10f}f;".format(sat))
+  print("__CONSTANT__ float sat_thr = {:.4f}f;".format(sat_thr))
+  print("__CONSTANT__ float limitJmax = {:.6f}f;".format(limitJmax))
+  print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
+  print("__CONSTANT__ float focusDist = {:.10f}f;".format(focusDist))
+  print("__CONSTANT__ float cuspMidBlend = {:.2f}f;".format(cuspMidBlend))
+  print("__CONSTANT__ float model_gamma = {:.10f}f;".format(model_gamma))
+  print("__CONSTANT__ float lowerHullGamma = {:.3f}f;".format(lowerHullGamma))
+  print("__CONSTANT__ float smoothCusps = {:.3f}f;".format(smoothCusps))
+  print("__CONSTANT__ float clamp_thr = {:.3f}f;".format(clamp_thr))
+  print("__CONSTANT__ float clamp_dist = {:.1f}f;".format(clamp_dist))
+  print()
+  print("__CONSTANT__ float4 compressionFuncParams = {" + "{:.2f}f, {:.1f}f, {:.1f}f, {:.1f}f".format(compressionFuncParams[0], compressionFuncParams[1], compressionFuncParams[2], compressionFuncParams[3]) + "};")
+  print()
+  print("__CONSTANT__ float3 surround = " + format_vector(surround) + ";")
+  print("__CONSTANT__ float3 inWhite = " + format_vector(inWhite) + ";")
+  print("__CONSTANT__ float3 outWhite = " + format_vector(outWhite) + ";")
+  print("__CONSTANT__ float3 refWhite = " + format_vector(refWhite) + ";")
+  print()
+  print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[360]"))
+#   print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[360]", 1))
+  print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[360]"))
+#   print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[360]", 1))
+  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[360]", 2))
 
-gamutCuspTableUnsorted = np.zeros((gamutCuspTableSize, 3))
-for i in range(gamutCuspTableSize):
-  hNorm = float(i) / gamutCuspTableSize
-  RGB = HSV_to_RGB([hNorm, 1.0, 1.0])
-  gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
+def main():
+    global peakLuminance, primariesLimit, whiteLimit
+    if len(sys.argv) < 4:
+        print(f"Usage:  python3 {sys.argv[0]} <peakLuminance> <primariesLimit> <whiteLimit>")
+        print("peakLuminance - peak luminance in nits")
+        print("primariesLimit – primaries of the target gamut")
+        print("\t0: AP0-ACES")
+        print("\t1: AP1-ACES")
+        print("\t2: sRGB/Rec.709")
+        print("\t3: Rec.2020")
+        print("\t4: P3")
+        print("whiteLimit – white point of the limiting gamut")
+        print("effectively the 'creative white'")
+        print("\t0: ACES white")
+        print("\t1: D65")
+        exit(1)
+    peakLuminance = float(sys.argv[1])
+    primariesLimit = int(sys.argv[2])
+    whiteLimit = int(sys.argv[3])
+    init()
+    print_constants()
 
-minhIndex = 0
-for i in range(1, gamutCuspTableSize):
-  if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
-    minhIndex = i
-
-cgamutCuspTable = np.zeros((gamutCuspTableSize, 3))
-for i in range(gamutCuspTableSize):
-  cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
-
-# Reach table for the chroma compression reach. If AP1 this is the same as gamutCuspTableReach
-cgamutReachTable = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
-for i in range(gamutCuspTableSize):
-  cgamutReachTable[i][2] = i
-  for M in range(1300):
-    sampleM = float(M)
-    newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
-    if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
-      cgamutReachTable[i][1] = sampleM
-      break
-
-XYZ_to_RGB_limit = tmpx
-RGB_to_XYZ_limit = tmpr
-
-# Cusp table for limiting gamut
-gamutCuspTableUnsorted = np.zeros((gamutCuspTableSize, 3))
-for i in range(gamutCuspTableSize):
-  hNorm = float(i) / gamutCuspTableSize
-  RGB = HSV_to_RGB([hNorm, 1.0, 1.0])
-  gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
-
-minhIndex = 0
-for i in range(1, gamutCuspTableSize):
-  if( gamutCuspTableUnsorted[i][2] <  gamutCuspTableUnsorted[minhIndex][2]):
-    minhIndex = i
-
-gamutCuspTable = np.zeros((gamutCuspTableSize, 3))
-for i in range(gamutCuspTableSize):
-  gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
-
-# Cusp table for limiting reach gamut, values at a J of 100.  Covers M values
-# up to 10000 nits.
-gamutCuspTableReach = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
-for i in range(gamutCuspTableSize):
-  gamutCuspTableReach[i][2] = i
-  for M in range(1300):
-    sampleM = float(M)
-    newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
-    if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
-      gamutCuspTableReach[i][1] = sampleM
-      break
-
-midJ = Y_to_J(daniele_c_t * mmScaleFactor, L_A, Y_b, surround[1])
-
-# Find upper hull gamma values for the gamut mapper
-# start by taking a h angle
-# get the cusp J value for that angle
-# find a J value halfway to the Jmax
-# iterate through gamma values until the approxilate max M is negative through the actual boundry
-gamutTopGamma = np.zeros(gamutCuspTableSize)
-for i in range(gamutCuspTableSize):
-  # get cusp from cusp table at hue position
-  JMcusp = cuspFromTable(float(i))
-  # create test value halfway betwen the cusp and the Jmax
-  # positions between the cusp and Jmax we will check
-  testPositions = [0.01, 0.5, 0.99]
-  # variables that get set as we iterate through, once all 3 are set to true we break the loop
-  gammaFound = [False, False, False]
-  # limit value, once we cross this value, we are outside of the top gamut shell 
-  maxRGBtestVal = 1.0
-  # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
-  for Tg in range(70, 170):
-    # topGamma value created from the Tg variable
-    topGamma = float(Tg) / 100.0
-    # loop to run through each of the positions defined in the testPositions list
-    for testIndex in range(3):
-      testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i)])
-      approxLimit  =  findGamutBoundaryIntersection(testJmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
-      newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i)]))
-      # if any channel has broken through the top gamut hull, break
-      if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
-        gamutTopGamma[i] = topGamma
-        gammaFound[testIndex] = True
-    # once all 3 of the test
-    if (gammaFound[0] and gammaFound[1] and gammaFound[2]):
-      break
-
-print()
-print(format_array3(XYZ_to_RGB_input, "__CONSTANT__ float3x3 XYZ_to_RGB_input"))
-print(format_array3(XYZ_to_RGB_limit, "__CONSTANT__ float3x3 XYZ_to_RGB_limit"))
-print(format_array3(XYZ_to_RGB_reach, "__CONSTANT__ float3x3 XYZ_to_RGB_reach"))
-print(format_array3(XYZ_to_RGB_output, "__CONSTANT__ float3x3 XYZ_to_RGB_output"))
-print(format_array3(RGB_to_XYZ_input, "__CONSTANT__ float3x3 RGB_to_XYZ_input"))
-print(format_array3(RGB_to_XYZ_limit, "__CONSTANT__ float3x3 RGB_to_XYZ_limit"))
-print(format_array3(RGB_to_XYZ_reach, "__CONSTANT__ float3x3 RGB_to_XYZ_reach"))
-print(format_array3(RGB_to_XYZ_output, "__CONSTANT__ float3x3 RGB_to_XYZ_output"))
-print(format_array3(XYZ_to_AP1, "__CONSTANT__ float3x3 XYZ_to_AP1"))
-print(format_array3(AP1_to_XYZ, "__CONSTANT__ float3x3 AP1_to_XYZ"))
-print(format_array3(CAT_CAT16, "__CONSTANT__ float3x3 CAT_CAT16"))
-print(format_array3(panlrcm, "__CONSTANT__ float3x3 panlrcm", 1))
-print("__CONSTANT__ float daniele_m_2 = {:.10f}f;".format(daniele_m_2))
-print("__CONSTANT__ float daniele_s_2 = {:.10f}f;".format(daniele_s_2))
-print("__CONSTANT__ float daniele_g = {:.2f}f;".format(daniele_g))
-print("__CONSTANT__ float daniele_t_1 = {:.2f}f;".format(daniele_t_1))
-print("__CONSTANT__ float daniele_n = {:.1f}f;".format(daniele_n))
-print("__CONSTANT__ float daniele_u_2 = {:.10f}f;".format(daniele_u_2))
-print("__CONSTANT__ float daniele_n_r = {:.1f}f;".format(daniele_n_r))
-print()
-print("__CONSTANT__ float compr = {:.6f}f;".format(compr))
-print("__CONSTANT__ float sat = {:.10f}f;".format(sat))
-print("__CONSTANT__ float sat_thr = {:.4f}f;".format(sat_thr))
-print("__CONSTANT__ float limitJmax = {:.6f}f;".format(limitJmax))
-print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
-print("__CONSTANT__ float focusDist = {:.10f}f;".format(focusDist))
-print("__CONSTANT__ float cuspMidBlend = {:.2f}f;".format(cuspMidBlend))
-print("__CONSTANT__ float model_gamma = {:.10f}f;".format(model_gamma))
-print("__CONSTANT__ float lowerHullGamma = {:.3f}f;".format(lowerHullGamma))
-print("__CONSTANT__ float smoothCusps = {:.3f}f;".format(smoothCusps))
-print("__CONSTANT__ float clamp_thr = {:.3f}f;".format(clamp_thr))
-print("__CONSTANT__ float clamp_dist = {:.1f}f;".format(clamp_dist))
-print()
-print("__CONSTANT__ float4 compressionFuncParams = {" + "{:.2f}f, {:.1f}f, {:.1f}f, {:.1f}f".format(compressionFuncParams[0], compressionFuncParams[1], compressionFuncParams[2], compressionFuncParams[3]) + "};")
-print()
-print("__CONSTANT__ float3 surround = " + format_vector(surround) + ";")
-print("__CONSTANT__ float3 inWhite = " + format_vector(inWhite) + ";")
-print("__CONSTANT__ float3 outWhite = " + format_vector(outWhite) + ";")
-print("__CONSTANT__ float3 refWhite = " + format_vector(refWhite) + ";")
-print()
-print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[360]"))
-print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[360]", 1))
-print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[360]"))
-print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[360]", 1))
-print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[360]", 2))
+if __name__ == "__main__":
+    main()
