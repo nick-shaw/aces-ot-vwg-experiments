@@ -27,8 +27,8 @@ primariesReach = 1
 
 # Chroma compression params (limit, k1, k2)
 chroma_compress = 3.5
-chroma_expand = 1.56
-chroma_expand_thr = 0.4
+chroma_expand = 1.65
+chroma_expand_thr = 0.5
 
 # Gamut compression params
 gamutCuspTableSize = 360
@@ -39,7 +39,6 @@ cuspMidBlend = 1.2
 # Focus distance of the compression focal point from the achromatic axis
 focusDistance = 1.5
 focusAdjustGain = 0.35
-focusAdjustPeakGain = 1.0
 focusGainBlend = 0.3
 # How much the edges of the target RGB cube are smoothed when finding the gamut boundary
 # in order to reduce visible contours at the gamut cusps
@@ -48,7 +47,7 @@ lowerHullGamma = 1.15
 compressionFuncParams = [0.75, 1.1, 1.3, 1.2]
 
 # Soft clip parameters
-clamp_thr = 0.999
+clamp_thr = 0.9997
 clamp_dist = 1.1
 
 # Hellwig 2022 CAM params
@@ -57,7 +56,7 @@ surround = (0.9, 0.59, 0.9)
 # xy coordintes for custom CAT matrix
 rxy = (0.82, 0.175)
 gxy = (-1.3, 1.8)
-bxy = (0.13, -0.15)
+bxy = (0.13, -0.14)
 wxy = (0.333, 0.333)
 ra = ac_resp * 2
 ba = 0.05 + (2.0 - ra)
@@ -911,6 +910,8 @@ def main():
         print("effectively the 'creative white'")
         print("\t0: ACES white")
         print("\t1: D65")
+        print()
+        print("E.g.:\npython3 v53_init.py 100 2 1\nwill produce the Rec.709 100 nit values")
         exit(1)
     peakLuminance = float(sys.argv[1])
     primariesLimit = int(sys.argv[2])
