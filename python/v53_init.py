@@ -768,15 +768,15 @@ def init():
 
   cgamutCuspTable = np.zeros((gamutCuspTableSize, 3))
   for i in range(gamutCuspTableSize):
-    cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
+    cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize].copy()
 
   # Reach table for the chroma compression reach. If AP1 this is the same as gamutCuspTableReach
   cgamutReachTable = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
   for i in range(gamutCuspTableSize):
-    cgamutReachTable[i][2] = i
+    cgamutReachTable[i][2] = float(i) * 360 / gamutCuspTableSize
     for M in range(1300):
       sampleM = float(M)
-      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
+      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, float(i) * 360 / gamutCuspTableSize]))
       if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
         cgamutReachTable[i][1] = sampleM
         break
@@ -798,18 +798,18 @@ def init():
 
   gamutCuspTable = np.zeros((gamutCuspTableSize, 3))
   for i in range(gamutCuspTableSize):
-    gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize]
+    gamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize].copy()
 
   # Cusp table for limiting reach gamut, values at a J of 100.  Covers M values
   # up to 10000 nits.
   gamutCuspTableReach = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
   for i in range(gamutCuspTableSize):
-    gamutCuspTableReach[i][2] = i
+    gamutCuspTableReach[i][2] = float(i) * 360 / gamutCuspTableSize
     for M in range(1300):
       sampleM = float(M)
-      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, i]))
+      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, float(i) * 360 / gamutCuspTableSize]))
       if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
-        gamutCuspTableReach[i][1] = sampleM
+        gamutCuspTableReach[i][0] = sampleM
         break
 
   midJ = Y_to_J(daniele_c_t * mmScaleFactor, L_A, Y_b, surround[1])
@@ -822,7 +822,7 @@ def init():
   gamutTopGamma = np.zeros(gamutCuspTableSize)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
-    JMcusp = cuspFromTable(float(i))
+    JMcusp = cuspFromTable(float(i) * 360 / gamutCuspTableSize)
     # create test value halfway betwen the cusp and the Jmax
     # positions between the cusp and Jmax we will check
     testPositions = [0.01, 0.5, 0.99]
@@ -836,9 +836,9 @@ def init():
       topGamma = float(Tg) / 100.0
       # loop to run through each of the positions defined in the testPositions list
       for testIndex in range(3):
-        testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i)])
+        testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i) * 360 / gamutCuspTableSize])
         approxLimit  =  findGamutBoundaryIntersection(testJmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
-        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i)]))
+        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i) * 360 / gamutCuspTableSize]))
         # if any channel has broken through the top gamut hull, break
         if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
           gamutTopGamma[i] = topGamma
@@ -884,16 +884,16 @@ def print_constants():
   print()
   print("__CONSTANT__ float4 compressionFuncParams = {" + "{:.2f}f, {:.1f}f, {:.1f}f, {:.1f}f".format(compressionFuncParams[0], compressionFuncParams[1], compressionFuncParams[2], compressionFuncParams[3]) + "};")
   print()
-  print("__CONSTANT__ float3 surround = " + format_vector(surround) + ";")
+  print("__CONSTANT__ float3 surround = " + format_vector(surround, 2) + ";")
   print("__CONSTANT__ float3 inWhite = " + format_vector(inWhite) + ";")
   print("__CONSTANT__ float3 outWhite = " + format_vector(outWhite) + ";")
   print("__CONSTANT__ float3 refWhite = " + format_vector(refWhite) + ";")
   print()
-  print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[360]"))
-  print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[360]", 1))
-  print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[360]"))
-  print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[360]", 1))
-  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[360]", 2))
+  print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[{}]".format(gamutCuspTableSize)))
+  print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[{}]".format(gamutCuspTableSize), 1))
+  print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[{}]".format(gamutCuspTableSize)))
+  print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[{}]".format(gamutCuspTableSize), 1))
+  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 2))
 
 def main():
     global peakLuminance, primariesLimit, whiteLimit
@@ -917,6 +917,7 @@ def main():
     primariesLimit = int(sys.argv[2])
     whiteLimit = int(sys.argv[3])
     init()
+    print(cuspFromTable(0.0))
     print_constants()
 
 if __name__ == "__main__":
