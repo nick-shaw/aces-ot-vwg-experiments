@@ -917,7 +917,6 @@ def main():
     primariesLimit = int(sys.argv[2])
     whiteLimit = int(sys.argv[3])
     init()
-    print(cuspFromTable(0.0))
     print_constants()
 
 if __name__ == "__main__":
