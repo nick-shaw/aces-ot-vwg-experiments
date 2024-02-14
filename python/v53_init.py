@@ -783,6 +783,7 @@ def init():
 
   XYZ_to_RGB_limit = tmpx
   RGB_to_XYZ_limit = tmpr
+  XYZ_to_RGB_reach = tmpR
 
   # Cusp table for limiting gamut
   gamutCuspTableUnsorted = np.zeros((gamutCuspTableSize, 3))
