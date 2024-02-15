@@ -75,7 +75,6 @@ def format_array3(M, name, decimals=10, indent1=0, indent2=4):
     out = out + " " * indent1 + "{\n"
     n = M.shape[0]
     for i in range(n):
-#         print(M[i])
         out = out + " " * indent2 + format_vector(M[i], decimals) + ("," if i < n - 1  else "") + "\n"
     out = out + " " * indent1 + "};\n"
     return out
@@ -598,41 +597,47 @@ def init():
 
   identity_matrix = np.identity(3)
 
-  XYZ_to_AP0_ACES_matrix = np.array([
-  [ 1.0498110175,  0.0000000000, -0.0000974845],
-  [-0.4959030231,  1.3733130458,  0.0982400361],
-  [ 0.0000000000,  0.0000000000,  0.9912520182]
-  ])
+#   XYZ_to_AP0_ACES_matrix = np.array([
+#   [ 1.0498110175,  0.0000000000, -0.0000974845],
+#   [-0.4959030231,  1.3733130458,  0.0982400361],
+#   [ 0.0000000000,  0.0000000000,  0.9912520182]
+#   ])
+  XYZ_to_AP0_ACES_matrix = RGBPrimsToXYZMatrix((0.7347, 0.2653), (0.0, 1.0), (0.0001, -0.077), (0.32168, 0.33767), 1.0, 1)
 
-  XYZ_to_AP1_ACES_matrix = np.array([
-  [ 1.6410233797, -0.3248032942, -0.2364246952],
-  [-0.6636628587,  1.6153315917,  0.0167563477],
-  [ 0.0117218943, -0.0082844420,  0.9883948585]
-  ])
+#   XYZ_to_AP1_ACES_matrix = np.array([
+#   [ 1.6410233797, -0.3248032942, -0.2364246952],
+#   [-0.6636628587,  1.6153315917,  0.0167563477],
+#   [ 0.0117218943, -0.0082844420,  0.9883948585]
+#   ])
+  XYZ_to_AP1_ACES_matrix = RGBPrimsToXYZMatrix((0.713, 0.293), (0.165, 0.830), (0.128, 0.044), (0.32168, 0.33767), 1.0, 1)
 
-  XYZ_to_Rec709_D65_matrix = np.array([
-  [ 3.2409699419, -1.5373831776, -0.4986107603],
-  [-0.9692436363,  1.8759675015,  0.0415550574],
-  [ 0.0556300797, -0.2039769589,  1.0569715142]
-  ])
+#   XYZ_to_Rec709_D65_matrix = np.array([
+#   [ 3.2409699419, -1.5373831776, -0.4986107603],
+#   [-0.9692436363,  1.8759675015,  0.0415550574],
+#   [ 0.0556300797, -0.2039769589,  1.0569715142]
+#   ])
+  XYZ_to_Rec709_D65_matrix = RGBPrimsToXYZMatrix((0.64, 0.33), (0.3, 0.6), (0.15, 0.06), (0.3127, 0.3290), 1.0, 1)
 
-  XYZ_to_Rec2020_D65_matrix = np.array([
-  [ 1.7166511880, -0.3556707838, -0.2533662814],
-  [-0.6666843518,  1.6164812366,  0.0157685458],
-  [ 0.0176398574, -0.0427706133,  0.9421031212]
-  ])
+#   XYZ_to_Rec2020_D65_matrix = np.array([
+#   [ 1.7166511880, -0.3556707838, -0.2533662814],
+#   [-0.6666843518,  1.6164812366,  0.0157685458],
+#   [ 0.0176398574, -0.0427706133,  0.9421031212]
+#   ])
+  XYZ_to_Rec2020_D65_matrix  = RGBPrimsToXYZMatrix((0.708, 0.292), (0.170, 0.797), (0.131, 0.046), (0.3127, 0.3290), 1.0, 1)
 
-  XYZ_to_P3_D65_matrix = np.array([
-  [ 2.4934969119, -0.9313836179, -0.4027107845],
-  [-0.8294889696,  1.7626640603,  0.0236246858],
-  [ 0.0358458302, -0.0761723893,  0.9568845240]
-  ])
+#   XYZ_to_P3_D65_matrix = np.array([
+#   [ 2.4934969119, -0.9313836179, -0.4027107845],
+#   [-0.8294889696,  1.7626640603,  0.0236246858],
+#   [ 0.0358458302, -0.0761723893,  0.9568845240]
+#   ])
+  XYZ_to_P3_D65_matrix = RGBPrimsToXYZMatrix((0.680, 0.320), (0.265, 0.690), (0.150, 0.060), (0.3127, 0.3290), 1.0, 1)
 
-  XYZ_to_P3_DCI_matrix = np.array([
-  [ 2.7253940305, -1.0180030062, -0.4401631952],
-  [-0.7951680258,  1.6897320548,  0.0226471906],
-  [ 0.0412418914, -0.0876390192,  1.1009293786]
-  ])
+#   XYZ_to_P3_DCI_matrix = np.array([
+#   [ 2.7253940305, -1.0180030062, -0.4401631952],
+#   [-0.7951680258,  1.6897320548,  0.0226471906],
+#   [ 0.0412418914, -0.0876390192,  1.1009293786]
+#   ])
+  XYZ_to_P3_DCI_matrix = RGBPrimsToXYZMatrix((0.680, 0.320), (0.265, 0.690), (0.150, 0.060), (0.314, 0.351), 1.0, 1)
 
   # populate the input primaries matrix
   XYZ_to_RGB_input = XYZ_to_AP0_ACES_matrix
@@ -770,16 +775,48 @@ def init():
   for i in range(gamutCuspTableSize):
     cgamutCuspTable[i] = gamutCuspTableUnsorted[(minhIndex+i)%gamutCuspTableSize].copy()
 
+  def outside_reach(newLimitRGB):
+    return newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0
+
   # Reach table for the chroma compression reach. If AP1 this is the same as gamutCuspTableReach
-  cgamutReachTable = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+#   cgamutReachTable = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+#   for i in range(gamutCuspTableSize):
+#     cgamutReachTable[i][2] = float(i) * 360 / gamutCuspTableSize
+#     for M in range(1300):
+#       sampleM = float(M)
+#       newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, float(i) * 360 / gamutCuspTableSize]))
+#       if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
+#         cgamutReachTable[i][1] = sampleM
+#         break
+
+  cgamutReachTable = np.zeros(
+    (gamutCuspTableSize, 3)
+  )  # float3 table for parity with Blink. Could just be a float table
   for i in range(gamutCuspTableSize):
-    cgamutReachTable[i][2] = float(i) * 360 / gamutCuspTableSize
-    for M in range(1300):
-      sampleM = float(M)
-      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, float(i) * 360 / gamutCuspTableSize]))
-      if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
-        cgamutReachTable[i][1] = sampleM
-        break
+    hue = float(i) * 360 / gamutCuspTableSize
+    cgamutReachTable[i][2] = hue
+
+    # Initially tried binary search between 0 and 1300, but there must be cases where extreme values wrap
+    # So start small and jump in small ish steps until we are outside then binary search inside that range
+    search_range = 50.0
+    low, high = 0.0, search_range
+    outside = False
+    while not outside:
+      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, high, hue]))
+      outside = outside_reach(newLimitRGB)
+      if not outside:
+        low = high
+        high = high + search_range
+
+    while (high - low) > 1e-3: # how close should we be
+      sampleM = (high + low) / 2
+      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, hue]))
+      if outside_reach(newLimitRGB):
+        high = sampleM
+      else:
+        low = sampleM
+    cgamutReachTable[i][0] = low
+    cgamutReachTable[i][1] = high
 
   XYZ_to_RGB_limit = tmpx
   RGB_to_XYZ_limit = tmpr
@@ -803,15 +840,44 @@ def init():
 
   # Cusp table for limiting reach gamut, values at a J of 100.  Covers M values
   # up to 10000 nits.
-  gamutCuspTableReach = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+#   gamutCuspTableReach = np.zeros((gamutCuspTableSize, 3))  # float3 table for parity with Blink. Could just be a float table
+#   for i in range(gamutCuspTableSize):
+#     gamutCuspTableReach[i][2] = float(i) * 360 / gamutCuspTableSize
+#     for M in range(1300):
+#       sampleM = float(M)
+#       newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, float(i) * 360 / gamutCuspTableSize]))
+#       if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
+#         gamutCuspTableReach[i][0] = sampleM
+#         break
+
+  gamutCuspTableReach = np.zeros(
+    (gamutCuspTableSize, 3)
+  )  # float3 table for parity with Blink. Could just be a float table
   for i in range(gamutCuspTableSize):
-    gamutCuspTableReach[i][2] = float(i) * 360 / gamutCuspTableSize
-    for M in range(1300):
-      sampleM = float(M)
-      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, float(i) * 360 / gamutCuspTableSize]))
-      if (newLimitRGB[0] < 0.0 or newLimitRGB[1] < 0.0 or newLimitRGB[2] < 0.0):
-        gamutCuspTableReach[i][0] = sampleM
-        break
+    hue = float(i) * 360 / gamutCuspTableSize
+    gamutCuspTableReach[i][2] = hue
+
+    # Initially tried binary search between 0 and 1300, but there must be cases where extreme values wrap
+    # So start small and jump in small ish steps until we are outside then binary search inside that range
+    search_range = 50.0
+    low, high = 0.0, search_range
+    outside = False
+    while not outside:
+      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, high, hue]))
+      outside = outside_reach(newLimitRGB)
+      if not outside:
+        low = high
+        high = high + search_range
+
+    while (high - low) > 1e-3: # how close should we be
+      sampleM = (high + low) / 2
+      newLimitRGB = JMh_to_reach_RGB(np.array([limitJmax, sampleM, hue]))
+      if outside_reach(newLimitRGB):
+        high = sampleM
+      else:
+        low = sampleM
+    gamutCuspTableReach[i][0] = low
+    gamutCuspTableReach[i][1] = high
 
   midJ = Y_to_J(daniele_c_t * mmScaleFactor, L_A, Y_b, surround[1])
 
@@ -891,9 +957,9 @@ def print_constants():
   print("__CONSTANT__ float3 refWhite = " + format_vector(refWhite) + ";")
   print()
   print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[{}]".format(gamutCuspTableSize)))
-  print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[{}]".format(gamutCuspTableSize), 1))
+  print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[{}]".format(gamutCuspTableSize), 3))
   print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[{}]".format(gamutCuspTableSize)))
-  print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[{}]".format(gamutCuspTableSize), 1))
+  print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[{}]".format(gamutCuspTableSize), 3))
   print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 2))
 
 def main():
