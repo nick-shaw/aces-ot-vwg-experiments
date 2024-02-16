@@ -1,6 +1,9 @@
 import sys
 import numpy as np
 
+from cProfile import Profile
+from pstats import SortKey, Stats
+
 # Parameters passed to Blink from the UI
 
 # Primaries of the Output Encoding
@@ -146,11 +149,12 @@ def RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, Y, direction):
 
 # multiplies a 3D vector with a 3x3 matrix
 def vector_dot(m, v):
-    r = np.ones(3)
-    for c in range(3):
-      r[c] = m[c][0]*v[0] + m[c][1]*v[1] + m[c][2]*v[2]
-
-    return r
+    #r = np.ones(3)
+    #for c in range(3):
+    #  r[c] = m[c][0]*v[0] + m[c][1]*v[1] + m[c][2]*v[2]
+    #
+    #return r
+    return np.dot(m, v)
 
 # convert achromatic luminance to Hellwig J
 def Y_to_J(Y, L_A, Y_b, surround_y):
@@ -185,8 +189,8 @@ def spow(base, exponent):
     else:
       return pow(base, exponent)
 
-def float3spow(base, exponent):
-      return np.array([spow(base[0], exponent), spow(base[1], exponent), spow(base[2], exponent)])
+def float3pow(base, exponent):
+      return np.array([pow(base[0], exponent), pow(base[1], exponent), pow(base[2], exponent)])
 
 # "safe" div
 def sdiv( a, b ):
@@ -196,7 +200,7 @@ def sdiv( a, b ):
       return a / b
 
 def post_adaptation_non_linear_response_compression_forward(RGB, F_L):
-  F_L_RGB = float3spow(F_L * np.abs(RGB) / 100.0, 0.42)
+  F_L_RGB = float3pow(F_L * np.abs(RGB) / 100.0, 0.42)
   RGB_c = (400.0 * np.sign(RGB) * F_L_RGB) / (27.13 + F_L_RGB)
   return RGB_c
 
@@ -371,7 +375,7 @@ def JMh_to_reach_RGB(JMh):
    return RGB
 
 def post_adaptation_non_linear_response_compression_inverse(RGB, F_L):
-  RGB_p =  (np.sign(RGB) * 100.0 / F_L * float3spow((27.13 * np.abs(RGB)) / (400.0 - np.abs(RGB)), 1.0 / 0.42) )
+  RGB_p =  (np.sign(RGB) * 100.0 / F_L * float3pow((27.13 * np.abs(RGB)) / (400.0 - np.abs(RGB)), 1.0 / 0.42) )
   return RGB_p
 
 def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
@@ -1026,7 +1030,21 @@ def main():
     peakLuminance = float(sys.argv[1])
     primariesLimit = int(sys.argv[2])
     whiteLimit = int(sys.argv[3])
-    init()
+    with Profile() as profile:
+      init()
+      (
+          Stats(profile, stream=sys.stderr)
+          .strip_dirs()
+          .sort_stats(SortKey.TIME)
+          .print_stats()
+      )
+      #(
+      #    Stats(profile, stream=sys.stderr)
+      #    .strip_dirs()
+      #    .sort_stats(SortKey.CALLS)
+      #    .print_stats()
+      #)
+
     print_constants()
 
 if __name__ == "__main__":
