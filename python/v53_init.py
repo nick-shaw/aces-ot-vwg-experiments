@@ -888,6 +888,9 @@ def init():
   # iterate through gamma values until the approximate max M is negative through the actual boundary
   testPositions = [0.01, 0.5, 0.99]
 
+  def outside_top_hull(newLimitRGB, maxRGBtestVal):
+    return newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal
+
   gamutTopGamma = np.zeros(gamutCuspTableSize)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
@@ -897,7 +900,7 @@ def init():
     # positions between the cusp and Jmax we will check
     # variables that get set as we iterate through, once all are set to true we break the loop
     testJmh = [np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPosition ), JMcusp[1] , hue]) for testPosition in testPositions]
-    gammaFound = [False, False, False]
+
     # limit value, once we cross this value, we are outside of the top gamut shell 
     maxRGBtestVal = 1.0
     # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
@@ -905,15 +908,16 @@ def init():
       # topGamma value created from the Tg variable
       topGamma = float(Tg) / 100.0
       # loop to run through each of the positions defined in the testPositions list
+      gammaFound = [False] * len(testPositions)
       for testIndex in range(len(testPositions)):
-        approxLimit  =  findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+        approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
         newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
         # if any channel has broken through the top gamut hull, break
-        if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
+        if outside_top_hull(newLimitRGB, maxRGBtestVal):
           gamutTopGamma[i] = topGamma
           gammaFound[testIndex] = True
-      # once all 3 of the test
-      if (gammaFound[0] and gammaFound[1] and gammaFound[2]):
+      # once all of the tests pass
+      if all(gammaFound):
         break
 
 def print_constants():
