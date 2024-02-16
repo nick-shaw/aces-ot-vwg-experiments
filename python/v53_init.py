@@ -904,9 +904,9 @@ def init():
     search_range = 0.4
     low, high = 0, search_range
     outside = False
-    while not outside and high < 3:
+    while not outside and high < 5.0:
       gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, high, maxRGBtestVal)
-      if not all(gammaFound):
+      if not gammaFound:
         low = high
         high = high + search_range
       else:
@@ -917,7 +917,7 @@ def init():
     while (high - low) > 1e-5: # how close should we be
       testGamma = (high + low) / 2
       gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, testGamma, maxRGBtestVal)
-      if all(gammaFound):
+      if gammaFound:
         high = testGamma
         gamutTopGamma[i] = high
       else:
@@ -932,14 +932,15 @@ def outside_top_hull(newLimitRGB, maxRGBtestVal):
 
 
 def evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal):
-    # loop to run through each of the positions defined in the testPositions list
-    gammaFound = [False] * len(testJmh)
-    for testIndex in range(len(testJmh)):
-      approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+    gammaFound = False
+    for Jmh in testJmh:
+      approxLimit = findGamutBoundaryIntersection(Jmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
       newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
 
-      gammaFound[testIndex] = outside_top_hull(newLimitRGB, maxRGBtestVal)
-    return gammaFound
+      gammaFound = outside_top_hull(newLimitRGB, maxRGBtestVal)
+      if not gammaFound:
+        return False
+    return True
 
 
 def print_constants():
