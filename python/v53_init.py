@@ -457,24 +457,38 @@ def lerp(a, b, t):
 # so instead we use a pre-computed table of cusp points
 # sampled at 1 degree hue intervals of the the RGB target gamut
 # and lerp between them to get the approximate J & M values
-def cuspFromTable(h):
+
+def cusp_interval_for_hue(hue):
   lo = np.zeros(3)
   hi = np.zeros(3)
-
-  if( h <= gamutCuspTable[0][2] ):
+  if( hue <= gamutCuspTable[0][2] ):
     lo = gamutCuspTable[gamutCuspTableSize-1].copy()
     lo[2] = lo[2]-360.0
     hi = gamutCuspTable[0].copy()
-  elif( h >= gamutCuspTable[gamutCuspTableSize-1][2] ):
+  elif( hue >= gamutCuspTable[gamutCuspTableSize-1][2] ):
     lo = gamutCuspTable[gamutCuspTableSize-1].copy()
     hi = gamutCuspTable[0].copy()
     hi[2] = hi[2]+360.0
   else:
-    for i in range(gamutCuspTableSize):
-      if( h <= gamutCuspTable[i][2] ):
-        lo = gamutCuspTable[i-1].copy()
-        hi = gamutCuspTable[i].copy()
-        break
+    low_i, high_i = 0, gamutCuspTableSize - 1
+    # as the distribution is approximately linear we locate the interval faster by probing at that point first
+    i = int(hue) % gamutCuspTableSize
+    while (low_i + 1 < high_i):
+      if (hue > gamutCuspTable[i][2]):
+        low_i = i
+      else:
+        high_i = i
+
+      i = (high_i + low_i) // 2 # note integer division
+
+    lo = gamutCuspTable[high_i-1].copy()
+    hi = gamutCuspTable[high_i].copy()
+
+  return lo, hi
+
+def cuspFromTable(h):
+
+  (lo, hi) = cusp_interval_for_hue(h)
 
   t = (h - lo[2]) / (hi[2] - lo[2])
 
@@ -914,7 +928,7 @@ def init():
     if high >= 3:
       print("Linear search did not find top gamma for hue {}".format(hue), file=sys.stderr)
 
-    while (high - low) > 1e-5: # how close should we be
+    while (high - low) > 1e-6: # how close should we be
       testGamma = (high + low) / 2
       gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, testGamma, maxRGBtestVal)
       if gammaFound:
