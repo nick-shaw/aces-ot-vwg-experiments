@@ -1,6 +1,9 @@
 import sys
 import numpy as np
 
+from cProfile import Profile
+from pstats import SortKey, Stats
+
 # Parameters passed to Blink from the UI
 
 # Primaries of the Output Encoding
@@ -146,11 +149,12 @@ def RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, Y, direction):
 
 # multiplies a 3D vector with a 3x3 matrix
 def vector_dot(m, v):
-    r = np.ones(3)
-    for c in range(3):
-      r[c] = m[c][0]*v[0] + m[c][1]*v[1] + m[c][2]*v[2]
-
-    return r
+    #r = np.ones(3)
+    #for c in range(3):
+    #  r[c] = m[c][0]*v[0] + m[c][1]*v[1] + m[c][2]*v[2]
+    #
+    #return r
+    return np.dot(m, v)
 
 # convert achromatic luminance to Hellwig J
 def Y_to_J(Y, L_A, Y_b, surround_y):
@@ -185,8 +189,8 @@ def spow(base, exponent):
     else:
       return pow(base, exponent)
 
-def float3spow(base, exponent):
-      return np.array([spow(base[0], exponent), spow(base[1], exponent), spow(base[2], exponent)])
+def float3pow(base, exponent):
+      return np.array([pow(base[0], exponent), pow(base[1], exponent), pow(base[2], exponent)])
 
 # "safe" div
 def sdiv( a, b ):
@@ -196,7 +200,7 @@ def sdiv( a, b ):
       return a / b
 
 def post_adaptation_non_linear_response_compression_forward(RGB, F_L):
-  F_L_RGB = float3spow(F_L * np.abs(RGB) / 100.0, 0.42)
+  F_L_RGB = float3pow(F_L * np.abs(RGB) / 100.0, 0.42)
   RGB_c = (400.0 * np.sign(RGB) * F_L_RGB) / (27.13 + F_L_RGB)
   return RGB_c
 
@@ -214,7 +218,7 @@ def JMh_to_limit_RGB(JMh):
   luminanceRGB = vector_dot(XYZ_to_RGB_limit, luminanceXYZ)
   RGB = luminanceRGB / boundaryRGB / referenceLuminance
 
-  return RGB;
+  return RGB
 
 # basic 3D hypotenuse function, does not deal with under/overflow
 def hypot_float3(xyz):
@@ -371,7 +375,7 @@ def JMh_to_reach_RGB(JMh):
    return RGB
 
 def post_adaptation_non_linear_response_compression_inverse(RGB, F_L):
-  RGB_p =  (np.sign(RGB) * 100.0 / F_L * float3spow((27.13 * np.abs(RGB)) / (400.0 - np.abs(RGB)), 1.0 / 0.42) )
+  RGB_p =  (np.sign(RGB) * 100.0 / F_L * float3pow((27.13 * np.abs(RGB)) / (400.0 - np.abs(RGB)), 1.0 / 0.42) )
   return RGB_p
 
 def Hellwig2022_JMh_to_XYZ( JMh, XYZ_w, surround, L_A, Y_b):
@@ -457,24 +461,38 @@ def lerp(a, b, t):
 # so instead we use a pre-computed table of cusp points
 # sampled at 1 degree hue intervals of the the RGB target gamut
 # and lerp between them to get the approximate J & M values
-def cuspFromTable(h):
+
+def cusp_interval_for_hue(hue):
   lo = np.zeros(3)
   hi = np.zeros(3)
-
-  if( h <= gamutCuspTable[0][2] ):
+  if( hue <= gamutCuspTable[0][2] ):
     lo = gamutCuspTable[gamutCuspTableSize-1].copy()
     lo[2] = lo[2]-360.0
     hi = gamutCuspTable[0].copy()
-  elif( h >= gamutCuspTable[gamutCuspTableSize-1][2] ):
+  elif( hue >= gamutCuspTable[gamutCuspTableSize-1][2] ):
     lo = gamutCuspTable[gamutCuspTableSize-1].copy()
     hi = gamutCuspTable[0].copy()
     hi[2] = hi[2]+360.0
   else:
-    for i in range(gamutCuspTableSize):
-      if( h <= gamutCuspTable[i][2] ):
-        lo = gamutCuspTable[i-1].copy()
-        hi = gamutCuspTable[i].copy()
-        break
+    low_i, high_i = 0, gamutCuspTableSize - 1
+    # as the distribution is approximately linear we locate the interval faster by probing at that point first
+    i = int(hue) % gamutCuspTableSize
+    while (low_i + 1 < high_i):
+      if (hue > gamutCuspTable[i][2]):
+        low_i = i
+      else:
+        high_i = i
+
+      i = (high_i + low_i) // 2 # note integer division
+
+    lo = gamutCuspTable[high_i-1].copy()
+    hi = gamutCuspTable[high_i].copy()
+
+  return lo, hi
+
+def cuspFromTable(h):
+
+  (lo, hi) = cusp_interval_for_hue(h)
 
   t = (h - lo[2]) / (hi[2] - lo[2])
 
@@ -749,7 +767,7 @@ def init():
     n = 460.0 / panlrcm[i][0]
     panlrcm[i] *= n
 
-  # limitJmax (asumed to match limitRGB white)
+  # limitJmax (assumed to match limitRGB white)
   limitJmax = Y_to_J(peakLuminance, L_A, Y_b, surround[1])
 
   # Cusp table for chroma compression gamut
@@ -885,34 +903,63 @@ def init():
   # start by taking a h angle
   # get the cusp J value for that angle
   # find a J value halfway to the Jmax
-  # iterate through gamma values until the approxilate max M is negative through the actual boundry
-  gamutTopGamma = np.zeros(gamutCuspTableSize)
+  # iterate through gamma values until the approximate max M is negative through the actual boundary
+  testPositions = [0.01, 0.5, 0.99]
+
+  gamutTopGamma = np.full(gamutCuspTableSize, -1.0)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
-    JMcusp = cuspFromTable(float(i) * 360 / gamutCuspTableSize)
-    # create test value halfway betwen the cusp and the Jmax
+    hue = float(i) * 360 / gamutCuspTableSize
+    JMcusp = cuspFromTable(hue)
+    # create test value halfway between the cusp and the Jmax
     # positions between the cusp and Jmax we will check
-    testPositions = [0.01, 0.5, 0.99]
-    # variables that get set as we iterate through, once all 3 are set to true we break the loop
-    gammaFound = [False, False, False]
+    # variables that get set as we iterate through, once all are set to true we break the loop
+    testJmh = [np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPosition ), JMcusp[1] , hue]) for testPosition in testPositions]
+
     # limit value, once we cross this value, we are outside of the top gamut shell 
     maxRGBtestVal = 1.0
-    # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
-    for Tg in range(70, 170):
-      # topGamma value created from the Tg variable
-      topGamma = float(Tg) / 100.0
-      # loop to run through each of the positions defined in the testPositions list
-      for testIndex in range(3):
-        testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i) * 360 / gamutCuspTableSize])
-        approxLimit  =  findGamutBoundaryIntersection(testJmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
-        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i) * 360 / gamutCuspTableSize]))
-        # if any channel has broken through the top gamut hull, break
-        if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
-          gamutTopGamma[i] = topGamma
-          gammaFound[testIndex] = True
-      # once all 3 of the test
-      if (gammaFound[0] and gammaFound[1] and gammaFound[2]):
-        break
+
+    search_range = 0.4
+    low, high = 0, search_range
+    outside = False
+    while not outside and high < 5.0:
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, high, maxRGBtestVal)
+      if not gammaFound:
+        low = high
+        high = high + search_range
+      else:
+        outside = True
+    if high >= 3:
+      print("Linear search did not find top gamma for hue {}".format(hue), file=sys.stderr)
+
+    while (high - low) > 1e-6: # how close should we be
+      testGamma = (high + low) / 2
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, testGamma, maxRGBtestVal)
+      if gammaFound:
+        high = testGamma
+        gamutTopGamma[i] = high
+      else:
+        low = testGamma
+ 
+    if gamutTopGamma[i] < 0.0:
+      print("Did not find top gamma for hue {}".format(hue), file=sys.stderr)
+
+
+def outside_top_hull(newLimitRGB, maxRGBtestVal):
+    return newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal
+
+
+def evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal):
+    gammaFound = False
+    for Jmh in testJmh:
+      approxLimit = findGamutBoundaryIntersection(Jmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+      newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
+
+      gammaFound = outside_top_hull(newLimitRGB, maxRGBtestVal)
+      if not gammaFound:
+        return False
+    return True
+
 
 def print_constants():
   print()
@@ -960,7 +1007,7 @@ def print_constants():
   print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[{}]".format(gamutCuspTableSize), 3))
   print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[{}]".format(gamutCuspTableSize)))
   print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[{}]".format(gamutCuspTableSize), 3))
-  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 2))
+  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 15))
 
 def main():
     global peakLuminance, primariesLimit, whiteLimit
@@ -983,7 +1030,21 @@ def main():
     peakLuminance = float(sys.argv[1])
     primariesLimit = int(sys.argv[2])
     whiteLimit = int(sys.argv[3])
-    init()
+    with Profile() as profile:
+      init()
+      (
+          Stats(profile, stream=sys.stderr)
+          .strip_dirs()
+          .sort_stats(SortKey.TIME)
+          .print_stats()
+      )
+      #(
+      #    Stats(profile, stream=sys.stderr)
+      #    .strip_dirs()
+      #    .sort_stats(SortKey.CALLS)
+      #    .print_stats()
+      #)
+
     print_constants()
 
 if __name__ == "__main__":
