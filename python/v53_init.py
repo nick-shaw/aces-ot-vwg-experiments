@@ -891,7 +891,7 @@ def init():
   def outside_top_hull(newLimitRGB, maxRGBtestVal):
     return newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal
 
-  gamutTopGamma = np.zeros(gamutCuspTableSize)
+  gamutTopGamma = np.full(gamutCuspTableSize, -1.0)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
     hue = float(i) * 360 / gamutCuspTableSize
@@ -904,7 +904,7 @@ def init():
     # limit value, once we cross this value, we are outside of the top gamut shell 
     maxRGBtestVal = 1.0
     # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
-    for Tg in range(70, 170):
+    for Tg in range(70, 200):
       # topGamma value created from the Tg variable
       topGamma = float(Tg) / 100.0
       # loop to run through each of the positions defined in the testPositions list
@@ -912,13 +912,16 @@ def init():
       for testIndex in range(len(testPositions)):
         approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
         newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
-        # if any channel has broken through the top gamut hull, break
-        if outside_top_hull(newLimitRGB, maxRGBtestVal):
-          gamutTopGamma[i] = topGamma
-          gammaFound[testIndex] = True
+
+        gammaFound[testIndex] = outside_top_hull(newLimitRGB, maxRGBtestVal)
+
       # once all of the tests pass
       if all(gammaFound):
+        gamutTopGamma[i] = topGamma
         break
+    
+    if gamutTopGamma[i] < 0.0:
+      print("Did not find top gamma for hue {}".format(hue), file=sys.stderr)
 
 def print_constants():
   print()
