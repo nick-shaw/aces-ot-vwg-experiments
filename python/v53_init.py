@@ -749,7 +749,7 @@ def init():
     n = 460.0 / panlrcm[i][0]
     panlrcm[i] *= n
 
-  # limitJmax (asumed to match limitRGB white)
+  # limitJmax (assumed to match limitRGB white)
   limitJmax = Y_to_J(peakLuminance, L_A, Y_b, surround[1])
 
   # Cusp table for chroma compression gamut
@@ -885,15 +885,18 @@ def init():
   # start by taking a h angle
   # get the cusp J value for that angle
   # find a J value halfway to the Jmax
-  # iterate through gamma values until the approxilate max M is negative through the actual boundry
+  # iterate through gamma values until the approximate max M is negative through the actual boundary
+  testPositions = [0.01, 0.5, 0.99]
+
   gamutTopGamma = np.zeros(gamutCuspTableSize)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
-    JMcusp = cuspFromTable(float(i) * 360 / gamutCuspTableSize)
-    # create test value halfway betwen the cusp and the Jmax
+    hue = float(i) * 360 / gamutCuspTableSize
+    JMcusp = cuspFromTable(hue)
+    # create test value halfway between the cusp and the Jmax
     # positions between the cusp and Jmax we will check
-    testPositions = [0.01, 0.5, 0.99]
-    # variables that get set as we iterate through, once all 3 are set to true we break the loop
+    # variables that get set as we iterate through, once all are set to true we break the loop
+    testJmh = [np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPosition ), JMcusp[1] , hue]) for testPosition in testPositions]
     gammaFound = [False, False, False]
     # limit value, once we cross this value, we are outside of the top gamut shell 
     maxRGBtestVal = 1.0
@@ -902,10 +905,9 @@ def init():
       # topGamma value created from the Tg variable
       topGamma = float(Tg) / 100.0
       # loop to run through each of the positions defined in the testPositions list
-      for testIndex in range(3):
-        testJmh = np.array([JMcusp[0] + ((limitJmax - JMcusp[0]) * testPositions[testIndex] ), JMcusp[1] , float(i) * 360 / gamutCuspTableSize])
-        approxLimit  =  findGamutBoundaryIntersection(testJmh, JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
-        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], float(i) * 360 / gamutCuspTableSize]))
+      for testIndex in range(len(testPositions)):
+        approxLimit  =  findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
         # if any channel has broken through the top gamut hull, break
         if (newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal):
           gamutTopGamma[i] = topGamma
