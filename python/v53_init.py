@@ -888,19 +888,6 @@ def init():
   # iterate through gamma values until the approximate max M is negative through the actual boundary
   testPositions = [0.01, 0.5, 0.99]
 
-  def outside_top_hull(newLimitRGB, maxRGBtestVal):
-    return newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal
-
-  def evaluate_gamma_fit(JMcusp, testJmh, topGamma):
-      # loop to run through each of the positions defined in the testPositions list
-      gammaFound = [False] * len(testJmh)
-      for testIndex in range(len(testJmh)):
-        approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
-        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
-
-        gammaFound[testIndex] = outside_top_hull(newLimitRGB, maxRGBtestVal)
-      return gammaFound
-
   gamutTopGamma = np.full(gamutCuspTableSize, -1.0)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
@@ -916,13 +903,29 @@ def init():
     # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
     for Tg in range(70, 250):
       topGamma = float(Tg) / 100.0
-      gammaFound = evaluate_gamma_fit(JMcusp, testJmh, topGamma)
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal)
       if all(gammaFound):
         gamutTopGamma[i] = topGamma
         break
     
     if gamutTopGamma[i] < 0.0:
       print("Did not find top gamma for hue {}".format(hue), file=sys.stderr)
+
+
+def outside_top_hull(newLimitRGB, maxRGBtestVal):
+    return newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal
+
+
+def evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal):
+    # loop to run through each of the positions defined in the testPositions list
+    gammaFound = [False] * len(testJmh)
+    for testIndex in range(len(testJmh)):
+      approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+      newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
+
+      gammaFound[testIndex] = outside_top_hull(newLimitRGB, maxRGBtestVal)
+    return gammaFound
+
 
 def print_constants():
   print()
