@@ -891,6 +891,16 @@ def init():
   def outside_top_hull(newLimitRGB, maxRGBtestVal):
     return newLimitRGB[0] > maxRGBtestVal or newLimitRGB[1] > maxRGBtestVal or newLimitRGB[2] > maxRGBtestVal
 
+  def evaluate_gamma_fit(JMcusp, testJmh, topGamma):
+      # loop to run through each of the positions defined in the testPositions list
+      gammaFound = [False] * len(testJmh)
+      for testIndex in range(len(testJmh)):
+        approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
+        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
+
+        gammaFound[testIndex] = outside_top_hull(newLimitRGB, maxRGBtestVal)
+      return gammaFound
+
   gamutTopGamma = np.full(gamutCuspTableSize, -1.0)
   for i in range(gamutCuspTableSize):
     # get cusp from cusp table at hue position
@@ -904,18 +914,9 @@ def init():
     # limit value, once we cross this value, we are outside of the top gamut shell 
     maxRGBtestVal = 1.0
     # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
-    for Tg in range(70, 200):
-      # topGamma value created from the Tg variable
+    for Tg in range(70, 250):
       topGamma = float(Tg) / 100.0
-      # loop to run through each of the positions defined in the testPositions list
-      gammaFound = [False] * len(testPositions)
-      for testIndex in range(len(testPositions)):
-        approxLimit = findGamutBoundaryIntersection(testJmh[testIndex], JMcusp, lerp(JMcusp[0], midJ, cuspMidBlend), limitJmax, 10000.0, 0.0, topGamma, 1.0)
-        newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
-
-        gammaFound[testIndex] = outside_top_hull(newLimitRGB, maxRGBtestVal)
-
-      # once all of the tests pass
+      gammaFound = evaluate_gamma_fit(JMcusp, testJmh, topGamma)
       if all(gammaFound):
         gamutTopGamma[i] = topGamma
         break
