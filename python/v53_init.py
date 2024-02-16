@@ -900,14 +900,29 @@ def init():
 
     # limit value, once we cross this value, we are outside of the top gamut shell 
     maxRGBtestVal = 1.0
-    # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
-    for Tg in range(70, 250):
-      topGamma = float(Tg) / 100.0
-      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal)
+
+    search_range = 0.4
+    low, high = 0, search_range
+    outside = False
+    while not outside and high < 3:
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, high, maxRGBtestVal)
+      if not all(gammaFound):
+        low = high
+        high = high + search_range
+      else:
+        outside = True
+    if high >= 3:
+      print("Linear search did not find top gamma for hue {}".format(hue), file=sys.stderr)
+
+    while (high - low) > 1e-5: # how close should we be
+      testGamma = (high + low) / 2
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, testGamma, maxRGBtestVal)
       if all(gammaFound):
-        gamutTopGamma[i] = topGamma
-        break
-    
+        high = testGamma
+        gamutTopGamma[i] = high
+      else:
+        low = testGamma
+ 
     if gamutTopGamma[i] < 0.0:
       print("Did not find top gamma for hue {}".format(hue), file=sys.stderr)
 
@@ -973,7 +988,7 @@ def print_constants():
   print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[{}]".format(gamutCuspTableSize), 3))
   print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[{}]".format(gamutCuspTableSize)))
   print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[{}]".format(gamutCuspTableSize), 3))
-  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 2))
+  print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 15))
 
 def main():
     global peakLuminance, primariesLimit, whiteLimit
