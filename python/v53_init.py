@@ -214,7 +214,7 @@ def JMh_to_limit_RGB(JMh):
   luminanceRGB = vector_dot(XYZ_to_RGB_limit, luminanceXYZ)
   RGB = luminanceRGB / boundaryRGB / referenceLuminance
 
-  return RGB;
+  return RGB
 
 # basic 3D hypotenuse function, does not deal with under/overflow
 def hypot_float3(xyz):
