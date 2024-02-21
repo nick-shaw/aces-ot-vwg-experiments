@@ -16,7 +16,6 @@ from colour.utilities import (
 # Return compression gamut cusp M scaled with an eccentricity factor
 def cusp_with_eccentricity_factor(
     h,
-    cc_params,
     cusp_params,
 ):
     JMcusp = cuspFromTable(h, cusp_params.cgamutCuspTable)

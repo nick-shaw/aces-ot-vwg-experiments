@@ -26,7 +26,7 @@ def chromaCompressionForward(
 
     nJ = J / cc_params.limitJmax
     snJ = np.maximum(1.0 - nJ, np.zeros(nJ.shape))
-    Mnorm = cusp_with_eccentricity_factor(h, cc_params, cusp_params)
+    Mnorm = cusp_with_eccentricity_factor(h, cusp_params)
     limit = (
         np.power(nJ, cc_params.model_gamma)
         * cReachFromTable(h, cusp_params.cgamutReachTable)
@@ -86,7 +86,7 @@ def chromaCompressionInverse(
 
     nJ = J / cc_params.limitJmax
     snJ = np.maximum(1.0 - nJ, np.zeros(nJ.shape))
-    Mnorm = cusp_with_eccentricity_factor(h, cc_params, cusp_params)
+    Mnorm = cusp_with_eccentricity_factor(h, cusp_params)
     limit = (
         np.power(nJ, cc_params.model_gamma)
         * cReachFromTable(h, cusp_params.cgamutReachTable)

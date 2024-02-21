@@ -19,6 +19,8 @@ from colour.utilities import (
 )
 
 from drt_colour_lib import HSV_to_RGB
+from drt_cusp_lib import cuspFromTable
+from drt_gamut_compress_lib import findGamutBoundaryIntersection
 from drt_cam import (
     VIEWING_CONDITIONS_HELLWIG2022,
     Y_to_J,
@@ -126,10 +128,95 @@ class Output_Params:
     clamp: bool
 
 
-def drt_params(
+def drt_params(target):
+    if target == 1:
+        sRGBDerived = colour.models.RGB_COLOURSPACE_sRGB
+        sRGBDerived.use_derived_transformation_matrices(True)
+        return _drt_params(
+            inputDiscountIlluminant=True,
+            inputViewingConditions="Dim",
+            inputColourSpace=colour.models.RGB_COLOURSPACE_ACES2065_1,
+            peakLuminance=100,
+            limitDiscountIlluminant=True,
+            limitViewingConditions="Dim",
+            limitColourSpace=sRGBDerived,
+            outputDiscountIlluminant=True,
+            outputViewingConditions="Dim",
+            outputColourSpace=sRGBDerived,
+        )
+    elif target == 2:
+
+        def g24_encode(x):
+            return np.power(x, 1 / 2.4, where=x > 0)
+
+        def g24_decode(x):
+            return np.power(x, 2.4, where=x > 0)
+
+        BT709_CS = colour.models.RGB_COLOURSPACE_BT709
+        BT1886_709_CS = colour.models.RGB_Colourspace(
+            "Rec709 Gamma 2.4",
+            BT709_CS.primaries,
+            BT709_CS.whitepoint,
+            "D65",
+            BT709_CS.matrix_RGB_to_XYZ,
+            BT709_CS.matrix_XYZ_to_RGB,
+            cctf_encoding=g24_encode,
+            cctf_decoding=g24_decode,
+        )
+
+        return _drt_params(
+            inputDiscountIlluminant=True,
+            inputViewingConditions="Dim",
+            inputColourSpace=colour.models.RGB_COLOURSPACE_ACES2065_1,
+            peakLuminance=100,
+            limitDiscountIlluminant=True,
+            limitViewingConditions="Dim",
+            limitColourSpace=BT1886_709_CS,
+            outputDiscountIlluminant=True,
+            outputViewingConditions="Dim",
+            outputColourSpace=sRGBDerived,
+        )
+    elif target == 3:
+
+        def pq_encode(x):
+            return colour.models.eotf_inverse_BT2100_PQ(x * 100)
+
+        def pq_decode(x):
+            return colour.models.eotf_BT2100_PQ(x) / 100
+
+        BT2020_CS = colour.models.RGB_COLOURSPACE_BT2020
+        BT2100_PQ_CS = colour.models.RGB_Colourspace(
+            "Rec2100 PQ",
+            BT2020_CS.primaries,
+            BT2020_CS.whitepoint,
+            "D65",
+            BT2020_CS.matrix_RGB_to_XYZ,
+            BT2020_CS.matrix_XYZ_to_RGB,
+            cctf_encoding=pq_encode,
+            cctf_decoding=pq_decode,
+        )
+
+        return _drt_params(
+            inputDiscountIlluminant=True,
+            inputViewingConditions="Dim",
+            inputColourSpace=colour.models.RGB_COLOURSPACE_ACES2065_1,
+            peakLuminance=1000,
+            limitDiscountIlluminant=True,
+            limitViewingConditions="Dim",
+            limitColourSpace=colour.models.RGB_COLOURSPACE_DISPLAY_P3,
+            outputDiscountIlluminant=True,
+            outputViewingConditions="Dim",
+            outputColourSpace=BT2100_PQ_CS,
+        )
+    else:
+        raise RuntimeError(f"Unsupported target {target}")
+
+
+def _drt_params(
     inputDiscountIlluminant=True,
     inputViewingConditions="Dim",
     inputColourSpace=colour.models.RGB_COLOURSPACE_ACES2065_1,
+    peakLuminance=100,
     limitDiscountIlluminant=True,
     limitViewingConditions="Dim",
     limitColourSpace=colour.models.RGB_COLOURSPACE_sRGB,
@@ -145,7 +232,7 @@ def drt_params(
     CUSTOM_CAT16 = RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, 1, 1)
 
     # Tone scale
-    peakLuminanceTS = 100
+    peakLuminanceTS = peakLuminance
     de_params = daniele_evo_params(peakLuminanceTS)
 
     # White
@@ -185,15 +272,15 @@ def drt_params(
             applyReachClamp=None,
         ),
         "GamutCompression": GamutCompression_Params(
-            cuspMidBlend=1.3,
-            focusDistance=1.15,
+            cuspMidBlend=1.15,
+            focusDistance=1.4,
             focusDist=None,
-            focusAdjustGain=0.35,
-            focusGainBlend=0.3,
+            focusGainBlend=0.5,
+            focusAdjustGain=0.6,
             limitJmax=None,
             midJ=None,
             model_gamma=None,
-            smoothCusps=0.26,
+            smoothCusps=0.19,
             compressionFuncParams=[0.75, 1.1, 1.3, 1.2],
             reach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
             reach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
@@ -230,7 +317,7 @@ def drt_params(
             eotf_inverse=outputColourSpace.cctf_encoding,
             fitWhite=False,
             softclamp=True,
-            clamp_thr=0.9997,
+            clamp_thr=0.99,
             clamp_dist=1.1,
             clamp=True,
         ),
@@ -543,11 +630,73 @@ def cusp_tables(
     gamutCuspTableReach = tstack([zeros, first_negative, h])
 
     # Upper hull gamma values for the gamut mapper
-    # TODO: Vectorize the table derivation, sequential runs in more than 10sec.,
-    # just use Nick's precomputed value for now.
 
-    GT_gamutTopGamma = np.load("gamutTopGamma.npy")
-    gamutTopGamma = GT_gamutTopGamma
+    # start by taking a h angle
+    # get the cusp J value for that angle
+    # find a J value halfway to the Jmax
+    # iterate through gamma values until the approxilate max M is negative through the actual boundry
+    gamutTopGamma = np.zeros(h_samples)
+    for i in range(h_samples):
+        # get cusp from cusp table at hue position
+        JMcusp = cuspFromTable(i, gamutCuspTable)
+        # create test value halfway betwen the cusp and the Jmax
+        # positions between the cusp and Jmax we will check
+        testPositions = [0.01, 0.5, 0.99]
+        # variables that get set as we iterate through, once all 3 are set to true we break the loop
+        gammaFound = [False, False, False]
+        # limit value, once we cross this value, we are outside of the top gamut shell
+        maxRGBtestVal = 1.0
+        # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
+        for Tg in range(70, 170):
+            # topGamma value created from the Tg variable
+            topGamma = float(Tg) / 100.0
+            # loop to run through each of the positions defined in the testPositions list
+            for testIndex in range(3):
+                testJmh = np.array(
+                    [
+                        JMcusp[0]
+                        + (
+                            (cc_params.limitJmax - JMcusp[0]) * testPositions[testIndex]
+                        ),
+                        JMcusp[1],
+                        float(i),
+                    ]
+                )
+                approxLimit = findGamutBoundaryIntersection(
+                    testJmh,
+                    JMcusp,
+                    lerp(JMcusp[0], gc_params.midJ, gc_params.cuspMidBlend),
+                    cc_params.limitJmax,
+                    10000.0,
+                    0.0,
+                    topGamma,
+                    1.0,
+                )
+                newLimitRGB = JMh_to_luminance_RGB(
+                    np.array([approxLimit[0], approxLimit[1], float(i)]),
+                    limit_params.whiteXYZ,
+                    hellwig_params.L_A,
+                    hellwig_params.Y_b,
+                    limit_params.viewingConditions,
+                    limit_params.discountIlluminant,
+                    hellwig_params.matrix_lms,
+                    hellwig_params.compress_mode,
+                    limit_params.XYZ_to_RGB,
+                )
+                newLimitRGB = (
+                    newLimitRGB / boundaryRGB / hellwig_params.referenceLuminance
+                )
+                # if any channel has broken through the top gamut hull, break
+                if (
+                    newLimitRGB[0] > maxRGBtestVal
+                    or newLimitRGB[1] > maxRGBtestVal
+                    or newLimitRGB[2] > maxRGBtestVal
+                ):
+                    gamutTopGamma[i] = topGamma
+                    gammaFound[testIndex] = True
+            # once all 3 of the test
+            if gammaFound[0] and gammaFound[1] and gammaFound[2]:
+                break
 
     cusp_params.gamutCuspTable = gamutCuspTable
     cusp_params.gamutCuspTableReach = gamutCuspTableReach
@@ -557,16 +706,28 @@ def cusp_tables(
 
     # Compare table against Nick's Python reference
 
-    GT_cgamutCuspTable = np.load("cgamutCuspTable.npy")
-    np.testing.assert_almost_equal(cgamutCuspTable, GT_cgamutCuspTable)
-    GT_cgamutReachTable = np.load("cgamutReachTable.npy")
-    np.testing.assert_almost_equal(cgamutReachTable, GT_cgamutReachTable)
-    GT_gamutCuspTable = np.load("gamutCuspTable.npy")
-    np.testing.assert_almost_equal(gamutCuspTable, GT_gamutCuspTable)
-    GT_gamutCuspTableReach = np.load("gamutCuspTableReach.npy")
-    # Shuffle to restore JMh order
-    tmp = GT_gamutCuspTableReach.copy()
-    GT_gamutCuspTableReach[..., 0] = tmp[..., 1]
-    GT_gamutCuspTableReach[..., 1] = tmp[..., 0]
-    np.testing.assert_almost_equal(gamutCuspTableReach, GT_gamutCuspTableReach)
-    np.testing.assert_almost_equal(gamutTopGamma, GT_gamutTopGamma)
+    # import matplotlib
+    # matplotlib.use('Qt5Agg')
+    # import matplotlib.pyplot as plt
+
+    # plt.plot(np.arange(360), gamutTopGamma)
+    # plt.show()
+
+    # GT_cgamutCuspTable = np.load("cgamutCuspTable.npy")
+    # np.testing.assert_almost_equal(cgamutCuspTable, GT_cgamutCuspTable)
+    # GT_cgamutReachTable = np.load("cgamutReachTable.npy")
+    # # np.testing.assert_almost_equal(cgamutReachTable, GT_cgamutReachTable)
+    # GT_gamutCuspTable = np.load("gamutCuspTable.npy")
+    # np.testing.assert_almost_equal(gamutCuspTable, GT_gamutCuspTable)
+    # GT_gamutCuspTableReach = np.load("gamutCuspTableReach.npy")
+    # # Shuffle to restore JMh order
+    # tmp = GT_gamutCuspTableReach.copy()
+    # GT_gamutCuspTableReach[..., 0] = tmp[..., 1]
+    # GT_gamutCuspTableReach[..., 1] = tmp[..., 0]
+    # # np.testing.assert_almost_equal(gamutCuspTableReach, GT_gamutCuspTableReach)
+    # GT_gamutTopGamma = np.load("gamutTopGamma.npy")
+    # np.testing.assert_almost_equal(gamutTopGamma, GT_gamutTopGamma)
+
+
+def lerp(a, b, t):
+    return a + t * (b - a)
