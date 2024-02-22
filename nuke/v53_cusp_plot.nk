@@ -1134,6 +1134,7 @@ NoOp {
  addUserKnob {7 peakLuminance l "peak luminance" R 100 4000}
  peakLuminance 1000
  addUserKnob {4 limitGamut l "limiting gamut" M {Rec.709 P3-D65}}
+ limitGamut P3-D65
  addUserKnob {6 enableCuspSmoothing l "cusp smoothing" +STARTLINE}
  addUserKnob {7 cuspSmoothing l "" -STARTLINE}
  cuspSmoothing 0.19
