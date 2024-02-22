@@ -1,5 +1,4 @@
 #! /Applications/Nuke15.0v1/Nuke15.0v1.app/Contents/MacOS/libnuke-15.0.1.dylib -nx
-#write_info Write1 file:"~/Desktop/gamut_approx_v53_smoothed.mov" format:"1024 1024 1" chans:":rgba.red:rgba.green:rgba.blue:" framerange:"0 359" fps:"0" colorspace:"linear" datatype:"unknown" transfer:"unknown" views:"main" colorManagement:"Nuke"
 version 15.0 v1
 define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 <layout version="1.0">
@@ -21,7 +20,6 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="Curve Editor.1"/>
                     <page id="DopeSheet.1"/>
                     <page id="DAG.2"/>
-                    <page id="DAG.3"/>
                 </dock>
             </splitter>
             <split size="615"/>
@@ -37,7 +35,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 Root {
  inputs 0
  name /Users/nick/Dropbox/MacPro_Jobs/AMPAS/output_transforms/Nuke/v53_cusp_plot.nk
- frame 322
+ frame 100
  first_frame 0
  last_frame 359
  lock_range true
@@ -90,12 +88,15 @@ Constant {
  ypos -172
 }
 Expression {
- expr0 "300*y / (width - 1)"
- expr1 "300*x / (height - 1)"
+ expr0 "scale*y / (width - 1)"
+ expr1 "scale*x / (height - 1)"
  expr2 frame
  name Expression1
  xpos -351
  ypos -100
+ addUserKnob {20 User}
+ addUserKnob {7 scale}
+ scale {{parent.Settings.plotScale}}
 }
 set N362f4e00 [stack 0]
 Dot {
@@ -104,7 +105,7 @@ Dot {
  ypos -97
 }
 Group {
- name DRT_CAMv2
+ name DRT_CAMv3
  label "Input: \[value encoding_in]  / \[value primaries_in]\nLimit: \[value primaries_limit] / \[value white_limit] / \[value peak_luminance]nits\nOutput: \[value encoding_out] / \[value primaries_out]\n\[value toneScaleMode]\n\[file tail \[value BlinkScript1.kernelSourceFile]]"
  note_font "Bitstream Vera Sans"
  xpos -555
@@ -122,7 +123,7 @@ Group {
  addUserKnob {41 DRT_CAM_Kernel_discountIlluminant_out l discountIlluminant_out -STARTLINE T BlinkScript1.DRT_CAM_Kernel_discountIlluminant_out}
  addUserKnob {26 ""}
  addUserKnob {6 compress_mode l compressMode t "LMS compression mode\n" +STARTLINE}
- compress_mode true
+ compress_mode {{parent.Settings.compressMode}}
  addUserKnob {4 HellwigCam16Data l "Hellwig Cam16 Data" M {Stock Thomas "Live from params"}}
  HellwigCam16Data "Live from params"
  addUserKnob {4 inputViewingConditions l "Input Viewing Conditions" M {dark dim average}}
@@ -136,7 +137,7 @@ Group {
  addUserKnob {6 applyTonecurve l "apply Tonecurve" t "toggle the SingleStageToneScale transform" +STARTLINE}
  applyTonecurve true
  addUserKnob {7 peak_luminance l "Peak Luminance" t "Target peak luminance in cd/m^2" R 0 1000}
- peak_luminance 1000
+ peak_luminance {{parent.Settings.peakLuminance}}
  addUserKnob {6 monochrome t "Output monochrome image" +STARTLINE}
  addUserKnob {26 gamut_mapping_div l "Gamut Mapping"}
  addUserKnob {6 applyChromaCompression l "apply chroma compression" t "Applies the chroma compression step.  If this checkbox alone is checked the applies only the scaling step of chroma compression, but not the in-gamiut compression or the saturation." +STARTLINE}
@@ -157,7 +158,7 @@ Group {
  apply_gamut_compression true
  addUserKnob {6 iterativeGamutCompressor +STARTLINE}
  addUserKnob {4 primaries_limit l "limiting primaries" t "the limiting primaries of the gamut to which to compress to" M {AP0-ACES AP1-ACES sRGB/Rec.709 Rec.2020 P3 "" ""}}
- primaries_limit P3
+ primaries_limit {{parent.Settings.limitGamut==0?2:4}}
  addUserKnob {4 white_limit l "white point" t "The white point of the limiting gamut. Also used as the reference white for the output XYZ conversion, independent of the white point of the final encoding. This makes it effectively the creative white." -STARTLINE M {"ACES White" D65 "" "" ""}}
  white_limit D65
  addUserKnob {4 primaries_reach l "reach primaries" M {AP0-ACES AP1-ACES sRGB/Rec.709-D65 Rec.2020-D65 P3-D65 P3-DCI "Spectral Locus" "Chroma Compression Space"}}
@@ -181,10 +182,8 @@ Group {
  addUserKnob {19 compression_params l compression t "the threshold, min limit, max limit, and power parameters for the PowerP compression function\n\nvalues below the threshold will not be compressed and values at the limit will be compressed towards the gamut boundary while the power values defines the shape of the curve"}
  compression_params {0.75 1.1 1.3 1.2}
  addUserKnob {6 compression_params_panelDropped l "panel dropped state" -STARTLINE +HIDDEN}
- addUserKnob {6 enable_cusp_smoothing l "smooth cusps" +STARTLINE}
- enable_cusp_smoothing true
- addUserKnob {7 smooth_cusps l "" t "the amount by how much to smooth the edges and corners of the limiting gamut cube, except the black & white corners." -STARTLINE}
- smooth_cusps 0.19
+ addUserKnob {7 smooth_cusps l "smooth cusps" t "the amount by how much to smooth the edges and corners of the limiting gamut cube, except the black & white corners."}
+ smooth_cusps {{parent.Settings.cuspSmoothing*parent.Settings.enableCuspSmoothing}}
  addUserKnob {20 sixAxisCompression n 1}
  sixAxisCompression 0
  addUserKnob {6 sixAxisCompressionMode +STARTLINE}
@@ -314,7 +313,7 @@ Group {
   DRT_CAM_Kernel_disableLowerHullGamma true
   DRT_CAM_Kernel_lowerHullGamma {{lowerHullGamma}}
   DRT_CAM_Kernel_upperHullGamma {{parent.upperHullGamma}}
-  DRT_CAM_Kernel_smoothCusps {{"parent.enable_cusp_smoothing * parent.smooth_cusps"}}
+  DRT_CAM_Kernel_smoothCusps {{parent.smooth_cusps}}
   DRT_CAM_Kernel_encodingOut {{parent.encoding_out}}
   DRT_CAM_Kernel_primariesOut {{parent.primaries_out}}
   DRT_CAM_Kernel_fitWhite {{parent.fit_white}}
@@ -368,10 +367,13 @@ Expression {
  expr0 1
  expr1 1
  expr2 1
- expr3 "y == int(0.5 + r * (height - 1) /300) && x == int(0.5 + g * (width - 1) / 300)"
+ expr3 "y == int(0.5 + r * (height - 1) /scale) && x == int(0.5 + g * (width - 1) / scale)"
  name Expression4
  xpos -555
  ypos 53
+ addUserKnob {20 User}
+ addUserKnob {7 scale}
+ scale {{parent.Settings.plotScale}}
 }
 Dilate {
  channels alpha
@@ -400,7 +402,7 @@ Dot {
 }
 push $N362f4e00
 Group {
- name DRT_CAMv1
+ name DRT_CAMv2
  label "Input: \[value encoding_in]  / \[value primaries_in]\nLimit: \[value primaries_limit] / \[value white_limit] / \[value peak_luminance]nits\nOutput: \[value encoding_out] / \[value primaries_out]\n\[value toneScaleMode]\n\[file tail \[value BlinkScript1.kernelSourceFile]]"
  note_font "Bitstream Vera Sans"
  xpos -351
@@ -418,7 +420,7 @@ Group {
  addUserKnob {41 DRT_CAM_Kernel_discountIlluminant_out l discountIlluminant_out -STARTLINE T BlinkScript1.DRT_CAM_Kernel_discountIlluminant_out}
  addUserKnob {26 ""}
  addUserKnob {6 compress_mode l compressMode t "LMS compression mode\n" +STARTLINE}
- compress_mode true
+ compress_mode {{parent.Settings.compressMode}}
  addUserKnob {4 HellwigCam16Data l "Hellwig Cam16 Data" M {Stock Thomas "Live from params"}}
  HellwigCam16Data "Live from params"
  addUserKnob {4 inputViewingConditions l "Input Viewing Conditions" M {dark dim average}}
@@ -432,7 +434,7 @@ Group {
  addUserKnob {6 applyTonecurve l "apply Tonecurve" t "toggle the SingleStageToneScale transform" +STARTLINE}
  applyTonecurve true
  addUserKnob {7 peak_luminance l "Peak Luminance" t "Target peak luminance in cd/m^2" R 0 1000}
- peak_luminance 1000
+ peak_luminance {{parent.Settings.peakLuminance}}
  addUserKnob {6 monochrome t "Output monochrome image" +STARTLINE}
  addUserKnob {26 gamut_mapping_div l "Gamut Mapping"}
  addUserKnob {6 applyChromaCompression l "apply chroma compression" t "Applies the chroma compression step.  If this checkbox alone is checked the applies only the scaling step of chroma compression, but not the in-gamiut compression or the saturation." +STARTLINE}
@@ -453,7 +455,7 @@ Group {
  apply_gamut_compression true
  addUserKnob {6 iterativeGamutCompressor +STARTLINE}
  addUserKnob {4 primaries_limit l "limiting primaries" t "the limiting primaries of the gamut to which to compress to" M {AP0-ACES AP1-ACES sRGB/Rec.709 Rec.2020 P3 "" ""}}
- primaries_limit P3
+ primaries_limit {{parent.Settings.limitGamut==0?2:4}}
  addUserKnob {4 white_limit l "white point" t "The white point of the limiting gamut. Also used as the reference white for the output XYZ conversion, independent of the white point of the final encoding. This makes it effectively the creative white." -STARTLINE M {"ACES White" D65 "" "" ""}}
  white_limit D65
  addUserKnob {4 primaries_reach l "reach primaries" M {AP0-ACES AP1-ACES sRGB/Rec.709-D65 Rec.2020-D65 P3-D65 P3-DCI "Spectral Locus" "Chroma Compression Space"}}
@@ -661,10 +663,13 @@ Expression {
  expr0 1
  expr1 1
  expr2 1
- expr3 "y == int(0.5 + r * (height - 1) / 300) || x == int(0.5 + g * (width - 1) / 300)"
+ expr3 "y == int(0.5 + r * (height - 1) / scale) || x == int(0.5 + g * (width - 1) / scale)"
  name Expression3
  xpos -351
  ypos 43
+ addUserKnob {20 User}
+ addUserKnob {7 scale}
+ scale {{parent.Settings.plotScale}}
 }
 Dilate {
  channels alpha
@@ -708,7 +713,7 @@ Group {
  addUserKnob {41 DRT_CAM_Kernel_discountIlluminant_out l discountIlluminant_out -STARTLINE T BlinkScript1.DRT_CAM_Kernel_discountIlluminant_out}
  addUserKnob {26 ""}
  addUserKnob {6 compress_mode l compressMode t "LMS compression mode\n" +STARTLINE}
- compress_mode true
+ compress_mode {{parent.Settings.compressMode}}
  addUserKnob {4 HellwigCam16Data l "Hellwig Cam16 Data" M {Stock Thomas "Live from params"}}
  HellwigCam16Data "Live from params"
  addUserKnob {4 inputViewingConditions l "Input Viewing Conditions" M {dark dim average}}
@@ -722,7 +727,7 @@ Group {
  addUserKnob {6 applyTonecurve l "apply Tonecurve" t "toggle the SingleStageToneScale transform" +STARTLINE}
  applyTonecurve true
  addUserKnob {7 peak_luminance l "Peak Luminance" t "Target peak luminance in cd/m^2" R 0 1000}
- peak_luminance 1000
+ peak_luminance {{parent.Settings.peakLuminance}}
  addUserKnob {6 monochrome t "Output monochrome image" +STARTLINE}
  addUserKnob {26 gamut_mapping_div l "Gamut Mapping"}
  addUserKnob {6 applyChromaCompression l "apply chroma compression" t "Applies the chroma compression step.  If this checkbox alone is checked the applies only the scaling step of chroma compression, but not the in-gamiut compression or the saturation." +STARTLINE}
@@ -947,15 +952,15 @@ Group {
  }
 end_group
 Multiply {
- value 0.001
+ value {{1/parent.DRT_CAMv53.peak_luminance}}
  name Multiply1
  xpos -165
  ypos 41
 }
 Colorspace {
  colorspace_in CIE-XYZ
- primary_out DCI-P3
- name Colorspace1
+ primary_out {{parent.Settings.limitGamut==0?15:7}}
+ name Colorspace2
  xpos -165
  ypos 73
 }
@@ -978,25 +983,43 @@ RotoPaint {
      {{cc
        {f 8192}
        {px
-        {x42940000 x42a60000}
-        {{0}
-      {0}}
-        {{x3f70f000}
-      {xbef0f100}}
-        {{0}
-      {0}}
-        {{0}
-      {0}}
-        {{x44832681 x4482e682}
-      {x43e74a01 x43cf4a01}}
-        {{0}
-      {0}}
-        {{0}
-      {0}}
-        {{x44830f58}
-      {xbfe0c100}}
-        {{0}
-      {0}}}}     idem}
+        {x42940000 x42a60000 x42c60000}
+        {{{x 2
+        {0 -}}      0}
+      {{x 2
+        {0 -}}      0}}
+        {{{x 2
+        {x3f70f000 -}}      x3f70f000}
+      {{x 2
+        {xbef0f100 -}}      xbef0f100}}
+        {{{x 2
+        {0 -}}      0}
+      {{x 2
+        {0 -}}      0}}
+        {{{x 2
+        {0 -}}      0}
+      {{x 2
+        {0 -}}      0}}
+        {{{x44832681 0 1 xbe638aab 1}
+       {x4482e682 xbe638aab 1 0 1}      x4483e683}
+      {{x43e74a01 0 1 xc0aaaaab 1}
+       {x43cf4a01 xc0aaaaab 1 0 1}      x43e04a01}}
+        {{{x 2
+        {0 -}}      0}
+      {{x 2
+        {0 -}}      0}}
+        {{{x 2
+        {0 -}}      0}
+      {{x 2
+        {0 -}}      0}}
+        {{{x 2
+        {x44830f58 -}}      x44830f58}
+      {{x 2
+        {xbfe0c100 -}}      xbfe0c100}}
+        {{{x 2
+        {0 -}}      0}
+      {{x 2
+        {0 -}}      0}}}}     idem}
      {tx x42a60000 x44268000 x43400000}
      {a osw x41200000 osf 0 str 1 spx x44000000 spy x44000000 sb 1 ltn x42a60000 ltm x42a60000 tt x40800000}}}}}}
  toolbox {selectAll {
@@ -1050,6 +1073,7 @@ Merge2 {
  name Merge1
  xpos -165
  ypos 209
+ disable {{!parent.Settings.showCusp}}
 }
 Merge2 {
  inputs 2
@@ -1057,21 +1081,23 @@ Merge2 {
  name Merge2
  xpos -165
  ypos 233
+ disable {{!parent.Settings.showApproximation}}
 }
 Text2 {
  font_size_toolbar 100
  font_width_toolbar 100
  font_height_toolbar 100
- message "\[frame]"
- old_message {{45 50}
+ message "h=\[frame]"
+ old_message {{104 61 49 48 48}
    }
- old_expression_markers {{0 1}
+ old_expression_markers {{2 4}
    }
  box {0 0 1024 1024}
  xjustify right
  yjustify bottom
  transforms {{0 2}
    }
+ cursor_position 2
  font {{ Open Sans : Regular : OpenSans-Regular.ttf : 0 }}
  center {512 512}
  cursor_initialised true
@@ -1085,43 +1111,36 @@ Text2 {
  xpos -55
  ypos 225
 }
-Write {
- file ~/Desktop/gamut_approx_v53_smoothed.mov
- file_type mov
- mov64_format "mov (QuickTime / MOV)"
- mov64_codec appr
- mov_h264_codec_profile "High 4:2:0 8-bit"
- mov64_pixel_format {{0}}
- mov64_quality High
- mov64_fast_start true
- mov64_write_timecode true
- mov64_gop_size 12
- mov64_b_frames 0
- mov64_bitrate 20000
- mov64_bitrate_tolerance 4000000
- mov64_quality_min 1
- mov64_quality_max 3
- raw true
- colorspace linear
- checkHashOnRead false
- version 6
- ocioColorspace scene_linear
- display default
- view sRGB
- name Write1
- xpos 67
- ypos 216
-}
 Viewer {
- frame 322
+ frame 100
  frame_range 0-359
  colour_sample_bbox {0.013671875 -0.12109375 0.015625 -0.119140625}
  samplepoints {{0.025390625 -0.02734375}
    }
- viewerProcess None
  softSelect true
  monitorOutOutputTransform rec709
  name Viewer1
- xpos 240
+ xpos 77
  ypos 225
+}
+NoOp {
+ inputs 0
+ name Settings
+ xpos 77
+ ypos -24
+ addUserKnob {20 User}
+ addUserKnob {6 compressMode l "compress mode" +STARTLINE}
+ compressMode true
+ addUserKnob {7 peakLuminance l "peak luminance" R 100 4000}
+ peakLuminance 1000
+ addUserKnob {4 limitGamut l "limiting gamut" M {Rec.709 P3-D65}}
+ addUserKnob {6 enableCuspSmoothing l "cusp smoothing" +STARTLINE}
+ addUserKnob {7 cuspSmoothing l "" -STARTLINE}
+ cuspSmoothing 0.19
+ addUserKnob {7 plotScale l "plot scale" R 100 500}
+ plotScale 300
+ addUserKnob {6 showApproximation l "show approximation" +STARTLINE}
+ showApproximation true
+ addUserKnob {6 showCusp l "show cusp" +STARTLINE}
+ showCusp true
 }
