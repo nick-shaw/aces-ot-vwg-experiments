@@ -926,7 +926,7 @@ def init():
     low, high = 0, search_range
     outside = False
     while not outside and high < 5.0:
-      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, high, maxRGBtestVal, False)
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, high, maxRGBtestVal)
       if not gammaFound:
         low = high
         high = high + search_range
@@ -937,7 +937,7 @@ def init():
 
     while (high - low) > 1e-6: # how close should we be
       testGamma = (high + low) / 2
-      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, testGamma, maxRGBtestVal, False)
+      gammaFound = evaluate_gamma_fit(JMcusp, hue, testJmh, testGamma, maxRGBtestVal)
       if gammaFound:
         high = testGamma
         gamutTopGamma[i] = high
@@ -964,17 +964,13 @@ def getFocusGain(J, cuspJ):
        # Analytic inverse possible below cusp
        return 1.0
 
-def evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal, debug):
+def evaluate_gamma_fit(JMcusp, hue, testJmh, topGamma, maxRGBtestVal):
     gammaFound = False
     focusJ = lerp(JMcusp[0], midJ, min(1.0, cuspMidBlend - (JMcusp[0] / limitJmax)))
     for Jmh in testJmh:
       slope_gain = limitJmax * focusDist * getFocusGain(Jmh[0], JMcusp[0])
       approxLimit = findGamutBoundaryIntersection( Jmh, JMcusp, focusJ, limitJmax, slope_gain, smoothCusps, topGamma, lowerHullGamma)
       newLimitRGB = JMh_to_limit_RGB(np.array([approxLimit[0], approxLimit[1], hue]))
-      if debug:
-        print("topGamma", topGamma)
-        print("approxLimit = ", approxLimit)
-        print("newLimitRGB = ", newLimitRGB)
 
       gammaFound = outside_top_hull(newLimitRGB, maxRGBtestVal)
       if not gammaFound:
