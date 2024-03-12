@@ -1,28 +1,16 @@
 // Matrices calculated from Equal Energy white
-// __CONSTANT__ float3x3 MATRIX_16 = 
-// {
-//     { 0.3662329270f,  0.5979188007f,  0.0357409422f },
-//     {-0.2155660470f,  1.0427613637f,  0.1722873040f },
-//     {-0.0020676190f,  0.0488260454f,  0.9503875570f }
-// };
-// 
-// __CONSTANT__ float3x3 MATRIX_INVERSE_16 = 
-// {
-//     { 2.0392540794f, -1.1756959081f,  0.1364418286f },
-//     { 0.4244368795f,  0.7225004744f, -0.1469373539f },
-//     {-0.0173688867f, -0.0396761636f,  1.0600480533f }
-// };
-
-__CONSTANT__ float3x3 MATRIX_16 = {
-    { 0.5951576789f,  0.4394092886f, -0.0344634736f},
-    {-0.2333583733f,  1.0893484122f,  0.1435787936f},
-    { 0.0572735340f, -0.3038780496f,  1.2428721668f}
+__CONSTANT__ float3x3 MATRIX_16 = 
+{
+    { 0.3662329270f,  0.5979188007f,  0.0357409422f },
+    {-0.2155660470f,  1.0427613637f,  0.1722873040f },
+    {-0.0020676190f,  0.0488260454f,  0.9503875570f }
 };
 
-__CONSTANT__ float3x3 MATRIX_INVERSE_16 = {
-    { 1.4519606301f, -0.5565110365f,  0.1045504064f},
-    { 0.3098696467f,  0.7705537428f, -0.0804233895f},
-    { 0.0088534185f,  0.2140427063f,  0.7801068782f}
+__CONSTANT__ float3x3 MATRIX_INVERSE_16 = 
+{
+    { 2.0392540794f, -1.1756959081f,  0.1364418286f },
+    { 0.4244368795f,  0.7225004744f, -0.1469373539f },
+    {-0.0173688867f, -0.0396761636f,  1.0600480533f }
 };
 
 // Input matrix
@@ -70,6 +58,10 @@ __CONSTANT__ float L_A = 100.0f;
 
 __CONSTANT__ float Y_b = 20.0f;
 
+__CONSTANT__ float ra = 2.0f;
+
+__CONSTANT__ float ba = 0.05f;
+
 __CONSTANT__ float referenceLuminance = 100.0f;
 
 __CONSTANT__ float3 surround = {0.9f, 0.59f, 0.9f};
@@ -84,12 +76,12 @@ __CONSTANT__ float lowerHullGamma = 1.14f;
 
 // Gamut Compression parameters
 __CONSTANT__ float cuspMidBlend = 1.3f;
-__CONSTANT__ float smoothCusps = 0.16f;
+__CONSTANT__ float smoothCusps = 0.24f;
 __CONSTANT__ float smoothJ = 0.058f;
 __CONSTANT__ float smoothM = 0.188f;
 __CONSTANT__ float focusDist = 1.35f;
 __CONSTANT__ float focusAdjustGain = 0.55f;
-__CONSTANT__ float focusGainBlend = 0.2f;
+__CONSTANT__ float focusGainBlend = 0.3f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.1f, 1.3f, 1.2f};
 
 // DanieleEvoCurve (ACES2 candidate) parameters
@@ -358,7 +350,7 @@ __DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float R_aw = RGB_aw.x ;
     float G_aw = RGB_aw.y ;
     float B_aw = RGB_aw.z ;
-    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw;
+    float A_w = A_w = ra * R_aw + G_aw + ba * B_aw;
 
     // # Step 1
     // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
@@ -450,7 +442,7 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     float R_aw = RGB_aw.x ;
     float G_aw = RGB_aw.y ;
     float B_aw = RGB_aw.z ;
-    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw;
+    float A_w = A_w = ra * R_aw + G_aw + ba * B_aw;
 
     float hr = degrees_to_radians(h);
 
