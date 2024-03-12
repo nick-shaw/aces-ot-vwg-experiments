@@ -1008,6 +1008,8 @@ def print_constants():
   print("__CONSTANT__ float compr = {:.6f}f;".format(compr))
   print("__CONSTANT__ float sat = {:.10f}f;".format(sat))
   print("__CONSTANT__ float sat_thr = {:.4f}f;".format(sat_thr))
+  print("__CONSTANT__ float ra = {:.4f}f;".format(ra))
+  print("__CONSTANT__ float rb = {:.4f}f;".format(rb))
   print("__CONSTANT__ float limitJmax = {:.6f}f;".format(limitJmax))
   print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
   print("__CONSTANT__ float focusDist = {:.10f}f;".format(focusDist))

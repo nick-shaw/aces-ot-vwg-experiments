@@ -361,12 +361,12 @@ __DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float3 RGB_c = D_RGB * RGB;
 
     // # Step 3
-    // Always compressMode
-    RGB_c = compress_bjorn(RGB_c);
+    // No compressMode
+//     RGB_c = compress_bjorn(RGB_c);
 
     float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
 
-    RGB_a = uncompress_bjorn(RGB_a);
+//     RGB_a = uncompress_bjorn(RGB_a);
 
     // # Step 4
     // # Converting to preliminary cartesian coordinates.
@@ -473,12 +473,12 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     // # Step 5
     // # Applying inverse post-adaptation non-linear response compression.
 
-    // Always compressMode
-    RGB_a = compress_bjorn(RGB_a);
+    // No compressMode
+//     RGB_a = compress_bjorn(RGB_a);
 
     float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L);
 
-    RGB_c = uncompress_bjorn(RGB_c);
+//     RGB_c = uncompress_bjorn(RGB_c);
 
     // # Step 6
     float3 RGB = RGB_c / D_RGB;
