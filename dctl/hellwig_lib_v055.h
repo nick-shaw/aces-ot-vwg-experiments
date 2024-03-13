@@ -536,6 +536,27 @@ __DEVICE__ inline float daniele_evo_rev(float Y)
     return f;
 }
 
+__DEVICE__ inline int midpoint(int low, int high)
+  {
+    return int((high + low) / 2); // Integer division
+  }
+
+__DEVICE__ inline float wrap_to_360(float hue)
+  {
+    float y = _fmod(hue, 360.0f);
+    if (y < 0.0f)
+    {
+      y = y + 360.0f;
+    }
+    return y;
+  }
+
+__DEVICE__ inline int hue_position_in_uniform_table(float hue, int table_size)
+  {
+    const float wrapped_hue = wrap_to_360(hue);
+    return int(wrapped_hue / 360.0f * table_size);
+  }
+
 __DEVICE__ inline float2 cuspFromTable(float h)
 {
     float3 lo;
@@ -555,15 +576,24 @@ __DEVICE__ inline float2 cuspFromTable(float h)
     }
     else
     {
-      for(int i = 1; i < 360; ++i)
+      int low_i  = 0;
+      int high_i = 359;
+      int i      = hue_position_in_uniform_table(h, 360);
+
+      while (low_i + 1 < high_i)
       {
-        if( h <= gamutCuspTable[i].z && h > gamutCuspTable[i-1].z )
+        if (h > gamutCuspTable[i].z)
         {
-          lo = gamutCuspTable[i-1];
-          hi = gamutCuspTable[i];
-//           break;
+          low_i = i;
         }
+        else
+        {
+          high_i = i;
+        }
+        i = midpoint(low_i, high_i);
       }
+      lo = gamutCuspTable[high_i - 1];
+      hi = gamutCuspTable[high_i];
     }
 
     float t = (h - lo.z) / (hi.z - lo.z);
@@ -593,15 +623,24 @@ __DEVICE__ inline float2 cCuspFromTable(float h)
     }
     else
     {
-      for(int i = 1; i < 360; ++i)
+      int low_i  = 0;
+      int high_i = 359;
+      int i      = hue_position_in_uniform_table(h, 360);
+
+      while (low_i + 1 < high_i)
       {
-        if( h <= cGamutCuspTable[i].z && h > cGamutCuspTable[i-1].z )
+        if (h > cGamutCuspTable[i].z)
         {
-          lo = cGamutCuspTable[i-1];
-          hi = cGamutCuspTable[i];
-//           break;
+          low_i = i;
         }
+        else
+        {
+          high_i = i;
+        }
+        i = midpoint(low_i, high_i);
       }
+      lo = cGamutCuspTable[high_i - 1];
+      hi = cGamutCuspTable[high_i];
     }
 
     float t = (h - lo.z) / (hi.z - lo.z);
@@ -625,18 +664,6 @@ __DEVICE__ inline float reachFromTable(float h)
     return lerp(gamutCuspTableReach[lo], gamutCuspTableReach[hi], t);
 }
 
-__DEVICE__ inline float cReachFromTable(float h)
-{
-    int lo = (int)_floorf(mod(h, 360.0f));
-    int hi = (int)_ceilf(mod(h, 360.0f));
-    if (hi == 360)
-    {
-        hi = 0;
-    }
-    float t = _fmod(h, 1.0f);
-
-    return lerp(cGamutReachTable[lo], cGamutReachTable[hi], t);
-}
   // A "toe" function that remaps the given value x between 0 and limit.
   // The k1 and k2 parameters change the size and shape of the toe.
   // https://www.desmos.com/calculator/6vplvw14ti
@@ -670,7 +697,7 @@ __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear,
     float nJ = JMh.x / limitJmax;
     float snJ = max(0.0f, 1.0f - nJ);
     float Mnorm = cCuspFromTable(JMh.z).y;
-    float limit = _powf(nJ, model_gamma) * cReachFromTable(JMh.z) / Mnorm;
+    float limit = _powf(nJ, model_gamma) * reachFromTable(JMh.z) / Mnorm;
 
     if (!invert)
     {
@@ -1012,3 +1039,11 @@ __DEVICE__ inline float linear_to_ST2084( float v )
 
     return spow((st2084_c_1 + st2084_c_2 * Y_p) / (st2084_c_3 * Y_p + 1.0f), st2084_m_2);
 }
+
+  // convert ST2084 PQ encoded values to linear
+__DEVICE__ inline float ST2084_to_linear(float v)
+  {
+    float V_p = spow(v, st2084_m_2_d);
+
+    return spow((max(0.0f, V_p - st2084_c_1) / (st2084_c_2 - st2084_c_3 * V_p)), st2084_m_1_d) * st2084_L_p;
+  }
