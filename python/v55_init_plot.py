@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 # 3: Rec.2020-D65
 # 4: P3-D65
 # 5: P3-DCI
-primariesOut = 2
+# primariesOut = 2
 
 referenceLuminance = 100.0
 compressMode = False
@@ -1009,7 +1009,7 @@ def print_constants():
   print("__CONSTANT__ float sat = {:.10f}f;".format(sat))
   print("__CONSTANT__ float sat_thr = {:.4f}f;".format(sat_thr))
   print("__CONSTANT__ float ra = {:.4f}f;".format(ra))
-  print("__CONSTANT__ float rb = {:.4f}f;".format(rb))
+  print("__CONSTANT__ float ba = {:.4f}f;".format(ba))
   print("__CONSTANT__ float limitJmax = {:.6f}f;".format(limitJmax))
   print("__CONSTANT__ float midJ = {:.10f}f;".format(midJ))
   print("__CONSTANT__ float focusDist = {:.10f}f;".format(focusDist))
@@ -1030,17 +1030,18 @@ def print_constants():
   print(format_array3(gamutCuspTable, "__CONSTANT__ float3 gamutCuspTable[{}]".format(gamutCuspTableSize)))
 #   print(format_array3(gamutCuspTableReach, "__CONSTANT__ float3 gamutCuspTableReach[{}]".format(gamutCuspTableSize), 3))
   print(format_array(np.split(gamutCuspTableReach, 3, 1)[0].reshape(-1), "__CONSTANT__ float gamutCuspTableReach[{}]".format(gamutCuspTableSize), 3))
-  print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cgamutCuspTable[{}]".format(gamutCuspTableSize)))
+  print(format_array3(cgamutCuspTable, "__CONSTANT__ float3 cGamutCuspTable[{}]".format(gamutCuspTableSize)))
 #   print(format_array3(cgamutReachTable, "__CONSTANT__ float3 cgamutReachTable[{}]".format(gamutCuspTableSize), 3))
-  print(format_array(np.split(cgamutReachTable, 3, 1)[0].reshape(-1), "__CONSTANT__ float cgamutReachTable[{}]".format(gamutCuspTableSize), 3))
+  print(format_array(np.split(cgamutReachTable, 3, 1)[0].reshape(-1), "__CONSTANT__ float cGamutReachTable[{}]".format(gamutCuspTableSize), 3))
   print(format_array(gamutTopGamma, "__CONSTANT__ float gamutTopGamma[{}]".format(gamutCuspTableSize), 15))
 
 def main():
-    global peakLuminance, primariesLimit, whiteLimit
-    if len(sys.argv) < 4:
-        print(f"Usage:  python3 {sys.argv[0]} <peakLuminance> <primariesLimit> <whiteLimit>")
+    global peakLuminance, primariesLimit, primariesOut, whiteLimit
+    if len(sys.argv) < 5:
+        print(f"Usage:  python3 {sys.argv[0]} <peakLuminance> <primariesLimit> <primariesOut> <whiteLimit>")
         print("peakLuminance - peak luminance in nits")
         print("primariesLimit – primaries of the target gamut")
+        print("primariesOut – primaries of the encoding gamut")
         print("\t0: AP0-ACES")
         print("\t1: AP1-ACES")
         print("\t2: sRGB/Rec.709")
@@ -1051,11 +1052,12 @@ def main():
         print("\t0: ACES white")
         print("\t1: D65")
         print()
-        print("E.g.:\npython3 v53_init.py 100 2 1\nwill produce the Rec.709 100 nit values")
+        print("E.g.:\npython3 v53_init.py 100 2 2 1\nwill produce the Rec.709 100 nit values")
         exit(1)
     peakLuminance = float(sys.argv[1])
     primariesLimit = int(sys.argv[2])
-    whiteLimit = int(sys.argv[3])
+    primariesOut = int(sys.argv[3])
+    whiteLimit = int(sys.argv[4])
     with Profile() as profile:
       init()
       (

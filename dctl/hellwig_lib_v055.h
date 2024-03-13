@@ -50,8 +50,6 @@ __CONSTANT__ float3x3 panlrcm =
     { 460.0f, -220.0f, -6300.0f},
 };
 
-__CONSTANT__ float HALF_MAXIMUM = 65504.0f;
-
 __CONSTANT__ float PI = 3.141592653589793f;
 
 __CONSTANT__ float L_A = 100.0f;
@@ -79,7 +77,6 @@ __CONSTANT__ float cuspMidBlend = 1.3f;
 __CONSTANT__ float smoothCusps = 0.24f;
 __CONSTANT__ float smoothJ = 0.058f;
 __CONSTANT__ float smoothM = 0.188f;
-__CONSTANT__ float focusDist = 1.35f;
 __CONSTANT__ float focusAdjustGain = 0.55f;
 __CONSTANT__ float focusGainBlend = 0.3f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.1f, 1.3f, 1.2f};
@@ -907,13 +904,14 @@ __DEVICE__ inline float3 compressGamut2(float3 JMh, int invert, float Jx)
     // Calculate AP1 Reach boundary
     float reachMaxM = reachFromTable(JMh.z);
 
-    // slope_gain changed to use boundary J instead of source J (seems to make no difference)
+    // slope_gain changed to use boundary J instead of source J (unsure if this is needed)
     slope_gain = limitJmax * focusDist * getFocusGain(JMboundary.x, JMcusp.x);
     
-    // J intersection recalculated with new slope_gain (still no difference)
+    // J intersection recalculated with new slope_gain (unsure if this is needed)
     projectJ = solve_J_intersect(JMboundary, focusJ, limitJmax, slope_gain);
 
     // slope is recalculated here because it was a local variable in findGamutBoundaryIntersection
+    // but also because it will have changed slightly due to the changed slope_gain
     float slope;
 
     if (projectJ < focusJ)
