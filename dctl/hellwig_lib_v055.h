@@ -924,8 +924,8 @@ __DEVICE__ inline float3 compressGamut2(float3 JMh, int invert, float Jx)
 
     // Find gamut intersection
     float3 nickBoundryReturn = findGamutBoundaryIntersection(JMh, JMcusp, focusJ, limitJmax, slope_gain, smoothCusps);
-    float2 JMboundary        = float2(nickBoundryReturn.x, nickBoundryReturn.y);
-    float2 project_to        = float2(nickBoundryReturn.z, 0.0f);
+    float2 JMboundary        = make_float2(nickBoundryReturn.x, nickBoundryReturn.y);
+    float2 project_to        = make_float2(nickBoundryReturn.z, 0.0f);
     float projectJ           = nickBoundryReturn.z;
 
     // Calculate AP1 Reach boundary
