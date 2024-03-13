@@ -181,57 +181,6 @@ def achromatic_response_inverse(
     return A
 
 
-def compress_bjorn(xyz):
-    C = np.mean(xyz, axis=-1, keepdims=True)
-
-    xyz_temp = xyz - C
-    R = np.linalg.norm(xyz_temp, axis=-1, keepdims=True)
-
-    R = R * 0.816496580927726  # sqrt(2/3)
-
-    xyz_temp = xyz_temp / R
-
-    r = R / C
-    r = r * r
-    r = np.sqrt(4.0 / r + 1.0) - 1.0
-
-    s = -np.min(xyz_temp, axis=-1, keepdims=True)
-    s = s - 0.5
-
-    t = 0.5 + np.sqrt(s * s + r * r / 4.0)
-    t = C / t  # t is always >= 0.5
-
-    xyz_temp = xyz_temp * t + C
-
-    return np.where(np.logical_or(R == 0, C == 0), xyz, xyz_temp)
-
-
-def uncompress_bjorn(xyz):
-    C = np.mean(xyz, axis=-1, keepdims=True)
-
-    xyz_temp = xyz - C
-    R = np.linalg.norm(xyz_temp, axis=-1, keepdims=True)
-
-    R = R * 0.816496580927726  # sqrt(2/3)
-
-    xyz_temp = xyz_temp / R
-
-    t = C / R
-    t = t - 0.5
-
-    s = -np.min(xyz_temp, axis=-1, keepdims=True)
-    s = s - 0.5
-
-    r = 2 * np.sqrt(np.abs(t * t - s * s)) + 1
-    r = np.sqrt(np.abs(r * r - 1))
-
-    return np.where(
-        np.logical_or(np.logical_or(R == 0, C == 0), r == 0),
-        xyz,
-        xyz_temp * (C * 2 / r) + C,
-    )
-
-
 def opponent_colour_dimensions_forward(RGB: ArrayLike) -> NDArrayFloat:
     """
     Parameters

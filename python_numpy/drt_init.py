@@ -35,8 +35,7 @@ class DRTParams:
     L_A: float
     Y_b: float
     matrix_lms: ArrayLike
-    compress_mode: bool
-    AP1Clamp: bool
+    ap1_clamp: bool
 
     # Tonescale
     peakLuminance: float
@@ -76,8 +75,9 @@ class DRTParams:
     smoothCuspJ: float
     smoothCuspM: float
     compressionFuncParams: ArrayLike
-    gcreach_RGB_to_XYZ: ArrayLike
-    gcreach_XYZ_to_RGB: ArrayLike
+    # Not used, assuming same as cc (AP1)
+    # gcreach_RGB_to_XYZ: ArrayLike
+    # gcreach_XYZ_to_RGB: ArrayLike
 
     # Cusp / hull tables
     tableSize: int
@@ -234,8 +234,7 @@ def _drt_params(
         L_A=100,
         Y_b=20,
         matrix_lms=CUSTOM_CAT16,
-        compress_mode=False,
-        AP1Clamp=True,
+        ap1_clamp=True,
 
         # Tonescale
         peakLuminance=peakLuminance,
@@ -275,8 +274,8 @@ def _drt_params(
         smoothCuspJ=0.058,
         smoothCuspM=0.188,
         compressionFuncParams=[0.75, 1.1, 1.3, 1.2],
-        gcreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
-        gcreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
+        # gcreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
+        # gcreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
 
         # Cusp / hull tables
         tableSize=360,
@@ -480,8 +479,6 @@ def daniele_evo_params(peakLuminance):
 
 def cusp_tables(params):
 
-    boundaryRGB = params.peakLuminance / params.referenceLuminance
-
     h_samples = params.tableSize
 
     # Cusp table for chroma compression gamut
@@ -490,7 +487,7 @@ def cusp_tables(params):
     h = np.linspace(0, 1, h_samples, endpoint=False)
     ones = np.ones(h.shape)
     RGB = HSV_to_RGB(tstack([h, ones, ones]))
-    RGB *= boundaryRGB * params.referenceLuminance
+    RGB *= params.peakLuminance
     gamutCuspTableUnsorted = luminance_RGB_to_JMh(
         RGB,
         params.limit_whiteXYZ,
@@ -499,8 +496,7 @@ def cusp_tables(params):
         params.input_viewingConditions,
         params.input_discountIlluminant,
         params.matrix_lms,
-        params.compress_mode,
-        params.gcreach_RGB_to_XYZ,
+        params.ccreach_RGB_to_XYZ,
     )
     minhIndex = np.argmin(gamutCuspTableUnsorted[..., 2], axis=-1)
     cgamutCuspTable = np.roll(gamutCuspTableUnsorted, -minhIndex, axis=0)
@@ -527,10 +523,9 @@ def cusp_tables(params):
                 params.limit_viewingConditions,
                 params.limit_discountIlluminant,
                 params.matrix_lms,
-                params.compress_mode,
                 params.ccreach_XYZ_to_RGB,
             )
-            newLimitRGB = newLimitRGB / boundaryRGB / params.referenceLuminance
+            newLimitRGB /= params.peakLuminance
             outside = np.any(newLimitRGB < 0, axis=-1)
             if not outside:
                 low = high
@@ -547,7 +542,6 @@ def cusp_tables(params):
                 params.input_viewingConditions,
                 params.input_discountIlluminant,
                 params.matrix_lms,
-                params.compress_mode,
                 params.ccreach_XYZ_to_RGB,
             )
             outside = np.any(newLimitRGB < 0, axis=-1)
@@ -565,7 +559,7 @@ def cusp_tables(params):
     h = np.linspace(0, 1, h_samples, endpoint=False)
     ones = np.ones(h.shape)
     RGB = HSV_to_RGB(tstack([h, ones, ones]))
-    RGB *= boundaryRGB * params.referenceLuminance
+    RGB *= params.peakLuminance
     gamutCuspTableUnsorted = luminance_RGB_to_JMh(
         RGB,
         params.limit_whiteXYZ,
@@ -574,7 +568,6 @@ def cusp_tables(params):
         params.input_viewingConditions,
         params.input_discountIlluminant,
         params.matrix_lms,
-        params.compress_mode,
         params.limit_RGB_to_XYZ,
     )
     minhIndex = np.argmin(gamutCuspTableUnsorted[..., 2], axis=-1)
@@ -582,57 +575,7 @@ def cusp_tables(params):
 
     # Cusp table for gamut compressor limiting reach gamut.
 
-    gamutCuspTableReach = np.zeros((h_samples, 3))
-    for i in range(h_samples):
-        hue = float(i) * 360 / h_samples
-        gamutCuspTableReach[i][2] = hue
-
-        # Initially tried binary search between 0 and 1300, but there must be cases where extreme values wrap
-        # So start small and jump in small ish steps until we are outside then binary search inside that range
-        search_range = 50.0
-        low, high = 0.0, search_range
-        outside = False
-        while not outside:
-            JMhSearch = np.array([params.limitJmax, high, hue])
-            newLimitRGB = JMh_to_luminance_RGB(
-                JMhSearch,
-                params.limit_whiteXYZ,
-                params.L_A,
-                params.Y_b,
-                params.input_viewingConditions,
-                params.input_discountIlluminant,
-                params.matrix_lms,
-                params.compress_mode,
-                params.gcreach_XYZ_to_RGB,
-            )
-            newLimitRGB = newLimitRGB / boundaryRGB / params.referenceLuminance
-            outside = np.any(newLimitRGB < 0, axis=-1)
-            if not outside:
-                low = high
-                high = high + search_range
-
-        while (high - low) > 1e-2: # how close should we be
-            sampleM = (high + low) / 2
-            JMhSearch = np.array([params.limitJmax, sampleM, hue])
-            newLimitRGB = JMh_to_luminance_RGB(
-                JMhSearch,
-                params.limit_whiteXYZ,
-                params.L_A,
-                params.Y_b,
-                params.input_viewingConditions,
-                params.input_discountIlluminant,
-                params.matrix_lms,
-                params.compress_mode,
-                params.gcreach_XYZ_to_RGB,
-            )
-            outside = np.any(newLimitRGB < 0, axis=-1)
-            if outside:
-                high = sampleM
-            else:
-                low = sampleM
-
-        gamutCuspTableReach[i][0] = params.limitJmax
-        gamutCuspTableReach[i][1] = high
+    gamutCuspTableReach = cgamutReachTable
 
     # Upper hull gamma values for the gamut mapper
 
@@ -656,7 +599,7 @@ def cusp_tables(params):
         gamma_found = False
 
         while not gamma_found and high < 5.0:
-            gamma_found = evaluate_gamma_fit(JMcusp, testJmh, high, boundaryRGB, params)
+            gamma_found = evaluate_gamma_fit(JMcusp, testJmh, high, params)
             if not gamma_found:
                 low = high
                 high = high + search_range
@@ -664,7 +607,7 @@ def cusp_tables(params):
         testGamma = -1.0
         while (high - low) > 1e-5:
             testGamma = (high + low) / 2
-            gamma_found = evaluate_gamma_fit(JMcusp, testJmh, testGamma, boundaryRGB, params)
+            gamma_found = evaluate_gamma_fit(JMcusp, testJmh, testGamma, params)
             if gamma_found:
                 high = testGamma
             else:
@@ -672,10 +615,8 @@ def cusp_tables(params):
 
         gamutTopGamma[i] = testGamma
 
-
-    # Compare table against Nick's Python reference
-
-    # import matplotlib
-    # matplotlib.use('Qt5Agg')
-    # import matplotlib.pyplot as plt
-
+    params.cgamutCuspTable = cgamutCuspTable
+    params.cgamutReachTable = cgamutReachTable
+    params.gamutCuspTable = gamutCuspTable
+    params.gamutCuspTableReach = gamutCuspTableReach
+    params.gamutTopGamma = gamutTopGamma

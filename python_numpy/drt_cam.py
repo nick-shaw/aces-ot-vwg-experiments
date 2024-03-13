@@ -24,8 +24,6 @@ from drt_cam_lib import (
     matrix_post_adaptation_non_linear_response_compression,
     achromatic_response_forward,
     achromatic_response_inverse,
-    compress_bjorn,
-    uncompress_bjorn,
     opponent_colour_dimensions_forward,
     opponent_colour_dimensions_inverse,
     hue_angle,
@@ -75,7 +73,6 @@ def XYZ_to_JMh(
     surround: str = "Average",
     discount_illuminant: bool = False,
     matrix_lms: ArrayLike = CAT_CAT16,
-    compress_mode: bool = False,
 ) -> NDArrayFloat:
 
     _X_w, Y_w, _Z_w = tsplit(XYZ_w)
@@ -115,13 +112,7 @@ def XYZ_to_JMh(
 
     # Step 3
     # Applying forward post-adaptation non-linear response compression.
-
-    if compress_mode:
-        RGB_c = compress_bjorn(RGB_c)
-        RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L)
-        RGB_a = uncompress_bjorn(RGB_a)
-    else:
-        RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L)
+    RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L)
 
     # Step 4
     # Converting to preliminary cartesian coordinates.
@@ -163,7 +154,6 @@ def JMh_to_XYZ(
     surround: str = "Average",
     discount_illuminant: bool = False,
     matrix_lms: ArrayLike = CAT_CAT16,
-    compress_mode: bool = False,
 ) -> NDArrayFloat:
 
     J, M, h = tsplit(JMh)
@@ -216,13 +206,7 @@ def JMh_to_XYZ(
 
     # Step 5
     # Applying inverse post-adaptation non-linear response compression.
-
-    if compress_mode:
-        RGB_a = compress_bjorn(RGB_a)
-        RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L)
-        RGB_c = uncompress_bjorn(RGB_c)
-    else:
-        RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L)
+    RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L)
 
     # Step 6
     RGB = RGB_c / D_RGB
@@ -241,12 +225,11 @@ def JMh_to_luminance_RGB(
     surround,
     discount_illuminant,
     matrix_lms,
-    compress_mode,
     matrix_XYZ_to_RGB,
 ) -> NDArrayFloat:
 
     luminanceXYZ = JMh_to_XYZ(
-        JMh, XYZ_w, L_A, Y_b, surround, discount_illuminant, matrix_lms, compress_mode
+        JMh, XYZ_w, L_A, Y_b, surround, discount_illuminant, matrix_lms
     )
     luminanceRGB = vector_dot(matrix_XYZ_to_RGB, luminanceXYZ)
     return luminanceRGB
@@ -260,13 +243,12 @@ def luminance_RGB_to_JMh(
     surround,
     discount_illuminant,
     matrix_lms,
-    compress_mode,
     matrix_RGB_to_XYZ,
 ) -> NDArrayFloat:
 
     XYZ = vector_dot(matrix_RGB_to_XYZ, luminanceRGB)
     JMh = XYZ_to_JMh(
-        XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant, matrix_lms, compress_mode
+        XYZ, XYZ_w, L_A, Y_b, surround, discount_illuminant, matrix_lms
     )
     return JMh
 

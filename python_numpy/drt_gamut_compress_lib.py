@@ -217,7 +217,7 @@ def compressPowerP(v, threshold, limit, power, inverse):
     return vCompressed
 
 
-def evaluate_gamma_fit(JMcusp, testJmh, topGamma, boundaryRGB, params):
+def evaluate_gamma_fit(JMcusp, testJmh, topGamma, params):
     testJmh = np.asarray(testJmh)
     testJ, testM, testh = tsplit(testJmh)
     Jcusp, Mcusp = tsplit(JMcusp)
@@ -241,9 +241,8 @@ def evaluate_gamma_fit(JMcusp, testJmh, topGamma, boundaryRGB, params):
         params.limit_viewingConditions,
         params.limit_discountIlluminant,
         params.matrix_lms,
-        params.compress_mode,
         params.limit_XYZ_to_RGB,
     )
-    newLimitRGB = newLimitRGB / boundaryRGB / params.referenceLuminance
+    newLimitRGB /= params.peakLuminance
 
     return np.all(np.any(newLimitRGB > 1, axis=-1))

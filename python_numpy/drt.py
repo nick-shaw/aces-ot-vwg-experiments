@@ -22,7 +22,7 @@ def drt_forward(RGB, params):
     luminanceRGB = RGB * params.referenceLuminance
     luminanceXYZ = vector_dot(params.input_RGB_to_XYZ, luminanceRGB)
 
-    if params.AP1Clamp:
+    if params.ap1_clamp:
       luminanceRGB = vector_dot(colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB, luminanceXYZ)
       luminanceRGB = np.clip(luminanceRGB, 0, np.finfo(np.float16).max)
       luminanceXYZ = vector_dot(colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ, luminanceRGB)
@@ -37,7 +37,6 @@ def drt_forward(RGB, params):
         params.input_viewingConditions,
         params.input_discountIlluminant,
         matrix_lms=params.matrix_lms,
-        compress_mode=params.compress_mode,
     )
 
     # 2. Apply tone scale on lightness attribute
@@ -58,7 +57,6 @@ def drt_forward(RGB, params):
         params.output_viewingConditions,
         params.output_discountIlluminant,
         matrix_lms=params.matrix_lms,
-        compress_mode=params.compress_mode,
     )
 
     luminanceRGB = vector_dot(params.limit_XYZ_to_RGB, luminanceXYZ)
@@ -95,7 +93,6 @@ def drt_inverse(RGB, params):
         params.output_viewingConditions,
         params.output_discountIlluminant,
         matrix_lms=params.matrix_lms,
-        compress_mode=params.compress_mode,
     )
 
     # 2. Gamut un-compression
@@ -116,7 +113,6 @@ def drt_inverse(RGB, params):
         params.input_viewingConditions,
         params.input_discountIlluminant,
         matrix_lms=params.matrix_lms,
-        compress_mode=params.compress_mode,
     )
 
     luminanceRGB = vector_dot(params.input_XYZ_to_RGB, luminanceXYZ)
