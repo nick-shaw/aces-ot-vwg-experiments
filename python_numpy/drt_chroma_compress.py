@@ -12,24 +12,23 @@ from colour.utilities import (
     tstack,
 )
 
-from drt_cusp_lib import cusp_with_eccentricity_factor, cReachFromTable
+from drt_cusp_lib import cuspFromTable, cReachFromTable
 
 
 def chromaCompressionForward(
     JMh,
     origJ,
-    cc_params,
-    cusp_params,
+    params
 ):
     J, M, h = tsplit(JMh)
     M_orig = M.copy()
 
-    nJ = J / cc_params.limitJmax
+    nJ = J / params.limitJmax
     snJ = np.maximum(1.0 - nJ, np.zeros(nJ.shape))
-    Mnorm = cusp_with_eccentricity_factor(h, cusp_params)
+    Mnorm = cuspFromTable(h, params.cgamutCuspTable)[..., 1]
     limit = (
-        np.power(nJ, cc_params.model_gamma)
-        * cReachFromTable(h, cusp_params.cgamutReachTable)
+        np.power(nJ, params.model_gamma)
+        * cReachFromTable(h, params.cgamutReachTable)
         / Mnorm
     )
 
@@ -38,7 +37,7 @@ def chromaCompressionForward(
     # J after the tonescale.  The rescaling uses the Hellwig2022 model gamma to
     # keep the M/J ratio correct (keeping the chromaticities constant).
     #
-    M *= np.power(J / origJ, cc_params.model_gamma)
+    M *= np.power(J / origJ, params.model_gamma)
 
     # Normalize M with the rendering space cusp M
     M /= Mnorm
@@ -53,8 +52,8 @@ def chromaCompressionForward(
     M = limit - toe_forward(
         limit - M,
         limit - 0.001,
-        snJ * cc_params.sat,
-        np.sqrt(nJ * nJ + cc_params.sat_thr),
+        snJ * params.sat,
+        np.sqrt(nJ * nJ + params.sat_thr),
     )
 
     #
@@ -63,10 +62,10 @@ def chromaCompressionForward(
     # saturation roll-off in the highlights, but attemps to preserve pure colors.  This
     # mostly affects highlights and mid-tones, and does not compress shadows.
     #
-    M = toe_forward(M, limit, nJ * cc_params.compr, snJ)
+    M = toe_forward(M, limit, nJ * params.compr, snJ)
 
     # Clamp M to the rendering space
-    if cc_params.applyReachClamp:
+    if params.applyReachClamp:
         M = np.minimum(np.ones(M.shape) * limit, M)
 
     # Denormalize
@@ -78,32 +77,31 @@ def chromaCompressionForward(
 def chromaCompressionInverse(
     JMh,
     origJ,
-    cc_params,
-    cusp_params,
+    params,
 ):
     J, M, h = tsplit(JMh)
     M_orig = M.copy()
 
-    nJ = J / cc_params.limitJmax
+    nJ = J / params.limitJmax
     snJ = np.maximum(1.0 - nJ, np.zeros(nJ.shape))
-    Mnorm = cusp_with_eccentricity_factor(h, cusp_params)
+    Mnorm = cuspFromTable(h, params.cgamutCuspTable)[..., 1]
     limit = (
-        np.power(nJ, cc_params.model_gamma)
-        * cReachFromTable(h, cusp_params.cgamutReachTable)
+        np.power(nJ, params.model_gamma)
+        * cReachFromTable(h, params.cgamutReachTable)
         / Mnorm
     )
 
     M /= Mnorm
-    M = toe_inverse(M, limit, nJ * cc_params.compr, snJ)
+    M = toe_inverse(M, limit, nJ * params.compr, snJ)
     M = limit - toe_inverse(
         limit - M,
         limit - 0.001,
-        snJ * cc_params.sat,
-        np.sqrt(nJ * nJ + cc_params.sat_thr),
+        snJ * params.sat,
+        np.sqrt(nJ * nJ + params.sat_thr),
     )
     M *= Mnorm
 
-    M *= pow(J / origJ, -cc_params.model_gamma)
+    M *= pow(J / origJ, -params.model_gamma)
 
     return np.where(M_orig == 0.0, np.zeros(M.shape), M)
 

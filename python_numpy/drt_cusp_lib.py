@@ -13,19 +13,6 @@ from colour.utilities import (
 )
 
 
-# Return compression gamut cusp M scaled with an eccentricity factor
-def cusp_with_eccentricity_factor(
-    h,
-    cusp_params,
-):
-    JMcusp = cuspFromTable(h, cusp_params.cgamutCuspTable)
-    J, M = tsplit(JMcusp)
-
-    e_t = 1.0
-
-    return M * e_t
-
-
 def cuspFromTable(h, table):
 
     h = np.asarray(h)

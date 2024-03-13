@@ -13,8 +13,8 @@ from colour.utilities import (
 )
 
 from drt_cam import (
-    JMh_to_luminance_RGB,
-    luminance_RGB_to_JMh,
+    Hellwig_J_to_Y,
+    Y_to_Hellwig_J,
 )
 from drt_chroma_compress import (
     chromaCompressionForward,
@@ -22,104 +22,59 @@ from drt_chroma_compress import (
 )
 
 
-def forwardTonescale(
-    inputJMh: ArrayLike,
-    hellwig_params,
-    devo_params,
-    cc_params,
-    cusp_params,
-    limit_params,
-    output_params,
-) -> NDArrayFloat:
+def forwardTonescale(inputJMh: ArrayLike, params) -> NDArrayFloat:
 
     J, M, h = tsplit(inputJMh)
-    zeros = np.zeros(J.shape)
-    monoJMh = tstack([J, zeros, zeros])
 
-    linearJMh = JMh_to_luminance_RGB(
-        monoJMh,
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        limit_params.viewingConditions,
-        limit_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        output_params.XYZ_to_RGB,
+    linear = Hellwig_J_to_Y(
+        J,
+        params.L_A,
+        params.Y_b,
+        params.limit_viewingConditions) / params.referenceLuminance
+    luminanceTS = daniele_evo_fwd(linear, params)
+    luminanceTS *= params.n_r
+
+    tonemappedJ = Y_to_Hellwig_J(
+        luminanceTS,
+        params.L_A,
+        params.Y_b,
+        params.limit_viewingConditions
     )
-
-    linear = linearJMh[..., 0] / hellwig_params.referenceLuminance
-    luminanceTS = daniele_evo_fwd(linear, devo_params)
-    luminanceTS *= devo_params.n_r
-
-    tonemappedmonoJMh = luminance_RGB_to_JMh(
-        tstack([luminanceTS, luminanceTS, luminanceTS]),
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        limit_params.viewingConditions,
-        limit_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        output_params.RGB_to_XYZ,
-    )
-    tonemappedJMh = tstack([tonemappedmonoJMh[..., 0], M, h])
+    tonemappedJMh = tstack([tonemappedJ, M, h])
 
     outputJMh = tonemappedJMh
-
     outputJMh[..., 1] = chromaCompressionForward(
-        tonemappedJMh, J, cc_params, cusp_params
+        tonemappedJMh, J, params
     )
 
     return outputJMh
 
 
-def inverseTonescale(
-    JMh: ArrayLike,
-    hellwig_params,
-    devo_params,
-    cc_params,
-    cusp_params,
-    limit_params,
-    output_params,
-) -> NDArrayFloat:
+def inverseTonescale(JMh: ArrayLike, params) -> NDArrayFloat:
 
     J, M, h = tsplit(JMh)
-    zeros = np.zeros(J.shape)
-    monoTonemappedJMh = tstack([J, zeros, zeros])
 
-    monoTonemappedRGB = JMh_to_luminance_RGB(
-        monoTonemappedJMh,
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        limit_params.viewingConditions,
-        limit_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        output_params.XYZ_to_RGB,
+    luminance = Hellwig_J_to_Y(
+        J,
+        params.L_A,
+        params.Y_b,
+        params.limit_viewingConditions
     )
 
-    luminance = monoTonemappedRGB[..., 0]
-    luminance /= devo_params.n_r
-    linear = daniele_evo_rev(luminance, devo_params)
-    linear = linear * hellwig_params.referenceLuminance
+    luminance /= params.n_r
+    linear = daniele_evo_rev(luminance, params)
+    linear = linear * params.referenceLuminance
 
-    untonemappedMonoJMh = luminance_RGB_to_JMh(
-        tstack([linear, linear, linear]),
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        limit_params.viewingConditions,
-        limit_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        output_params.RGB_to_XYZ,
+    untonemappedJ = Y_to_Hellwig_J(
+        linear,
+        params.L_A,
+        params.Y_b,
+        params.limit_viewingConditions
     )
-    untonemappedColourJMh = tstack([untonemappedMonoJMh[..., 0], M, h])
+    untonemappedColourJMh = tstack([untonemappedJ, M, h])
 
     untonemappedColourJMh[..., 1] = chromaCompressionInverse(
-        JMh, untonemappedMonoJMh[..., 0], cc_params, cusp_params
+        JMh, untonemappedJ, params
     )
 
     return untonemappedColourJMh

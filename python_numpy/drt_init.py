@@ -20,28 +20,25 @@ from colour.utilities import (
 
 from drt_colour_lib import HSV_to_RGB
 from drt_cusp_lib import cuspFromTable
-from drt_gamut_compress_lib import findGamutBoundaryIntersection
+from drt_gamut_compress_lib import evaluate_gamma_fit
 from drt_cam import (
     VIEWING_CONDITIONS_HELLWIG2022,
-    Y_to_J,
+    Y_to_Hellwig_J,
     luminance_RGB_to_JMh,
     JMh_to_luminance_RGB,
 )
 
-# TODO: Flatten all parameters in a single class?
-
-
 @dataclass
-class Hellwig2022_Params:
+class DRTParams:
+    # CAM
     referenceLuminance: float
     L_A: float
     Y_b: float
     matrix_lms: ArrayLike
     compress_mode: bool
+    AP1Clamp: bool
 
-
-@dataclass
-class Daniele_Evo_Params:
+    # Tonescale
     peakLuminance: float
     n: float
     n_r: float
@@ -52,40 +49,37 @@ class Daniele_Evo_Params:
     u_2: float
     m_2: float
 
-
-@dataclass
-class ChromaCompression_Params:
+    # Chroma Compression
     chroma_compress: float
+    chroma_compress_fact: float
     chroma_expand: float
+    chroma_expand_fact: float
     chroma_expand_thr: float
-    cc_et: float
     limitJmax: float
     model_gamma: float
     sat: float
     sat_thr: float
     compr: float
     applyReachClamp: bool
+    ccreach_RGB_to_XYZ: ArrayLike
+    ccreach_XYZ_to_RGB: ArrayLike
 
-
-@dataclass
-class GamutCompression_Params:
+    # Gamut Compression:
     cuspMidBlend: float
     focusDistance: float
     focusDist: float
     focusAdjustGain: float
     focusGainBlend: float
-    # TODO: Some of these parameters are duplicated in ChromaCompression
-    limitJmax: float
+    focusDistScaling: float
     midJ: float
-    model_gamma: float
     smoothCusps: float
+    smoothCuspJ: float
+    smoothCuspM: float
     compressionFuncParams: ArrayLike
-    reach_RGB_to_XYZ: ArrayLike
-    reach_XYZ_to_RGB: ArrayLike
+    gcreach_RGB_to_XYZ: ArrayLike
+    gcreach_XYZ_to_RGB: ArrayLike
 
-
-@dataclass
-class Cusp_Params:
+    # Cusp / hull tables
     tableSize: int
     gamutCuspTable: ArrayLike
     gamutCuspTableReach: ArrayLike
@@ -94,31 +88,25 @@ class Cusp_Params:
     gamutTopGamma: ArrayLike
     gamutBottomGamma: float
 
+    # Input
+    input_discountIlluminant: bool
+    input_viewingConditions: str
+    input_XYZ_to_RGB: ArrayLike
+    input_RGB_to_XYZ: ArrayLike
+    input_whiteXYZ: ArrayLike
 
-@dataclass
-class Input_Params:
-    discountIlluminant: bool
-    viewingConditions: str
-    XYZ_to_RGB: ArrayLike
-    RGB_to_XYZ: ArrayLike
-    whiteXYZ: ArrayLike
+    # Limit
+    limit_discountIlluminant: bool
+    limit_viewingConditions: str
+    limit_XYZ_to_RGB: ArrayLike
+    limit_RGB_to_XYZ: ArrayLike
+    limit_whiteXYZ: ArrayLike
 
-
-@dataclass
-class Limit_Params:
-    discountIlluminant: bool
-    viewingConditions: str
-    XYZ_to_RGB: ArrayLike
-    RGB_to_XYZ: ArrayLike
-    whiteXYZ: ArrayLike
-
-
-@dataclass
-class Output_Params:
-    discountIlluminant: bool
-    viewingConditions: str
-    XYZ_to_RGB: ArrayLike
-    RGB_to_XYZ: ArrayLike
+    # Output
+    output_discountIlluminant: bool
+    output_viewingConditions: str
+    output_XYZ_to_RGB: ArrayLike
+    output_RGB_to_XYZ: ArrayLike
     eotf: Callable
     eotf_inverse: Callable
     fitWhite: bool
@@ -225,8 +213,8 @@ def _drt_params(
     outputColourSpace=colour.models.RGB_COLOURSPACE_sRGB,
 ):
     # LMS cone space for Hellwig 2022
-    rxy = np.array([0.82, 0.175])
-    gxy = np.array([-1.3, 1.8])
+    rxy = np.array([0.8336, 0.1735])
+    gxy = np.array([2.3854, -1.4659])
     bxy = np.array([0.13, -0.14])
     wxy = np.array([0.333, 0.333])
     CUSTOM_CAT16 = RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, 1, 1)
@@ -240,125 +228,121 @@ def _drt_params(
     inputWhiteXYZ = vector_dot(inputColourSpace.matrix_RGB_to_XYZ, white) * 100
     limitWhiteXYZ = vector_dot(limitColourSpace.matrix_RGB_to_XYZ, white) * 100
 
-    params = {
-        "Hellwig2022": Hellwig2022_Params(
-            referenceLuminance=100,
-            L_A=100,
-            Y_b=20,
-            matrix_lms=CUSTOM_CAT16,
-            compress_mode=1,
-        ),
-        "Daniele_Evo": Daniele_Evo_Params(
-            peakLuminance=de_params.peakLuminance,
-            n=de_params.n,
-            n_r=de_params.n_r,
-            g=de_params.g,
-            t_1=de_params.t_1,
-            c_t=de_params.c_t,
-            s_2=de_params.s_2,
-            u_2=de_params.u_2,
-            m_2=de_params.m_2,
-        ),
-        "ChromaCompression": ChromaCompression_Params(
-            chroma_compress=3.5,
-            chroma_expand=1.65,
-            chroma_expand_thr=0.5,
-            cc_et=3,
-            limitJmax=None,
-            model_gamma=None,
-            sat=None,
-            sat_thr=None,
-            compr=None,
-            applyReachClamp=None,
-        ),
-        "GamutCompression": GamutCompression_Params(
-            cuspMidBlend=1.15,
-            focusDistance=1.4,
-            focusDist=None,
-            focusGainBlend=0.5,
-            focusAdjustGain=0.6,
-            limitJmax=None,
-            midJ=None,
-            model_gamma=None,
-            smoothCusps=0.19,
-            compressionFuncParams=[0.75, 1.1, 1.3, 1.2],
-            reach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
-            reach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
-        ),
-        "Cusp": Cusp_Params(
-            tableSize=360,
-            gamutCuspTable=None,
-            gamutCuspTableReach=None,
-            cgamutCuspTable=None,
-            cgamutReachTable=None,
-            gamutTopGamma=None,
-            gamutBottomGamma=1.15,
-        ),
-        "Input": Input_Params(
-            discountIlluminant=inputDiscountIlluminant,
-            viewingConditions=inputViewingConditions,
-            XYZ_to_RGB=inputColourSpace.matrix_XYZ_to_RGB,
-            RGB_to_XYZ=inputColourSpace.matrix_RGB_to_XYZ,
-            whiteXYZ=inputWhiteXYZ,
-        ),
-        "Limit": Limit_Params(
-            discountIlluminant=limitDiscountIlluminant,
-            viewingConditions=limitViewingConditions,
-            XYZ_to_RGB=limitColourSpace.matrix_XYZ_to_RGB,
-            RGB_to_XYZ=limitColourSpace.matrix_RGB_to_XYZ,
-            whiteXYZ=limitWhiteXYZ,
-        ),
-        "Output": Output_Params(
-            discountIlluminant=outputDiscountIlluminant,
-            viewingConditions=outputViewingConditions,
-            XYZ_to_RGB=outputColourSpace.matrix_XYZ_to_RGB,
-            RGB_to_XYZ=outputColourSpace.matrix_RGB_to_XYZ,
-            eotf=outputColourSpace.cctf_decoding,
-            eotf_inverse=outputColourSpace.cctf_encoding,
-            fitWhite=False,
-            softclamp=True,
-            clamp_thr=0.99,
-            clamp_dist=1.1,
-            clamp=True,
-        ),
-    }
+    params = DRTParams(
+        # CAM
+        referenceLuminance=100,
+        L_A=100,
+        Y_b=20,
+        matrix_lms=CUSTOM_CAT16,
+        compress_mode=False,
+        AP1Clamp=True,
+
+        # Tonescale
+        peakLuminance=peakLuminance,
+        n=de_params["n"],
+        n_r=de_params["n_r"],
+        g=de_params["g"],
+        t_1=de_params["t_1"],
+        c_t=de_params["c_t"],
+        s_2=de_params["s_2"],
+        u_2=de_params["u_2"],
+        m_2=de_params["m_2"],
+
+        # Chroma Compression
+        chroma_compress=2.4,
+        chroma_compress_fact=3.3,
+        chroma_expand=1.3,
+        chroma_expand_fact=0.69,
+        chroma_expand_thr=0.5,
+        limitJmax=None,
+        model_gamma=None,
+        sat=None,
+        sat_thr=None,
+        compr=None,
+        applyReachClamp=None,
+        ccreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
+        ccreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
+
+        # Gamut Compression
+        cuspMidBlend=1.3,
+        focusDistance=1.35,
+        focusDist=None,
+        focusAdjustGain=0.55,
+        focusGainBlend=0.3,
+        focusDistScaling=1.75,
+        midJ=None,
+        smoothCusps=0.24,
+        smoothCuspJ=0.058,
+        smoothCuspM=0.188,
+        compressionFuncParams=[0.75, 1.1, 1.3, 1.2],
+        gcreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
+        gcreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
+
+        # Cusp / hull tables
+        tableSize=360,
+        gamutCuspTable=None,
+        gamutCuspTableReach=None,
+        cgamutCuspTable=None,
+        cgamutReachTable=None,
+        gamutTopGamma=None,
+        gamutBottomGamma=1.14,
+
+        # Input
+        input_discountIlluminant=inputDiscountIlluminant,
+        input_viewingConditions=inputViewingConditions,
+        input_XYZ_to_RGB=inputColourSpace.matrix_XYZ_to_RGB,
+        input_RGB_to_XYZ=inputColourSpace.matrix_RGB_to_XYZ,
+        input_whiteXYZ=inputWhiteXYZ,
+
+        # Limit
+        limit_discountIlluminant=limitDiscountIlluminant,
+        limit_viewingConditions=limitViewingConditions,
+        limit_XYZ_to_RGB=limitColourSpace.matrix_XYZ_to_RGB,
+        limit_RGB_to_XYZ=limitColourSpace.matrix_RGB_to_XYZ,
+        limit_whiteXYZ=limitWhiteXYZ,
+
+        # Output
+        output_discountIlluminant=outputDiscountIlluminant,
+        output_viewingConditions=outputViewingConditions,
+        output_XYZ_to_RGB=outputColourSpace.matrix_XYZ_to_RGB,
+        output_RGB_to_XYZ=outputColourSpace.matrix_RGB_to_XYZ,
+        eotf=outputColourSpace.cctf_decoding,
+        eotf_inverse=outputColourSpace.cctf_encoding,
+        fitWhite=False,
+        softclamp=True,
+        clamp_thr=0.99,
+        clamp_dist=1.1,
+        clamp=True,
+    )
 
     # Derived parameters
 
-    hw_params = params["Hellwig2022"]
-    de_params = params["Daniele_Evo"]
-    cc_params = params["ChromaCompression"]
-    gc_params = params["GamutCompression"]
-    cusp_params = params["Cusp"]
-    input_params = params["Input"]
-    limit_params = params["Limit"]
-
     # Chroma Compression
-    limitJmax = Y_to_J(
-        peakLuminanceTS, hw_params.L_A, hw_params.Y_b, inputViewingConditions
+    limitJmax = Y_to_Hellwig_J(
+        peakLuminanceTS, params.L_A, params.Y_b, inputViewingConditions
     )
 
     surround = VIEWING_CONDITIONS_HELLWIG2022[inputViewingConditions]
-    model_gamma = 1.0 / (surround.c * (1.48 + np.sqrt(hw_params.Y_b / hw_params.L_A)))
-    log_peak = np.log10(de_params.n / de_params.n_r)
-    compr = cc_params.chroma_compress + (cc_params.chroma_compress * 5.0) * log_peak
+    model_gamma = 1.0 / (surround.c * (1.48 + np.sqrt(params.Y_b / params.L_A)))
+    log_peak = np.log10(params.n / params.n_r)
+    compr = params.chroma_compress + (params.chroma_compress * params.chroma_compress_fact) * log_peak
     sat = max(
-        0.15, cc_params.chroma_expand - (cc_params.chroma_expand * 0.78) * log_peak
+        0.2, params.chroma_expand - (params.chroma_expand * params.chroma_expand_fact) * log_peak
     )
-    sat_thr = cc_params.chroma_expand_thr / de_params.n
+    sat_thr = params.chroma_expand_thr / params.n
 
-    cc_params.limitJmax = limitJmax
-    cc_params.model_gamma = model_gamma
-    cc_params.sat = sat
-    cc_params.sat_thr = sat_thr
-    cc_params.compr = compr
-    cc_params.applyReachClamp = False
+    params.limitJmax = limitJmax
+    params.model_gamma = model_gamma
+    params.sat = sat
+    params.sat_thr = sat_thr
+    params.compr = compr
+    params.applyReachClamp = False
 
     # Gamut Compression
-    midJ = Y_to_J(
-        de_params.c_t * de_params.n_r,
-        hw_params.L_A,
-        hw_params.Y_b,
+    midJ = Y_to_Hellwig_J(
+        params.c_t * params.n_r,
+        params.L_A,
+        params.Y_b,
         inputViewingConditions,
     )
 
@@ -366,26 +350,14 @@ def _drt_params(
     # HDR/SDR appearance match.  The projection gets slightly less
     # steep with higher peak luminance.
     # https:#www.desmos.com/calculator/bnfhjcq5vf
-    focusDist = min(
-        10.0, gc_params.focusDistance + gc_params.focusDistance * 1.65 * log_peak
-    )
+    focusDist = params.focusDistance + params.focusDistance * params.focusDistScaling * log_peak
 
-    gc_params.focusDist = focusDist
-    gc_params.limitJmax = limitJmax
-    gc_params.midJ = midJ
-    gc_params.model_gamma = model_gamma
+    params.focusDist = focusDist
+    params.midJ = midJ
 
     # Cusp tables
 
-    cusp_tables(
-        input_params,
-        hw_params,
-        de_params,
-        limit_params,
-        cc_params,
-        cusp_params,
-        gc_params,
-    )
+    cusp_tables(params)
 
     return params
 
@@ -494,32 +466,23 @@ def daniele_evo_params(peakLuminance):
     )
     daniele_m_2 = daniele_m_1 / daniele_u_2
 
-    return Daniele_Evo_Params(
-        peakLuminance,
-        daniele_n,
-        daniele_n_r,
-        daniele_g,
-        daniele_t_1,
-        daniele_c_t,
-        daniele_s_2,
-        daniele_u_2,
-        daniele_m_2,
-    )
+    return {
+        "n"   : daniele_n,
+        "n_r" : daniele_n_r,
+        "g"   : daniele_g,
+        "t_1" : daniele_t_1,
+        "c_t" : daniele_c_t,
+        "s_2" : daniele_s_2,
+        "u_2" : daniele_u_2,
+        "m_2" : daniele_m_2,
+    }
 
 
-def cusp_tables(
-    input_params,
-    hellwig_params,
-    devo_params,
-    limit_params,
-    cc_params,
-    cusp_params,
-    gc_params,
-):
+def cusp_tables(params):
 
-    boundaryRGB = devo_params.peakLuminance / hellwig_params.referenceLuminance
+    boundaryRGB = params.peakLuminance / params.referenceLuminance
 
-    h_samples = cusp_params.tableSize
+    h_samples = params.tableSize
 
     # Cusp table for chroma compression gamut
 
@@ -527,53 +490,74 @@ def cusp_tables(
     h = np.linspace(0, 1, h_samples, endpoint=False)
     ones = np.ones(h.shape)
     RGB = HSV_to_RGB(tstack([h, ones, ones]))
-    RGB *= boundaryRGB * hellwig_params.referenceLuminance
+    RGB *= boundaryRGB * params.referenceLuminance
     gamutCuspTableUnsorted = luminance_RGB_to_JMh(
         RGB,
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        input_params.viewingConditions,
-        input_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        gc_params.reach_RGB_to_XYZ,
+        params.limit_whiteXYZ,
+        params.L_A,
+        params.Y_b,
+        params.input_viewingConditions,
+        params.input_discountIlluminant,
+        params.matrix_lms,
+        params.compress_mode,
+        params.gcreach_RGB_to_XYZ,
     )
     minhIndex = np.argmin(gamutCuspTableUnsorted[..., 2], axis=-1)
     cgamutCuspTable = np.roll(gamutCuspTableUnsorted, -minhIndex, axis=0)
 
     # Reach table for the chroma compression reach.
 
-    M_samples = 1300
-    J = np.full((h_samples, M_samples), cc_params.limitJmax)
-    M = np.arange(M_samples)
-    M = np.tile(M, (h_samples, 1))
-    h = np.arange(h_samples)
-    h = np.tile(h, (M_samples, 1))
-    h = np.moveaxis(h, 0, -1)
-    JMhSearch = tstack([J, M, h])
+    cgamutReachTable = np.zeros((h_samples, 3))
+    for i in range(h_samples):
+        hue = float(i) * 360 / h_samples
+        cgamutReachTable[i][2] = hue
 
-    newLimitRGB = JMh_to_luminance_RGB(
-        JMhSearch,
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        input_params.viewingConditions,
-        input_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        gc_params.reach_XYZ_to_RGB,
-    )
-    newLimitRGB = newLimitRGB / boundaryRGB / hellwig_params.referenceLuminance
+        # Initially tried binary search between 0 and 1300, but there must be cases where extreme values wrap
+        # So start small and jump in small ish steps until we are outside then binary search inside that range
+        search_range = 100.0
+        low, high = 0.0, search_range
+        outside = False
+        while not outside and high < 1400:
+            JMhSearch = np.array([params.limitJmax, high, hue])
+            newLimitRGB = JMh_to_luminance_RGB(
+                JMhSearch,
+                params.limit_whiteXYZ,
+                params.L_A,
+                params.Y_b,
+                params.limit_viewingConditions,
+                params.limit_discountIlluminant,
+                params.matrix_lms,
+                params.compress_mode,
+                params.ccreach_XYZ_to_RGB,
+            )
+            newLimitRGB = newLimitRGB / boundaryRGB / params.referenceLuminance
+            outside = np.any(newLimitRGB < 0, axis=-1)
+            if not outside:
+                low = high
+                high = high + search_range
 
-    zeros = np.zeros(newLimitRGB.shape)
-    negatives = np.less(newLimitRGB, zeros)
-    any_negatives = np.any(negatives, axis=-1)
-    first_negative = any_negatives.argmax(axis=1)
+        while (high - low) > 1e-2: # how close should we be
+            sampleM = (high + low) / 2
+            JMhSearch = np.array([params.limitJmax, sampleM, hue])
+            newLimitRGB = JMh_to_luminance_RGB(
+                JMhSearch,
+                params.limit_whiteXYZ,
+                params.L_A,
+                params.Y_b,
+                params.input_viewingConditions,
+                params.input_discountIlluminant,
+                params.matrix_lms,
+                params.compress_mode,
+                params.ccreach_XYZ_to_RGB,
+            )
+            outside = np.any(newLimitRGB < 0, axis=-1)
+            if outside:
+                high = sampleM
+            else:
+                low = sampleM
 
-    zeros = np.zeros((h_samples))
-    h = np.arange(h_samples)
-    cgamutReachTable = tstack([zeros, first_negative, h])
+        cgamutReachTable[i][0] = params.limitJmax
+        cgamutReachTable[i][1] = high
 
     # Cusp table for limiting gamut
 
@@ -581,128 +565,113 @@ def cusp_tables(
     h = np.linspace(0, 1, h_samples, endpoint=False)
     ones = np.ones(h.shape)
     RGB = HSV_to_RGB(tstack([h, ones, ones]))
-    RGB *= boundaryRGB * hellwig_params.referenceLuminance
+    RGB *= boundaryRGB * params.referenceLuminance
     gamutCuspTableUnsorted = luminance_RGB_to_JMh(
         RGB,
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        input_params.viewingConditions,
-        input_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        limit_params.RGB_to_XYZ,
+        params.limit_whiteXYZ,
+        params.L_A,
+        params.Y_b,
+        params.input_viewingConditions,
+        params.input_discountIlluminant,
+        params.matrix_lms,
+        params.compress_mode,
+        params.limit_RGB_to_XYZ,
     )
     minhIndex = np.argmin(gamutCuspTableUnsorted[..., 2], axis=-1)
     gamutCuspTable = np.roll(gamutCuspTableUnsorted, -minhIndex, axis=0)
 
-    # Cusp table for limiting reach gamut.
+    # Cusp table for gamut compressor limiting reach gamut.
 
-    M_samples = 1300
-    J = np.full((h_samples, M_samples), cc_params.limitJmax)
-    M = np.arange(M_samples)
-    M = np.tile(M, (h_samples, 1))
-    h = np.arange(h_samples)
-    h = np.tile(h, (M_samples, 1))
-    h = np.moveaxis(h, 0, -1)
-    JMhSearch = tstack([J, M, h])
+    gamutCuspTableReach = np.zeros((h_samples, 3))
+    for i in range(h_samples):
+        hue = float(i) * 360 / h_samples
+        gamutCuspTableReach[i][2] = hue
 
-    newLimitRGB = JMh_to_luminance_RGB(
-        JMhSearch,
-        limit_params.whiteXYZ,
-        hellwig_params.L_A,
-        hellwig_params.Y_b,
-        input_params.viewingConditions,
-        input_params.discountIlluminant,
-        hellwig_params.matrix_lms,
-        hellwig_params.compress_mode,
-        gc_params.reach_XYZ_to_RGB,
-    )
-    newLimitRGB = newLimitRGB / boundaryRGB / hellwig_params.referenceLuminance
+        # Initially tried binary search between 0 and 1300, but there must be cases where extreme values wrap
+        # So start small and jump in small ish steps until we are outside then binary search inside that range
+        search_range = 50.0
+        low, high = 0.0, search_range
+        outside = False
+        while not outside:
+            JMhSearch = np.array([params.limitJmax, high, hue])
+            newLimitRGB = JMh_to_luminance_RGB(
+                JMhSearch,
+                params.limit_whiteXYZ,
+                params.L_A,
+                params.Y_b,
+                params.input_viewingConditions,
+                params.input_discountIlluminant,
+                params.matrix_lms,
+                params.compress_mode,
+                params.gcreach_XYZ_to_RGB,
+            )
+            newLimitRGB = newLimitRGB / boundaryRGB / params.referenceLuminance
+            outside = np.any(newLimitRGB < 0, axis=-1)
+            if not outside:
+                low = high
+                high = high + search_range
 
-    zeros = np.zeros(newLimitRGB.shape)
-    negatives = np.less(newLimitRGB, zeros)
-    any_negatives = np.any(negatives, axis=-1)
-    first_negative = any_negatives.argmax(axis=1)
+        while (high - low) > 1e-2: # how close should we be
+            sampleM = (high + low) / 2
+            JMhSearch = np.array([params.limitJmax, sampleM, hue])
+            newLimitRGB = JMh_to_luminance_RGB(
+                JMhSearch,
+                params.limit_whiteXYZ,
+                params.L_A,
+                params.Y_b,
+                params.input_viewingConditions,
+                params.input_discountIlluminant,
+                params.matrix_lms,
+                params.compress_mode,
+                params.gcreach_XYZ_to_RGB,
+            )
+            outside = np.any(newLimitRGB < 0, axis=-1)
+            if outside:
+                high = sampleM
+            else:
+                low = sampleM
 
-    zeros = np.zeros((h_samples))
-    h = np.arange(h_samples)
-    gamutCuspTableReach = tstack([zeros, first_negative, h])
+        gamutCuspTableReach[i][0] = params.limitJmax
+        gamutCuspTableReach[i][1] = high
 
     # Upper hull gamma values for the gamut mapper
 
-    # start by taking a h angle
-    # get the cusp J value for that angle
-    # find a J value halfway to the Jmax
-    # iterate through gamma values until the approxilate max M is negative through the actual boundry
-    gamutTopGamma = np.zeros(h_samples)
+    testPositions = [0.01, 0.5, 0.99]
+    gamutTopGamma = np.full(h_samples, -1.0)
     for i in range(h_samples):
-        # get cusp from cusp table at hue position
-        JMcusp = cuspFromTable(i, gamutCuspTable)
-        # create test value halfway betwen the cusp and the Jmax
-        # positions between the cusp and Jmax we will check
-        testPositions = [0.01, 0.5, 0.99]
-        # variables that get set as we iterate through, once all 3 are set to true we break the loop
-        gammaFound = [False, False, False]
-        # limit value, once we cross this value, we are outside of the top gamut shell
-        maxRGBtestVal = 1.0
-        # Tg is Test Gamma. the values are shifted two decimal points to the left. Tg 70 = Gamma 0.7
-        for Tg in range(70, 170):
-            # topGamma value created from the Tg variable
-            topGamma = float(Tg) / 100.0
-            # loop to run through each of the positions defined in the testPositions list
-            for testIndex in range(3):
-                testJmh = np.array(
-                    [
-                        JMcusp[0]
-                        + (
-                            (cc_params.limitJmax - JMcusp[0]) * testPositions[testIndex]
-                        ),
-                        JMcusp[1],
-                        float(i),
-                    ]
-                )
-                approxLimit = findGamutBoundaryIntersection(
-                    testJmh,
-                    JMcusp,
-                    lerp(JMcusp[0], gc_params.midJ, gc_params.cuspMidBlend),
-                    cc_params.limitJmax,
-                    10000.0,
-                    0.0,
-                    topGamma,
-                    1.0,
-                )
-                newLimitRGB = JMh_to_luminance_RGB(
-                    np.array([approxLimit[0], approxLimit[1], float(i)]),
-                    limit_params.whiteXYZ,
-                    hellwig_params.L_A,
-                    hellwig_params.Y_b,
-                    limit_params.viewingConditions,
-                    limit_params.discountIlluminant,
-                    hellwig_params.matrix_lms,
-                    hellwig_params.compress_mode,
-                    limit_params.XYZ_to_RGB,
-                )
-                newLimitRGB = (
-                    newLimitRGB / boundaryRGB / hellwig_params.referenceLuminance
-                )
-                # if any channel has broken through the top gamut hull, break
-                if (
-                    newLimitRGB[0] > maxRGBtestVal
-                    or newLimitRGB[1] > maxRGBtestVal
-                    or newLimitRGB[2] > maxRGBtestVal
-                ):
-                    gamutTopGamma[i] = topGamma
-                    gammaFound[testIndex] = True
-            # once all 3 of the test
-            if gammaFound[0] and gammaFound[1] and gammaFound[2]:
-                break
+        hue = float(i) * 360 / h_samples
+        JMcusp = cuspFromTable(hue, gamutCuspTable)
+        testJmh = [
+            np.array([
+                JMcusp[0] + ((params.limitJmax - JMcusp[0]) * testPosition),
+                JMcusp[1],
+                hue
+            ])
+            for testPosition in testPositions
+        ]
 
-    cusp_params.gamutCuspTable = gamutCuspTable
-    cusp_params.gamutCuspTableReach = gamutCuspTableReach
-    cusp_params.cgamutCuspTable = cgamutCuspTable
-    cusp_params.cgamutReachTable = cgamutReachTable
-    cusp_params.gamutTopGamma = gamutTopGamma
+        search_range = 0.4
+        low = 0.4
+        high = low + search_range
+        gamma_found = False
+
+        while not gamma_found and high < 5.0:
+            gamma_found = evaluate_gamma_fit(JMcusp, testJmh, high, boundaryRGB, params)
+            if not gamma_found:
+                low = high
+                high = high + search_range
+
+        testGamma = -1.0
+        while (high - low) > 1e-5:
+            testGamma = (high + low) / 2
+            gamma_found = evaluate_gamma_fit(JMcusp, testJmh, testGamma, boundaryRGB, params)
+            if gamma_found:
+                high = testGamma
+            else:
+                low = testGamma
+
+        gamutTopGamma[i] = testGamma
+
 
     # Compare table against Nick's Python reference
 
@@ -710,24 +679,3 @@ def cusp_tables(
     # matplotlib.use('Qt5Agg')
     # import matplotlib.pyplot as plt
 
-    # plt.plot(np.arange(360), gamutTopGamma)
-    # plt.show()
-
-    # GT_cgamutCuspTable = np.load("cgamutCuspTable.npy")
-    # np.testing.assert_almost_equal(cgamutCuspTable, GT_cgamutCuspTable)
-    # GT_cgamutReachTable = np.load("cgamutReachTable.npy")
-    # # np.testing.assert_almost_equal(cgamutReachTable, GT_cgamutReachTable)
-    # GT_gamutCuspTable = np.load("gamutCuspTable.npy")
-    # np.testing.assert_almost_equal(gamutCuspTable, GT_gamutCuspTable)
-    # GT_gamutCuspTableReach = np.load("gamutCuspTableReach.npy")
-    # # Shuffle to restore JMh order
-    # tmp = GT_gamutCuspTableReach.copy()
-    # GT_gamutCuspTableReach[..., 0] = tmp[..., 1]
-    # GT_gamutCuspTableReach[..., 1] = tmp[..., 0]
-    # # np.testing.assert_almost_equal(gamutCuspTableReach, GT_gamutCuspTableReach)
-    # GT_gamutTopGamma = np.load("gamutTopGamma.npy")
-    # np.testing.assert_almost_equal(gamutTopGamma, GT_gamutTopGamma)
-
-
-def lerp(a, b, t):
-    return a + t * (b - a)

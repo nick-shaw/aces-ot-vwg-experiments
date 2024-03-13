@@ -14,21 +14,24 @@ from colour.utilities import (
 
 from drt_cusp_lib import cuspFromTable
 
+from drt_cam import JMh_to_luminance_RGB
+
 
 # reimplemented from https:#github.com/nick-shaw/aces-ot-vwg-experiments/blob/master/python/intersection_approx.py
 def findGamutBoundaryIntersection(
-    JMh_s, JM_cusp, J_focus, J_max, slope_gain, smoothness, gamma_top, gamma_bottom
+    JMh_s, JM_cusp, J_focus, J_max, slope_gain, smoothness, gamma_top, gamma_bottom, params
 ):
     JM_source = JMh_s[..., :2]
 
     slope = 0.0
 
     s = max(0.000001, smoothness)
-    JM_cusp[..., 0] *= 1.0 + 0.055 * s  # J
-    JM_cusp[..., 1] *= 1.0 + 0.183 * s  # M
+    JM_smoothCusp = JM_cusp.copy()
+    JM_smoothCusp[..., 0] *= 1.0 + params.smoothCuspJ * s  # J
+    JM_smoothCusp[..., 1] *= 1.0 + params.smoothCuspM * s  # M
 
     J_intersect_source = solve_J_intersect(JM_source, J_focus, J_max, slope_gain)
-    J_intersect_cusp = solve_J_intersect(JM_cusp, J_focus, J_max, slope_gain)
+    J_intersect_cusp = solve_J_intersect(JM_smoothCusp, J_focus, J_max, slope_gain)
 
     slope = np.where(
         J_intersect_source < J_focus,
@@ -41,20 +44,20 @@ def findGamutBoundaryIntersection(
     M_boundary_lower = (
         J_intersect_cusp
         * np.power(J_intersect_source / J_intersect_cusp, 1 / gamma_bottom)
-        / (JM_cusp[..., 0] / JM_cusp[..., 1] - slope)
+        / (JM_smoothCusp[..., 0] / JM_smoothCusp[..., 1] - slope)
     )
 
     M_boundary_upper = (
-        JM_cusp[..., 1]
+        JM_smoothCusp[..., 1]
         * (J_max - J_intersect_cusp)
         * np.power(
             (J_max - J_intersect_source) / (J_max - J_intersect_cusp), 1.0 / gamma_top
         )
-        / (slope * JM_cusp[..., 1] + J_max - JM_cusp[..., 0])
+        / (slope * JM_smoothCusp[..., 1] + J_max - JM_smoothCusp[..., 0])
     )
 
-    M_boundary = JM_cusp[..., 1] * smin(
-        M_boundary_lower / JM_cusp[..., 1], M_boundary_upper / JM_cusp[..., 1], s
+    M_boundary = JM_smoothCusp[..., 1] * smin(
+        M_boundary_lower / JM_smoothCusp[..., 1], M_boundary_upper / JM_smoothCusp[..., 1], s
     )
 
     # J_boundary is not actually needed, but the calculation would be as follows
@@ -103,77 +106,76 @@ def lerp(a, b, t):
 def getFocusGain(
     J,
     cuspJ,
-    gc_params,
+    params,
 ):
 
-    thr = lerp(cuspJ, gc_params.limitJmax, gc_params.focusGainBlend)
+    thr = lerp(cuspJ, params.limitJmax, params.focusGainBlend)
 
     # Approximate inverse required above threshold
-    jmin = np.minimum(np.full(J.shape, gc_params.limitJmax), J)
-    jbound = np.maximum(np.full(J.shape, 0.0001), gc_params.limitJmax - jmin)
-    gain = (gc_params.limitJmax - thr) / jbound
-    gain = np.power(np.log10(gain), 1.0 / gc_params.focusAdjustGain) + 1.0
+    jmin = np.minimum(np.full(J.shape, params.limitJmax), J)
+    jbound = np.maximum(np.full(J.shape, 0.0001), params.limitJmax - jmin)
+    gain = (params.limitJmax - thr) / jbound
+    gain = np.power(np.log10(gain), 1.0 / params.focusAdjustGain) + 1.0
 
     return np.where(J > thr, gain, np.ones(J.shape))
 
 
 def getCompressionFuncParams(
     JMh,
-    gc_params,
-    cusp_params,
+    params,
 ):
 
     locusMax = getReachBoundary(
-        JMh, cusp_params.gamutCuspTableReach, gc_params, cusp_params
+        JMh, params.gamutCuspTableReach, params
     )[..., 1]
     difference = np.maximum(np.full(locusMax.shape, 1.0001), locusMax / JMh[..., 1])
-    threshold = np.maximum(gc_params.compressionFuncParams[0], 1.0 / difference)
+    threshold = np.maximum(params.compressionFuncParams[0], 1.0 / difference)
     return tstack(
         [
             threshold,
             difference,
             difference,
-            np.full(threshold.shape, gc_params.compressionFuncParams[3]),
+            np.full(threshold.shape, params.compressionFuncParams[3]),
         ]
     )
 
 
-def getReachBoundary(JMh, table, gc_params, cusp_params):
+def getReachBoundary(JMh, table, params):
 
     J, M, h = tsplit(JMh)
 
     reachMaxM = np.interp(h, table[..., 2], table[..., 1], period=360)
 
-    JMcusp = cuspFromTable(h, cusp_params.gamutCuspTable)
+    JMcusp = cuspFromTable(h, params.gamutCuspTable)
     focusJ = lerp(
         JMcusp[..., 0],
-        gc_params.midJ,
+        params.midJ,
         np.minimum(
             np.ones(JMcusp[..., 0].shape),
-            gc_params.cuspMidBlend - (JMcusp[..., 0] / gc_params.limitJmax),
+            params.cuspMidBlend - (JMcusp[..., 0] / params.limitJmax),
         ),
     )
     slope_gain = (
-        gc_params.limitJmax
-        * gc_params.focusDist
-        * getFocusGain(J, JMcusp[..., 0], gc_params)
+        params.limitJmax
+        * params.focusDist
+        * getFocusGain(J, JMcusp[..., 0], params)
     )
     intersectJ = solve_J_intersect(
-        tstack([J, M]), focusJ, gc_params.limitJmax, slope_gain
+        tstack([J, M]), focusJ, params.limitJmax, slope_gain
     )
     slope = np.where(
         intersectJ < focusJ,
         intersectJ * (intersectJ - focusJ) / (focusJ * slope_gain),
-        (gc_params.limitJmax - intersectJ)
+        (params.limitJmax - intersectJ)
         * (intersectJ - focusJ)
         / (focusJ * slope_gain),
     )
 
     boundaryNick = (
-        gc_params.limitJmax
-        * np.power(intersectJ / gc_params.limitJmax, gc_params.model_gamma)
+        params.limitJmax
+        * np.power(intersectJ / params.limitJmax, params.model_gamma)
         * reachMaxM
-        / (gc_params.limitJmax - slope * reachMaxM)
+        / (params.limitJmax - slope * reachMaxM)
     )
     return tstack([J, boundaryNick, h])
 
@@ -213,3 +215,35 @@ def compressPowerP(v, threshold, limit, power, inverse):
         )
 
     return vCompressed
+
+
+def evaluate_gamma_fit(JMcusp, testJmh, topGamma, boundaryRGB, params):
+    testJmh = np.asarray(testJmh)
+    testJ, testM, testh = tsplit(testJmh)
+    Jcusp, Mcusp = tsplit(JMcusp)
+
+    focusJ = lerp(
+        Jcusp,
+        params.midJ,
+        np.minimum(1.0, params.cuspMidBlend - (Jcusp / params.limitJmax))
+    )
+
+    slope_gain  = params.limitJmax * params.focusDist * getFocusGain(testJ, Jcusp, params)
+    approxLimit = findGamutBoundaryIntersection(testJmh, JMcusp, focusJ, params.limitJmax, slope_gain, params.smoothCusps, topGamma, params.gamutBottomGamma, params)
+    approximate_JMh = tstack([
+        approxLimit[..., 0], approxLimit[..., 1], testh])
+
+    newLimitRGB = JMh_to_luminance_RGB(
+        approximate_JMh,
+        params.limit_whiteXYZ,
+        params.L_A,
+        params.Y_b,
+        params.limit_viewingConditions,
+        params.limit_discountIlluminant,
+        params.matrix_lms,
+        params.compress_mode,
+        params.limit_XYZ_to_RGB,
+    )
+    newLimitRGB = newLimitRGB / boundaryRGB / params.referenceLuminance
+
+    return np.all(np.any(newLimitRGB > 1, axis=-1))

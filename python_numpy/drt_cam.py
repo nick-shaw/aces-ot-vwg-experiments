@@ -271,8 +271,7 @@ def luminance_RGB_to_JMh(
     return JMh
 
 
-# convert achromatic luminance to Hellwig J
-def Y_to_J(
+def Y_to_Hellwig_J(
     Y,
     L_A,
     Y_b,
@@ -290,8 +289,29 @@ def Y_to_J(
     F_L_W = np.power(F_L, 0.42)
     A_w = (400.0 * F_L_W) / (27.13 + F_L_W)
 
-    F_L_Y = np.power(F_L * abs(Y) / 100.0, 0.42)
+    F_L_Y = np.power(F_L * np.abs(Y) / 100.0, 0.42)
 
     return np.sign(Y) * (
         100.0 * np.power(((400.0 * F_L_Y) / (27.13 + F_L_Y)) / A_w, surround.c * z)
     )
+
+
+def Hellwig_J_to_Y(
+    J,
+    L_A,
+    Y_b,
+    surround,
+):
+    surround = VIEWING_CONDITIONS_HELLWIG2022[surround]
+
+    k     = 1.0 / (5.0 * L_A + 1.0)
+    k4    = k*k*k*k
+    F_L   = 0.2 * k4 * (5.0 * L_A) + 0.1 * np.power((1.0 - k4), 2.0) * np.power(5.0 * L_A, 1.0 / 3.0) 
+    n     = Y_b / 100.0
+    z     = 1.48 + np.sqrt(n)
+    F_L_W = np.power(F_L, 0.42)
+    A_w   = (400.0 * F_L_W) / (27.13 + F_L_W)
+
+    A = A_w * np.power(np.abs(J) / 100.0, 1.0 / (surround.c * z))
+
+    return np.sign(J) * 100.0 / F_L * np.power((27.13 * A) / (400.0 - A), 1.0 / 0.42)
