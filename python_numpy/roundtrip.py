@@ -5,6 +5,7 @@ import warnings
 
 import numpy as np
 import colour
+from colour.algebra import sdiv, sdiv_mode, spow, vector_dot
 
 from drt_init import drt_params
 from drt import drt_forward, drt_inverse
@@ -77,11 +78,15 @@ if __name__ == "__main__":
             inRGB = args.rgb
         elif args.cube:
             if args.target == 3:
-                maxRGB = colour.models.eotf_inverse_BT2100_PQ(1000)
+                scale = colour.models.eotf_inverse_BT2100_PQ(1000)
+                matrix = colour.matrix_RGB_to_RGB("Display P3", "ITU-R BT.2020")
             else:
-                maxRGB = 1.0
+                scale = 1.0
+                matrix = np.identity(3)
 
-            inRGB = hald_clut_generate(args.cube) * maxRGB
+            inRGB = hald_clut_generate(args.cube) * scale
+            inRGB = vector_dot(matrix, inRGB)
+            inRGB = np.clip(inRGB, 0, scale)
         else:
             # Predefined set of test values
             # ColorChecker 24 values as per SMPTE 2065-1

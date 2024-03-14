@@ -35,6 +35,7 @@ class DRTParams:
     L_A: float
     Y_b: float
     matrix_lms: ArrayLike
+    model_gamma: float
     ap1_clamp: bool
 
     # Tonescale
@@ -55,7 +56,6 @@ class DRTParams:
     chroma_expand_fact: float
     chroma_expand_thr: float
     limitJmax: float
-    model_gamma: float
     sat: float
     sat_thr: float
     compr: float
@@ -234,6 +234,7 @@ def _drt_params(
         L_A=100,
         Y_b=20,
         matrix_lms=CUSTOM_CAT16,
+        model_gamma=None,
         ap1_clamp=True,
 
         # Tonescale
@@ -254,7 +255,6 @@ def _drt_params(
         chroma_expand_fact=0.69,
         chroma_expand_thr=0.5,
         limitJmax=None,
-        model_gamma=None,
         sat=None,
         sat_thr=None,
         compr=None,
