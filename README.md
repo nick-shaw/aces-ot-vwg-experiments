@@ -36,6 +36,19 @@ This repo contains various experiments related to the ACES 2.0 [Output Transform
 
 * `hellwig_lib.h` - A library of functions and constants used by the above DRTs, to reduce code duplication.
 
+* `DRT_v55_709.dctl` - Pure DCTL implementation of the version 55 DRT, Rec.709 100 nits
+
+* `DRT_v55_P3_D65.dctl` - Pure DCTL implementation of the version 55 DRT, P3-D65 2.6 gamma 48 nits
+
+* `DRT_v55_PQ500.dctl` - Pure DCTL implementation of the version 55 DRT, 500 nit PQ limited to P3-D65 but encoded as Rec.2020
+
+* `DRT_v55_PQ1000.dctl` - Pure DCTL implementation of the version 55 DRT, 1000 nit PQ limited to P3-D65 but encoded as Rec.2020
+
+* `hellwig_lib_v055.h` - Library functions used by the above v55 DRTs
+
+* `ACES Transforms/ODT/DCTL_v55/` - Copies of the above DCTL files with settings and tagging for use in Resolve's `ACES Transforms/ODT` folder.
+
+* `ACES Transforms/IDT/DCTL_v55/` - Copies of the above DCTL files with settings (including "invert") and tagging for use in Resolve's `ACES Transforms/IDT` folder.
 
 To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*, *.cube* and *.h* files must be placed in a folder called `AMPAS` in the root of the Resolve LUT folder. Resolve should be in DaVinci YRGB mode, with the timeline colour space set to whatever the connected monitor is expecting. The first node in the node tree of the DRX is a conversion from LogC to ACEScct. This will obviously need to be modified if your source is not LogC.
 
@@ -57,6 +70,8 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 
 * `hellwig_ach.blink` - The Blink kernel used in the script above
 
+* `v54_cusp_plot.nk` - A visualisation of a JMh hue slice through the true gamut with an overlay of the approximated one.
+
 ## PYTHON
 
 * `cusp_path.py` - Code taken from [Thomas Mansencal's Colab](https://colab.research.google.com/drive/1OerRYxnKOYGhiZEZda1QS93JWBfN_WI0) with additional functions for gamut boundary finding. Also generates a plot of the cusp path and saves the source data for that plot in the `data` folder.
@@ -64,3 +79,5 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 * `cusp_plot.py` - Creates a png sequence of plots of the gamut boundary at different hue angles. Uses functions from `cusp_path.py`.
 
 * `interactive_cusp.py` - An interactive plot of the gamut boundary at a selectable hue value. Includes a skeleton framework for showing the path of gamut compression. The compression currently shown is a simple version, not the full version from the current DRT.
+
+* `v55_init_plot.py` - Python port of the `init()` function from the v55 Blink implementation. Generates the lookup tables for the DCTL, and also plots the variable upper hull gamma.

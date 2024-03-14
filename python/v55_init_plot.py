@@ -48,7 +48,7 @@ cuspMidBlend = 1.3
 # Focus distance of the compression focal point from the achromatic axis
 focusDistance = 1.35
 focusAdjustGain = 0.55
-focusGainBlend = 0.2
+focusGainBlend = 0.3
 focusDistScaling = 1.75
 # How much the edges of the target RGB cube are smoothed when finding the gamut boundary
 # in order to reduce visible contours at the gamut cusps
