@@ -84,4 +84,4 @@ When a preset is chosen, the numerical values shown are ignored. These are only 
 
 ## PYTHON_NUMPY
 
-* NumPy implementation by Rémi Achard (@remia) of the full v55 DRT.
+* NumPy implementation by Rémi Achard ([@remia](https://github.com/remia)) of the full v55 DRT.
