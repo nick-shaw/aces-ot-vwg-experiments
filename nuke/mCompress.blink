@@ -1,0 +1,67 @@
+kernel mCompressKernel : ImageComputationKernel<ePixelWise>
+{
+  Image<eRead, eAccessPoint, eEdgeClamped> src1; // the input image
+  Image<eRead, eAccessRandom, eEdgeClamped> src2; // the hue lookup
+  Image<eWrite> dst; // the output image
+
+  param:
+    float threshold;
+    float limit;
+    float power;
+
+  local:
+  float norm;
+
+  // In define(), parameters can be given labels and default values.
+  void define() {
+  }
+
+  // "PowerP" compression function (also used in the ACES Reference Gamut Compression transform)
+  // values of v above  'threshold' are compressed by a 'power' function
+  // so that an input value of 'limit' results in an output of 1.0
+  float compressPowerP(float v, float threshold, float limit, float power, int inverse)
+  {
+    float s = (limit - threshold) / pow(pow((1.0f - threshold) / (limit - threshold), -power) - 1.0f, 1.0f / power);
+
+    float vCompressed;
+
+    if (inverse)
+    {
+      vCompressed = (v < threshold || limit < 1.0001f || v > threshold + s)
+        ? v
+        : threshold + s * pow(-(pow((v - threshold) / s, power) / (pow((v - threshold) / s, power) - 1.0f)), 1.0f / power);
+    }
+    else
+    {
+      vCompressed = (v < threshold || limit < 1.0001f)
+        ? v
+        : threshold + s * ((v - threshold) / s) / (pow(1.0f + pow((v - threshold) / s, power), 1.0f / power));
+    }
+
+    return vCompressed;
+  }
+
+  // The init() function is run before any calls to process().
+  // Local variables can be initialized here.
+  void init() {
+  }
+
+  void process() {
+    // Read the input image
+    SampleType(src1) input = src1();
+//     SampleType(src2) input2 = src2();
+
+    // Isolate the RGB components
+    float3 srcJMh(input.x, input.y, input.z);
+//     float2 mod(input2.x, input2.y);
+
+    norm = 60.0f * pow(srcJMh.x / 60.0f, 1.14f);
+    float mNorm = srcJMh.y / norm;
+    float mCompressed = norm * compressPowerP(mNorm, threshold, limit, power, 0);
+    float scale = src2((int)(1919 * srcJMh.z / 360.0f), 540, 1);
+    float mOut = (1.0f - scale) * srcJMh.y + scale * mCompressed;
+
+    // Write the result to the output image
+    dst() = float4(srcJMh.x, mOut, srcJMh.z, input.w);
+  }
+};
