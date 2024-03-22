@@ -6,7 +6,7 @@ Group {
  label "JMh blue compress"
  selected true
  xpos 149
- ypos -97
+ ypos -98
  addUserKnob {20 User}
  addUserKnob {41 lut l "" -STARTLINE T ColorLookup1.lut}
  addUserKnob {41 useGPUIfAvailable l "Use GPU if available" T BlinkScript1.useGPUIfAvailable}
@@ -15,16 +15,24 @@ Group {
  addUserKnob {41 mCompressKernel_power l power T BlinkScript1.mCompressKernel_power}
  addUserKnob {4 workingSpace l "working space" M {ACEScg ACES2065-1}}
 }
- Grad {
+ Constant {
   inputs 0
-  name Grad1
-  xpos -142
-  ypos -125
+  channels rgb
   format "1920 1080 0 0 1920 1080 1 HD_1080"
-  output rgb
+  name Constant1
+  xpos -142
+  ypos -195
+ }
+ Expression {
+  expr0 "x / (width - 1)"
+  expr1 "x / (width - 1)"
+  expr2 "x / (width - 1)"
+  name Expression1
+  xpos -142
+  ypos -123
  }
  ColorLookup {
-  lut {master {curve C 0 x0.4993108213 0 s9.999999747e-05 t0 x0.6999999881 1 s-0 x0.9024144411 0 s9.999999747e-05 t0 x1 0}
+  lut {master {curve C 0 s4.999999874e-05 t-4.999999874e-05 x0.1024249345 -4.905747664e-06 s4.368809095e-05 t-4.368809095e-05 x0.4993108213 0 s9.999999747e-05 t0 x0.6999999881 1 s-0 x0.9024144411 0 s9.999999747e-05 t0 x1 0 s9.999999747e-05 t-0}
     red {}
     green {}
     blue {}
@@ -382,7 +390,6 @@ Group {
   mCompressKernel_power 1.2
   rebuild_finalise ""
   name BlinkScript1
-  selected true
   xpos 102
   ypos -73
  }
