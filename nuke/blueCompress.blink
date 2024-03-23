@@ -1,0 +1,381 @@
+kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
+{
+  Image<eRead, eAccessPoint, eEdgeClamped> src;
+  Image<eWrite> dst;
+
+  param:
+    float hueCentre;
+    float hueWidth;
+    float threshold;
+    float limit;
+    float power;
+    int workingSpace; // 0: ACEScg, 1: ACES2065-1
+
+  local:
+    float3x3 CAT_CAT16;
+    float3x3 CAT_CAT16_INVERSE;
+    float3x3 panlrcm;
+    float3x3 AP0_ACES_to_XYZ_matrix;
+    float3x3 AP1_ACES_to_XYZ_matrix;
+    float3x3 XYZ_to_AP0_ACES_matrix;
+    float3x3 XYZ_to_AP1_ACES_matrix;
+    
+    float3 acesWhite;
+    float3 surround;
+
+    float L_A;
+    float Y_b;
+
+  void define() {
+    defineParam(hueCentre, "hue centre", 251.29306f);
+    defineParam(hueWidth, "hue width", 144.0f);
+    defineParam(threshold, "compression threshold", 0.0f);
+    defineParam(limit, "compression limit", 1.9f);
+    defineParam(power, "compression power", 1.2f);
+  }
+
+  // multiplies a 3D vector with a 3x3 matrix
+  inline float3 vector_dot(const float3x3& m, const float3 v)
+  {
+    float3 r;
+    for (int c = 0; c < 3; c++)
+    {
+      r[c] = m[c][0] * v.x + m[c][1] * v.y + m[c][2] * v.z;
+    }
+
+    return r;
+  }
+
+  // "safe" power function to avoid NANs or INFs when taking a fractional power of a negative base
+  // this one initially returned -pow(abs(b), e) for negative b
+  // but this ended up producing undesirable results in some cases
+  // so now it just returns 0.0 instead
+  inline float spow(float base, float exponent)
+  {
+    if (base < 0.0f && exponent != floor(exponent))
+    {
+      return 0.0f;
+    }
+    else
+    {
+      return pow(base, exponent);
+    }
+  }
+
+  inline float3 float3pow(float3 base, float exponent)
+  {
+    return float3(pow(base.x, exponent), pow(base.y, exponent), pow(base.z, exponent));
+  }
+
+  // convert radians to degrees
+  inline float degrees(float radians)
+  {
+    return radians * 180.0f / PI;
+  }
+
+  // convert degrees to radians
+  inline float radians(float degrees)
+  {
+    return degrees / 180.0f * PI;
+  }
+
+  inline float wrap_to_360(float hue)
+  {
+    float y = fmod(hue, 360.0f);
+    if (y < 0.0)
+    {
+      y = y + 360.0f;
+    }
+    return y;
+  }
+
+  inline float3 XYZ_to_Hellwig2022_JMh(float3 XYZ, float3 XYZ_w, float L_A, float Y_b, float3 surround)
+  {
+    // # Step 0
+    // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+    float3 RGB_w = vector_dot(CAT_CAT16, XYZ_w);
+
+    // # Viewing conditions dependent parameters
+    float k   = 1 / (5 * L_A + 1);
+    float k4  = pow(k, 4);
+    float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * pow(5.0f * L_A, 1.0f / 3.0f);
+    float n   = Y_b / XYZ_w.y;
+    float z   = 1.48 + sqrt(n);
+
+    float3 D_RGB  = XYZ_w.y / RGB_w;
+    float3 RGB_wc = D_RGB * RGB_w;
+    float3 RGB_aw = post_adaptation_non_linear_response_compression_forward(RGB_wc, F_L);
+
+    // # Computing achromatic responses for the whitepoint.
+    float R_aw = RGB_aw.x;
+    float G_aw = RGB_aw.y;
+    float B_aw = RGB_aw.z;
+
+    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw;
+
+    // # Step 1
+    // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+    float3 RGB = vector_dot(CAT_CAT16, XYZ);
+
+    // # Step 2
+    float3 RGB_c = D_RGB * RGB;
+
+    // # Step 3
+    // # Applying forward post-adaptation non-linear response compression.
+
+    float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
+
+    // # Step 4
+    // # Converting to preliminary cartesian coordinates.
+    float R_a = RGB_a.x;
+    float G_a = RGB_a.y;
+    float B_a = RGB_a.z;
+    float a   = R_a - 12.0f * G_a / 11.0f + B_a / 11.0f;
+    float b   = (R_a + G_a - 2.0f * B_a) / 9.0f;
+
+    // # Computing the *hue* angle :math:`h`.
+    float hr = atan2(b, a);
+    float h  = wrap_to_360(degrees(hr));
+
+    // # Step 6
+    // # Computing achromatic responses for the stimulus.
+    float R_a2 = RGB_a.x;
+    float G_a2 = RGB_a.y;
+    float B_a2 = RGB_a.z;
+
+    float A = 2.0f * R_a2 + G_a2 + 0.05f * B_a2;
+
+    // # Step 7
+    // # Computing the correlate of *Lightness* :math:`J`.
+    float J = 100.0f * pow(A / A_w, surround.y * z);
+
+    // # Step 9
+    // # Computing the correlate of *colourfulness* :math:`M`.
+    float M = 43.0f * surround.z * sqrt(a * a + b * b);
+    
+    if (J == 0.0f)
+      M = 0.0f;
+    return {J, M, h};
+  }
+
+  float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)
+  {
+    const float3 F_L_RGB = float3pow(F_L / 100.0f * fabs(RGB), 0.42f);
+    const float3 RGB_c   = (400.0f * sign(RGB) * F_L_RGB) / (27.13f + F_L_RGB);
+    return RGB_c;
+  }
+
+  float3 post_adaptation_non_linear_response_compression_inverse(float3 RGB, float F_L)
+  {
+    const float3 absRGB = fabs(RGB);
+    const float3 RGB_p  = sign(RGB) * 100.0f / F_L * float3pow((27.13f * absRGB) / (400.0f - absRGB), 1.0f / 0.42f);
+    return RGB_p;
+  }
+
+  inline float3 Hellwig2022_JMh_to_XYZ(float3 JMh, float3 XYZ_w, float L_A, float Y_b, float3 surround)
+  {
+    float J = JMh.x;
+    float M = JMh.y;
+    float h = JMh.z;
+
+    // # Step 0
+    // # Converting *CIE XYZ* tristimulus values to sharpened *RGB* values.
+    float3 RGB_w = vector_dot(CAT_CAT16, XYZ_w);
+
+    // # Viewing conditions dependent parameters
+    float k   = 1 / (5 * L_A + 1);
+    float k4  = pow(k, 4);
+    float F_L = 0.2f * k4 * (5.0f * L_A) + 0.1f * pow((1.0f - k4), 2.0f) * pow(5.0f * L_A, 1.0f / 3.0f);
+    float n   = Y_b / XYZ_w.y;
+    float z   = 1.48 + sqrt(n);
+
+    float3 D_RGB  = XYZ_w.y / RGB_w;
+    float3 RGB_wc = D_RGB * RGB_w;
+    float3 RGB_aw = post_adaptation_non_linear_response_compression_forward(RGB_wc, F_L);
+
+    // # Computing achromatic responses for the whitepoint.
+    float R_aw = RGB_aw.x;
+    float G_aw = RGB_aw.y;
+    float B_aw = RGB_aw.z;
+
+    float A_w = 2.0f * R_aw + G_aw + 0.05f * B_aw;
+
+    float hr = radians(h);
+
+    // # Computing achromatic response :math:`A` for the stimulus.
+    float A = A_w * spow(J / 100.0f, 1.0f / (surround.y * z));
+
+    // # Computing *P_p_1* to *P_p_2*.
+    float P_p_1 = 43.0f * surround.z;
+    float P_p_2 = A;
+
+    // # Step 3
+    // # Computing opponent colour dimensions :math:`a` and :math:`b`.
+    float gamma = M / P_p_1;
+    float a     = gamma * cos(hr);
+    float b     = gamma * sin(hr);
+
+    // # Step 4
+    // # Applying post-adaptation non-linear response compression matrix.
+    float3 RGB_a = vector_dot(panlrcm, float3(P_p_2, a, b)) / 1403.0f;
+
+    // # Step 5
+    // # Applying inverse post-adaptation non-linear response compression.
+    float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L);
+
+    // # Step 6
+    float3 RGB = RGB_c / D_RGB;
+
+    // # Step 7
+    float3 XYZ = vector_dot(CAT_CAT16_INVERSE, RGB);
+
+    return XYZ;
+  }
+
+
+  // "PowerP" compression function (also used in the ACES Reference Gamut Compression transform)
+  // values of v above  'threshold' are compressed by a 'power' function
+  // so that an input value of 'limit' results in an output of 1.0
+  inline float compressPowerP(float v, float threshold, float limit, float power, int inverse)
+  {
+    float s = (limit - threshold) / pow(pow((1.0f - threshold) / (limit - threshold), -power) - 1.0f, 1.0f / power);
+
+    float vCompressed;
+
+    if (inverse)
+    {
+      vCompressed = (v < threshold || limit < 1.0001f || v > threshold + s)
+        ? v
+        : threshold + s * pow(-(pow((v - threshold) / s, power) / (pow((v - threshold) / s, power) - 1.0f)), 1.0f / power);
+    }
+    else
+    {
+      vCompressed = (v < threshold || limit < 1.0001f)
+        ? v
+        : threshold + s * ((v - threshold) / s) / (pow(1.0f + pow((v - threshold) / s, power), 1.0f / power));
+    }
+
+    return vCompressed;
+  }
+
+  // Bump function centered on *offset*, *width* wide and *height* high
+  inline float bump(float x, float offset, float width, float height)
+  {
+    float x_o = 2.0f * (x - offset) / width;
+    float y;
+    if (x_o < -1.0f || x_o > 1.0f)
+    {
+      y = 0.0f;
+    }
+    else
+    {
+      y = 5.0 * height * pow(5.0f, -1.0f / (1.0f - x_o * x_o));
+    }
+    x_o = 2.0f * (1.0f + x - offset) / width;
+    if (x_o >= -1.0f && x_o <= 1.0f)
+    {
+      y = 5.0 * height * pow(5.0f, -1.0f / (1.0f - x_o * x_o));
+    }
+    x_o = 2.0f * (x - offset - 1.0f) / width;
+    if (x_o >= -1.0f && x_o <= 1.0f)
+    {
+      y = 5.0 * height * pow(5.0f, -1.0f / (1.0f - x_o * x_o));
+    }
+    return y;
+  }
+
+  void init() {
+    float panlrcm_data[] =
+    {
+      2.0f, 1.0f, 0.05f,
+      1.0f, -12.0f / 11.0f, 1.0f / 11.0f,
+      1.0f / 9.0f, 1.0f / 9.0f, -2.0f / 9.0f
+    };
+    panlrcm.setArray(panlrcm_data);
+    panlrcm = panlrcm.invert();
+
+    // Normalize rows so that first column is 460
+    for (int i = 0; i < 3; i++)
+    {
+      float n = 460.0f / panlrcm[i][0];
+      panlrcm[i][0] *= n;
+      panlrcm[i][1] *= n;
+      panlrcm[i][2] *= n;
+    }
+    
+    float AP0_to_XYZ_matrix_data[] =
+    {
+      0.9525523959f,  0.0000000000f,  0.0000936786f,
+      0.3439664498f,  0.7281660966f, -0.0721325464f,
+      0.0000000000f,  0.0000000000f,  1.0088251844f
+    };
+    AP0_ACES_to_XYZ_matrix.setArray(AP0_to_XYZ_matrix_data);
+    XYZ_to_AP0_ACES_matrix = AP0_ACES_to_XYZ_matrix.invert();
+
+    float AP1_to_XYZ_matrix_data[] =
+    {
+      0.6624541811f,  0.1340042065f,  0.1561876870f,
+      0.2722287168f,  0.6740817658f,  0.0536895174f,
+     -0.0055746495f,  0.0040607335f,  1.0103391003f
+    };
+    AP1_ACES_to_XYZ_matrix.setArray(AP1_to_XYZ_matrix_data);
+    XYZ_to_AP1_ACES_matrix = AP1_ACES_to_XYZ_matrix.invert();
+
+    float CAT_CAT16_matrix_data[] =
+    {
+      0.3662329270f,  0.5979188007f,  0.0357409422f,
+     -0.2155660470f,  1.0427613637f,  0.1722873040f,
+     -0.0020676190f,  0.0488260454f,  0.9503875570f
+    };
+    CAT_CAT16.setArray(CAT_CAT16_matrix_data);
+    CAT_CAT16_INVERSE = CAT_CAT16.invert();
+
+    acesWhite = 100.0f * vector_dot(AP0_ACES_to_XYZ_matrix, float3(1.0f, 1.0f, 1.0f));
+    surround = float3(0.9f, 0.59f, 0.9f);
+    L_A = 100.0f;
+    Y_b = 20.0f;
+  }
+
+  void process() {
+    SampleType(src) input = src();
+
+    const float ap1BlueCuspM = 60.237217f;
+
+    float3 srcRGB(input.x, input.y, input.z);
+
+    float3 srcXYZ;
+    if (workingSpace == 1)
+    {
+      srcXYZ = vector_dot(AP0_ACES_to_XYZ_matrix, srcRGB);
+    }
+    else
+    {
+      srcXYZ = vector_dot(AP1_ACES_to_XYZ_matrix, srcRGB);
+    }
+    srcXYZ *= 100.0f;
+
+    float3 srcJMh = XYZ_to_Hellwig2022_JMh(srcXYZ, acesWhite, L_A, Y_b, surround);
+
+    float norm = ap1BlueCuspM * pow(srcJMh.x / ap1BlueCuspM, 1.14f);
+    float mNorm = srcJMh.y / norm;
+    float mCompressed = norm * compressPowerP(mNorm, threshold, limit, power, 0);
+    float scale = bump(srcJMh.z / 360.0f, fmod(hueCentre, 360.0f) / 360.0f, hueWidth / 360.0f, 1.0f);
+    float mOut = (1.0f - scale) * srcJMh.y + scale * mCompressed;
+    
+    float3 dstJMh = float3(srcJMh.x, mOut, srcJMh.z);
+    float3 dstXYZ = Hellwig2022_JMh_to_XYZ(dstJMh, acesWhite, L_A, Y_b, surround);
+    dstXYZ /= 100.0f;
+
+    float3 dstRGB;
+    if (workingSpace == 1)
+    {
+      dstRGB = vector_dot(XYZ_to_AP0_ACES_matrix, dstXYZ);
+    }
+    else
+    {
+      dstRGB = vector_dot(XYZ_to_AP1_ACES_matrix, dstXYZ);
+    }
+
+    dst() = float4(dstRGB.x, dstRGB.y, dstRGB.z, input.w);
+  }
+};
