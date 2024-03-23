@@ -6,6 +6,7 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
   param:
     float hueCentre;
     float hueWidth;
+    float normM;
     float threshold;
     float limit;
     float power;
@@ -27,8 +28,9 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
     float Y_b;
 
   void define() {
-    defineParam(hueCentre, "hue centre", 251.29306f);
+    defineParam(hueCentre, "hue centre", 288.0f);
     defineParam(hueWidth, "hue width", 144.0f);
+    defineParam(normM, "M normalisation", 60.0f);
     defineParam(threshold, "compression threshold", 0.0f);
     defineParam(limit, "compression limit", 1.9f);
     defineParam(power, "compression power", 1.2f);
@@ -339,8 +341,6 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
   void process() {
     SampleType(src) input = src();
 
-    const float ap1BlueCuspM = 60.237217f;
-
     float3 srcRGB(input.x, input.y, input.z);
 
     float3 srcXYZ;
@@ -356,7 +356,7 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
 
     float3 srcJMh = XYZ_to_Hellwig2022_JMh(srcXYZ, acesWhite, L_A, Y_b, surround);
 
-    float norm = ap1BlueCuspM * pow(srcJMh.x / ap1BlueCuspM, 1.14f);
+    float norm = normM * pow(srcJMh.x / normM, 1.14f);
     float mNorm = srcJMh.y / norm;
     float mCompressed = norm * compressPowerP(mNorm, threshold, limit, power, 0);
     float scale = bump(srcJMh.z / 360.0f, fmod(hueCentre, 360.0f) / 360.0f, hueWidth / 360.0f, 1.0f);
