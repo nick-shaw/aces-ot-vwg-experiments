@@ -10,7 +10,7 @@ Group {
  addUserKnob {20 User}
  addUserKnob {41 useGPUIfAvailable_1 l "Use GPU if available" T BlinkScript1.useGPUIfAvailable}
  addUserKnob {7 hueCentre l "hue centre" R 0 360}
- hueCentre 288
+ hueCentre 250
  addUserKnob {7 hueWidth l "hue width" R 0 180}
  hueWidth 120
  addUserKnob {8 normM l "M normalisation" R 0 120}
