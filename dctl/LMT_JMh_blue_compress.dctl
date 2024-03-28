@@ -6,6 +6,7 @@ DEFINE_UI_PARAMS(normM, M normalisation, DCTLUI_SLIDER_FLOAT, 60, 0, 120, 0.1)
 DEFINE_UI_PARAMS(threshold, compression threshold, DCTLUI_SLIDER_FLOAT, 0, 0, 1, 0.1)
 DEFINE_UI_PARAMS(limit, compression limit, DCTLUI_SLIDER_FLOAT, 1.9, 1, 5, 0.1)
 DEFINE_UI_PARAMS(power, compression power, DCTLUI_SLIDER_FLOAT, 1.2, 1, 3, 0.1)
+DEFINE_UI_PARAMS(compressMode, bjorn compress mode, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(workingSpace, working space, DCTLUI_COMBO_BOX, 2, {ACEScg, ACES2065_1, ACEScct}, {ACEScg, ACES2065-1, ACEScct})
 
 typedef struct
@@ -166,6 +167,72 @@ __DEVICE__ inline float mod(float a, float N)
     return a - N * _floorf(a / N);
 }
 
+  // basic 3D hypotenuse function, does not deal with under/overflow
+__DEVICE__ inline float hypot_float3(float3 xyz)
+  {
+    return _sqrtf(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
+  }
+
+__DEVICE__ inline float3 compress_bjorn(float3 xyz)
+  {
+    float C = (xyz.x + xyz.y + xyz.z) / 3.0f;
+
+    float3 xyz_temp = xyz - C;
+    float R = hypot_float3(xyz_temp);
+
+    if (R == 0.0f || C == 0.0f)
+      return xyz;
+
+    R = R * 0.816496580927726f;     // sqrt(2/3)
+
+    xyz_temp = xyz_temp / R;
+
+    float r = R / C ;
+    r = r * r ;
+    r = _sqrtf(4.0f / r + 1.0f) - 1.0f;
+
+    float s = -_fminf(xyz_temp.x, _fminf(xyz_temp.y, xyz_temp.z));
+    s = s - 0.5f;
+
+    float t = 0.5f + _sqrtf(s*s + r*r / 4.0f);
+    t = C / t;                                 // t is always >= 0.5f
+
+    xyz_temp = xyz_temp * t + C;
+
+    return xyz_temp;
+  }
+
+__DEVICE__ inline float3 uncompress_bjorn(float3 xyz)
+{
+    float C = (xyz.x + xyz.y + xyz.z) / 3.0f;
+
+    float3 xyz_temp = xyz - C;
+    float R = hypot_float3(xyz_temp);
+
+    if (R == 0.0f || C == 0.0f)
+      return xyz;
+
+    R = R * 0.816496580927726f;     // sqrt(2/3)
+
+    xyz_temp = xyz_temp / R;
+
+    float t = C / R;
+    t = t - 0.5f;
+
+    float s = -_fminf(xyz_temp.x, _fminf(xyz_temp.y, xyz_temp.z));
+    s = s -0.5f;
+
+    float r = 2 * _sqrtf(_fabs(t*t - s*s)) + 1.0f;
+    r = _sqrtf(_fabs(r*r - 1.0f));
+    if (r == 0.0f)
+      return xyz;
+    r = C * 2.0f / r;
+
+    xyz_temp = xyz_temp * r + C;
+
+    return xyz_temp;
+}
+
 __DEVICE__ inline float3 post_adaptation_non_linear_response_compression_forward(float3 RGB, float F_L)
 {
     float3 F_L_RGB = float3spow(F_L * float3abs(RGB) / 100.0f, 0.42f);
@@ -184,7 +251,7 @@ __DEVICE__ inline float3 post_adaptation_non_linear_response_compression_inverse
     return RGB_p;
 }
 
-__DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
+__DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w, bool compressMode)
 {
     float Y_w = XYZ_w.y ;
 
@@ -227,12 +294,17 @@ __DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
     float3 RGB_c = D_RGB * RGB;
 
     // # Step 3
-    // No compressMode
-//     RGB_c = compress_bjorn(RGB_c);
+    if ( compressMode )
+    {
+        RGB_c = compress_bjorn(RGB_c);
+    }
 
     float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
 
-//     RGB_a = uncompress_bjorn(RGB_a);
+    if ( compressMode )
+    {
+        RGB_a = uncompress_bjorn(RGB_a);
+    }
 
     // # Step 4
     // # Converting to preliminary cartesian coordinates.
@@ -272,7 +344,7 @@ __DEVICE__ inline float3 XYZ_to_Hellwig2022_JMh( float3 XYZ, float3 XYZ_w)
       return make_float3(J, M, h);
 }
 
-__DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
+__DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w, bool compressMode)
 {
     float J = JMh.x;
     float M = JMh.y;
@@ -339,12 +411,17 @@ __DEVICE__ inline float3 Hellwig2022_JMh_to_XYZ( float3 JMh, float3 XYZ_w)
     // # Step 5
     // # Applying inverse post-adaptation non-linear response compression.
 
-    // No compressMode
-//     RGB_a = compress_bjorn(RGB_a);
+    if ( compressMode )
+    {
+        RGB_a = compress_bjorn(RGB_a);
+    }
 
     float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L);
 
-//     RGB_c = uncompress_bjorn(RGB_c);
+    if ( compressMode )
+    {
+        RGB_c = uncompress_bjorn(RGB_c);
+    }
 
     // # Step 6
     float3 RGB = RGB_c / D_RGB;
@@ -424,7 +501,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         srcXYZ = vector_dot(AP1_ACES_to_XYZ_matrix, lin);
     }
     srcXYZ *= referenceLuminance;
-    float3 srcJMh = XYZ_to_Hellwig2022_JMh(srcXYZ, inWhite);
+    float3 srcJMh = XYZ_to_Hellwig2022_JMh(srcXYZ, inWhite, compressMode);
 
     float norm = normM * _powf(srcJMh.x / normM, 1.14f);
     float mNorm = srcJMh.y / norm;
@@ -433,7 +510,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float mOut = (1.0f - scale) * srcJMh.y + scale * mCompressed;
 
     float3 dstJMh = make_float3(srcJMh.x, mOut, srcJMh.z);
-    float3 dstXYZ = Hellwig2022_JMh_to_XYZ(dstJMh, inWhite);
+    float3 dstXYZ = Hellwig2022_JMh_to_XYZ(dstJMh, inWhite, compressMode);
     dstXYZ /= referenceLuminance;
     float3 dstRGB;
     if (workingSpace == ACES2065_1)

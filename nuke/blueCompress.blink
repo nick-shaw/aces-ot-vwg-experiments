@@ -10,6 +10,7 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
     float threshold;
     float limit;
     float power;
+    bool compressMode;
     int workingSpace; // 0: ACEScg, 1: ACES2065-1
 
   local:
@@ -91,6 +92,73 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
     return y;
   }
 
+  // basic 3D hypotenuse function, does not deal with under/overflow
+  inline float hypot_float3(float3 xyz)
+  {
+    return length(xyz);
+  }
+
+  float3 compress_bjorn(float3 xyz)
+  {
+    float C = (xyz.x + xyz.y + xyz.z) / 3;
+
+    float3 xyz_temp = xyz - C;
+    float  R        = hypot_float3(xyz_temp);
+
+    if (R == 0.0f || C == 0.0f)
+      return xyz;
+
+    R = R * 0.816496580927726; // sqrt(2/3)
+
+    xyz_temp = xyz_temp / R;
+
+    float r = R / C;
+    r       = r * r;
+    r       = sqrt(4.0f / r + 1.0f) - 1.0f;
+
+    float s = -min(xyz_temp.x, min(xyz_temp.y, xyz_temp.z));
+    s       = s - 0.5f;
+
+    float t = 0.5f + sqrt(s * s + r * r / 4.0f);
+    t       = C / t; // t is always >= 0.5f
+
+    xyz_temp = xyz_temp * t + C;
+
+    return xyz_temp;
+  }
+
+  float3 uncompress_bjorn(float3 xyz)
+  {
+    float C = (xyz.x + xyz.y + xyz.z) / 3;
+
+    float3 xyz_temp = xyz - C;
+    float  R        = hypot_float3(xyz_temp);
+
+    if (R == 0.0f || C == 0.0f)
+      return xyz;
+
+    R = R * 0.816496580927726; // sqrt(2/3)
+
+    xyz_temp = xyz_temp / R;
+
+    float t = C / R;
+    t       = t - 0.5f;
+
+    float s = -min(xyz_temp.x, min(xyz_temp.y, xyz_temp.z));
+    s       = s - 0.5f;
+
+    float r = 2 * sqrt(fabs(t * t - s * s)) + 1;
+    r       = sqrt(fabs(r * r - 1));
+    if (r == 0.0)
+      return xyz;
+    r = C * 2 / r;
+
+    xyz_temp = xyz_temp * r + C;
+
+    return xyz_temp;
+  }
+
+
   inline float3 XYZ_to_Hellwig2022_JMh(float3 XYZ, float3 XYZ_w, float L_A, float Y_b, float3 surround)
   {
     // # Step 0
@@ -125,7 +193,17 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
     // # Step 3
     // # Applying forward post-adaptation non-linear response compression.
 
+    if (compressMode)
+    {
+      RGB_c = compress_bjorn(RGB_c);
+    }
+
     float3 RGB_a = post_adaptation_non_linear_response_compression_forward(RGB_c, F_L);
+
+    if (compressMode)
+    {
+      RGB_a = uncompress_bjorn(RGB_a);
+    }
 
     // # Step 4
     // # Converting to preliminary cartesian coordinates.
@@ -223,7 +301,18 @@ kernel blueCompressKernel : ImageComputationKernel<ePixelWise>
 
     // # Step 5
     // # Applying inverse post-adaptation non-linear response compression.
+
+    if (compressMode)
+    {
+      RGB_a = compress_bjorn(RGB_a);
+    }
+
     float3 RGB_c = post_adaptation_non_linear_response_compression_inverse(RGB_a, F_L);
+
+    if (compressMode)
+    {
+      RGB_c = uncompress_bjorn(RGB_c);
+    }
 
     // # Step 6
     float3 RGB = RGB_c / D_RGB;
