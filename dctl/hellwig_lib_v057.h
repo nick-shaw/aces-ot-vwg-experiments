@@ -74,9 +74,9 @@ __CONSTANT__ float lowerHullGamma = 1.14f;
 
 // Gamut Compression parameters
 __CONSTANT__ float cuspMidBlend = 1.3f;
-__CONSTANT__ float smoothCusps = 0.24f;
-__CONSTANT__ float smoothJ = 0.058f;
-__CONSTANT__ float smoothM = 0.188f;
+__CONSTANT__ float smoothCusps = 0.18f;
+__CONSTANT__ float smoothJ = 0.02f;
+__CONSTANT__ float smoothM = 0.18f;
 __CONSTANT__ float focusAdjustGain = 0.55f;
 __CONSTANT__ float focusGainBlend = 0.3f;
 __CONSTANT__ float4 compressionFuncParams = {0.75f, 1.1f, 1.3f, 1.2f};
