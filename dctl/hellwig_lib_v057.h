@@ -538,7 +538,8 @@ __DEVICE__ inline float daniele_evo_rev(float Y)
 
 __DEVICE__ inline int midpoint(int low, int high)
   {
-    return int((high + low) / 2); // Integer division
+    int mid = (high + low) / 2; // Integer division
+    return mid;
   }
 
 __DEVICE__ inline float wrap_to_360(float hue)
@@ -554,7 +555,8 @@ __DEVICE__ inline float wrap_to_360(float hue)
 __DEVICE__ inline int hue_position_in_uniform_table(float hue, int table_size)
   {
     const float wrapped_hue = wrap_to_360(hue);
-    return int(wrapped_hue / 360.0f * table_size);
+    int hue_pos = wrapped_hue / 360.0f * table_size;
+    return hue_pos;
   }
 
 __DEVICE__ inline float2 cuspFromTable(float h)
