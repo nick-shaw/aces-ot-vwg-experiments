@@ -4,7 +4,7 @@ import numpy as np
 from cProfile import Profile
 from pstats import SortKey, Stats
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Parameters passed to Blink from the UI
 
@@ -179,6 +179,20 @@ def Y_to_J(Y, L_A, Y_b, surround_y):
 
     return np.sign(Y) * (100.0 * np.power(((400.0 * F_L_Y) / (27.13 + F_L_Y)) / A_w, surround_y * z))
 
+def J_to_Y(J, L_A, Y_b, surround_y):
+    k = 1.0 / (5.0 * L_A + 1.0)
+    k4 = k*k*k*k
+    F_L = 0.2 * k4 * (5.0 * L_A) + 0.1 * np.power((1.0 - k4), 2.0) * np.power(5.0 * L_A, 1.0 / 3.0)
+    n = Y_b / 100.0
+    z = 1.48 + np.sqrt(n)
+    F_L_W = np.power(F_L, 0.42)
+    A_w = (400.0 * F_L_W) / (27.13 + F_L_W)
+
+    A = np.sign(J) * (A_w * np.power(np.abs(J) / 100.0, 1.0 / (surround_y * z)))
+
+    return np.sign(A) * (100.0 / F_L * np.power((27.13 * np.abs(A)) / (400.0 - np.abs(A)), 1.0 / 0.42))
+
+
 # convert HSV cylindrical projection values to RGB
 def HSV_to_RGB( HSV ):
   C = HSV[2] * HSV[1]
@@ -218,6 +232,13 @@ def limit_RGB_to_JMh(RGB):
   luminanceRGB = RGB * boundaryRGB * referenceLuminance
   XYZ = vector_dot(RGB_to_XYZ_limit, luminanceRGB)
   JMh = XYZ_to_Hellwig2022_JMh(XYZ, limitWhite, L_A, Y_b, surround)
+
+  return JMh
+
+def reach_RGB_to_JMh(RGB):
+  luminanceRGB = RGB * boundaryRGB * referenceLuminance
+  XYZ = vector_dot(RGB_to_XYZ_reach, luminanceRGB)
+  JMh = XYZ_to_Hellwig2022_JMh(XYZ, inWhite, L_A, Y_b, surround)
 
   return JMh
 
@@ -793,7 +814,7 @@ def init():
   for i in range(gamutCuspTableSize):
     hNorm = float(i) / gamutCuspTableSize
     RGB = HSV_to_RGB([hNorm, 1.0, 1.0])
-    gamutCuspTableUnsorted[i] = limit_RGB_to_JMh(RGB)
+    gamutCuspTableUnsorted[i] = reach_RGB_to_JMh(RGB)
 
   minhIndex = 0
   for i in range(1, gamutCuspTableSize):
@@ -1074,16 +1095,16 @@ def main():
       #)
 
     print_constants()
-    hues = np.arange(360)
-    plt.plot(hues, gamutTopGamma)
-    gamuts = ['AP0', 'AP1', 'Rec.709', 'Rec.2020', 'P3']
-    whites = ['D60', 'D65']
-    gamut = gamuts[primariesLimit]
-    white = whites[whiteLimit]
-    plt.title("{}nits {} {}".format(int(peakLuminance), gamut, white))
-    plt.xlabel('Hellwig h')
-    plt.ylabel('Top Gamma')
-    plt.show()
+#     hues = np.arange(360)
+#     plt.plot(hues, gamutTopGamma)
+#     gamuts = ['AP0', 'AP1', 'Rec.709', 'Rec.2020', 'P3']
+#     whites = ['D60', 'D65']
+#     gamut = gamuts[primariesLimit]
+#     white = whites[whiteLimit]
+#     plt.title("{}nits {} {}".format(int(peakLuminance), gamut, white))
+#     plt.xlabel('Hellwig h')
+#     plt.ylabel('Top Gamma')
+#     plt.show()
 
 if __name__ == "__main__":
     main()
