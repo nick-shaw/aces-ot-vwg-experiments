@@ -72,7 +72,6 @@ class DRTParams:
     focusDistScaling: float
     midJ: float
     smoothCusps: float
-    smoothCuspJ: float
     smoothCuspM: float
     compressionFuncParams: ArrayLike
     # Not used, assuming same as cc (AP1)
@@ -215,7 +214,7 @@ def _drt_params(
     # LMS cone space for Hellwig 2022
     rxy = np.array([0.8336, 0.1735])
     gxy = np.array([2.3854, -1.4659])
-    bxy = np.array([0.13, -0.14])
+    bxy = np.array([0.087, -0.125])
     wxy = np.array([0.333, 0.333])
     CUSTOM_CAT16 = RGBPrimsToXYZMatrix(rxy, gxy, bxy, wxy, 1, 1)
 
@@ -270,10 +269,9 @@ def _drt_params(
         focusGainBlend=0.3,
         focusDistScaling=1.75,
         midJ=None,
-        smoothCusps=0.24,
-        smoothCuspJ=0.058,
-        smoothCuspM=0.188,
-        compressionFuncParams=[0.75, 1.1, 1.3, 1.2],
+        smoothCusps=0.12,
+        smoothCuspM=0.25,
+        compressionFuncParams=[0.75, 1.1, 1.3, 1],
         # gcreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
         # gcreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
 
@@ -284,7 +282,7 @@ def _drt_params(
         cgamutCuspTable=None,
         cgamutReachTable=None,
         gamutTopGamma=None,
-        gamutBottomGamma=1.14,
+        gamutBottomGamma=1/1.145,
 
         # Input
         input_discountIlluminant=inputDiscountIlluminant,
@@ -490,7 +488,7 @@ def cusp_tables(params):
     RGB *= params.peakLuminance
     gamutCuspTableUnsorted = luminance_RGB_to_JMh(
         RGB,
-        params.limit_whiteXYZ,
+        params.input_whiteXYZ,
         params.L_A,
         params.Y_b,
         params.input_viewingConditions,
@@ -517,7 +515,7 @@ def cusp_tables(params):
             JMhSearch = np.array([params.limitJmax, high, hue])
             newLimitRGB = JMh_to_luminance_RGB(
                 JMhSearch,
-                params.limit_whiteXYZ,
+                params.input_whiteXYZ,
                 params.L_A,
                 params.Y_b,
                 params.limit_viewingConditions,
@@ -536,7 +534,7 @@ def cusp_tables(params):
             JMhSearch = np.array([params.limitJmax, sampleM, hue])
             newLimitRGB = JMh_to_luminance_RGB(
                 JMhSearch,
-                params.limit_whiteXYZ,
+                params.input_whiteXYZ,
                 params.L_A,
                 params.Y_b,
                 params.input_viewingConditions,
