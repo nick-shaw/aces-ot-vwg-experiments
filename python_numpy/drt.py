@@ -23,9 +23,9 @@ def drt_forward(RGB, params):
     luminanceXYZ = vector_dot(params.input_RGB_to_XYZ, luminanceRGB)
 
     if params.ap1_clamp:
-      luminanceRGB = vector_dot(colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB, luminanceXYZ)
-      luminanceRGB = np.clip(luminanceRGB, 0, np.finfo(np.float16).max)
-      luminanceXYZ = vector_dot(colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ, luminanceRGB)
+        luminanceRGB = vector_dot(colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB, luminanceXYZ)
+        luminanceRGB = np.clip(luminanceRGB, 0, np.finfo(np.float32).max)
+        luminanceXYZ = vector_dot(colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ, luminanceRGB)
 
     # 1. Derive colour apparence correlates
 

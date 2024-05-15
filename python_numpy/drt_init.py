@@ -529,7 +529,7 @@ def cusp_tables(params):
                 low = high
                 high = high + search_range
 
-        while (high - low) > 1e-2: # how close should we be
+        while (high - low) > 1e-4: # how close should we be
             sampleM = (high + low) / 2
             JMhSearch = np.array([params.limitJmax, sampleM, hue])
             newLimitRGB = JMh_to_luminance_RGB(
@@ -542,6 +542,7 @@ def cusp_tables(params):
                 params.matrix_lms,
                 params.ccreach_XYZ_to_RGB,
             )
+            newLimitRGB /= params.peakLuminance
             outside = np.any(newLimitRGB < 0, axis=-1)
             if outside:
                 high = sampleM
