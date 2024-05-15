@@ -1,4 +1,4 @@
-Code current version is v54.
+Code current version is v58.
 
 To apply the display rendering on an image:
 
@@ -25,5 +25,6 @@ To test the roundtrip behaviour:
     python roundtrip.py 1 --cube 2
 
 To test against Nuke, generate references images from the Blink implementation, then use ``nuke_diff.py`` script.
+* Match achieved against Nuke's v58 Blink implementation is improved by lowering the binary search treshold for the reach cusp table to 1e-4.
 
 This is a work in progress.

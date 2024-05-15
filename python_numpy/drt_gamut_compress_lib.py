@@ -27,7 +27,6 @@ def findGamutBoundaryIntersection(
 
     s = max(0.000001, smoothness)
     JM_smoothCusp = JM_cusp.copy()
-    JM_smoothCusp[..., 0] *= 1.0 + params.smoothCuspJ * s  # J
     JM_smoothCusp[..., 1] *= 1.0 + params.smoothCuspM * s  # M
 
     J_intersect_source = solve_J_intersect(JM_source, J_focus, J_max, slope_gain)
