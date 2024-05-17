@@ -270,7 +270,7 @@ def _drt_params(
         focusDistScaling=1.75,
         midJ=None,
         smoothCusps=0.12,
-        smoothCuspM=0.25,
+        smoothCuspM=0.27,
         compressionFuncParams=[0.75, 1.1, 1.3, 1],
         # gcreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
         # gcreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
@@ -282,7 +282,7 @@ def _drt_params(
         cgamutCuspTable=None,
         cgamutReachTable=None,
         gamutTopGamma=None,
-        gamutBottomGamma=1/1.145,
+        gamutBottomGamma=1/1.14,
 
         # Input
         input_discountIlluminant=inputDiscountIlluminant,
