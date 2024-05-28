@@ -282,7 +282,7 @@ def _drt_params(
         cgamutCuspTable=None,
         cgamutReachTable=None,
         gamutTopGamma=None,
-        gamutBottomGamma=1/1.14,
+        gamutBottomGamma=1.14,
 
         # Input
         input_discountIlluminant=inputDiscountIlluminant,

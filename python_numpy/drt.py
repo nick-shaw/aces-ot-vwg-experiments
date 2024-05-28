@@ -65,9 +65,9 @@ def drt_forward(RGB, params):
     if params.clamp:
         luminanceRGB = np.clip(luminanceRGB, 0, params.peakLuminance)
 
+    luminanceRGB = luminanceRGB / params.referenceLuminance
     luminanceRGB = vector_dot(params.limit_RGB_to_XYZ, luminanceRGB)
     luminanceRGB = vector_dot(params.output_XYZ_to_RGB, luminanceRGB)
-    luminanceRGB = luminanceRGB / params.referenceLuminance
 
     outputRGB = params.eotf_inverse(luminanceRGB)
     outputRGB = np.clip(outputRGB, 0, 1)
