@@ -108,7 +108,7 @@ def generate(*args):
     limit = np.append(limit, whites_list[whites[limitingWhite.get()]]).reshape(4, 2)
     encoding = primaries_list[primaries[encodingPrimaries.get()]]
     encoding = np.append(encoding, whites_list[whites[encodingWhite.get()]]).reshape(4, 2)
-    peakLuminance = int(peak.get())
+    peakLuminance = int(float(peak.get()))
     eotfName = eotfs[eotf.get()]
     limitName = get_primary_name(limit)
     encodingName = get_primary_name(encoding)
@@ -162,8 +162,23 @@ def generate(*args):
     else:
         whiteEncodingY.set(encoding[3][1])
 
+def change_encoding(*args):
+    if encodingPrimaries.get() == "XYZ":
+        encoding_white_entry["values"] = ["D65", "E"]
+        eotf.set("Gamma 2.6")
+        encodingWhite.set("E")
+    elif encodingPrimaries.get() == "P3":
+        encoding_white_entry["values"] = ["D65", "D60", "DCI"]
+        encodingWhite.set(limitingWhite.get())
+        eotf.set("Gamma 2.6")
+    else:
+        encoding_white_entry["values"] = ["D65", "D60"]
+        if encodingPrimaries.get()[:3] == "Rec":
+            encodingWhite.set("D65")
+    generate()
+
 root = Tk()
-root.title("ACES Transform ID Generator")
+root.title("ACES Output Transform ID Generator")
 root.geometry("960x320")
 root.resizable(False, False)
 
@@ -182,7 +197,7 @@ explicit = StringVar()
 explicit_entry = ttk.Checkbutton(mainframe, text='Explicit', variable=explicit,
         command=generate, onvalue='explicit', offvalue='implicit')
 explicit_entry.grid(column=2, row=1,)
-explicit.set("implicit")
+explicit.set("explicit")
 
 peak = StringVar()
 peak_entry = ttk.Entry(mainframe, width=10, textvariable=peak)
@@ -210,7 +225,7 @@ encoding_primaries_entry = ttk.Combobox(mainframe, width=10, textvariable=encodi
 encoding_primaries_entry["values"] = ["Rec.709", "Rec.2020", "P3", "XYZ"]
 encoding_primaries_entry.state(["readonly"])
 encoding_primaries_entry.grid(column=5, row=2, sticky=W)
-encoding_primaries_entry.bind('<<ComboboxSelected>>', generate)
+encoding_primaries_entry.bind('<<ComboboxSelected>>', change_encoding)
 encodingPrimaries.set("Rec.709")
 
 limitingWhite = StringVar()
@@ -223,7 +238,7 @@ limitingWhite.set("D65")
 
 encodingWhite = StringVar()
 encoding_white_entry = ttk.Combobox(mainframe, width=10, textvariable=encodingWhite)
-encoding_white_entry["values"] = ["D65", "D60", "DCI", "E"]
+encoding_white_entry["values"] = ["D65", "D60"]
 encoding_white_entry.state(["readonly"])
 encoding_white_entry.grid(column=5, row=3, sticky=W)
 encoding_white_entry.bind('<<ComboboxSelected>>', generate)
@@ -264,7 +279,6 @@ whiteEncodingY = StringVar()
 ttk.Label(mainframe, textvariable=whiteEncodingY).grid(column=5, row=8)
 
 # ttk.Label(mainframe, text="Peak").grid(column=2, row=1, sticky=E)
-ttk.Label(mainframe, text="nits").grid(column=4, row=1, sticky=W)
 ttk.Label(mainframe, text="EOTF").grid(column=4, row=1, sticky=E)
 ttk.Label(mainframe, text="Limiting Primaries").grid(column=2, row=2, sticky=E)
 ttk.Label(mainframe, text="Encoding Primaries").grid(column=4, row=2, sticky=E)
@@ -283,6 +297,7 @@ for child in mainframe.winfo_children():
 acesId = StringVar()
 ttk.Label(mainframe, textvariable=acesId).grid(column=1, row=10, padx="20 5", pady="20 5", columnspan=6)
 
+ttk.Label(mainframe, text="nit peak").grid(column=4, row=1, padx="0 5", sticky=W)
 ttk.Label(mainframe, text="Red").grid(column=1, row=5, padx="64 5", sticky=E)
 ttk.Label(mainframe, text="Green").grid(column=1, row=6, padx="64 5", sticky=E)
 ttk.Label(mainframe, text="Blue").grid(column=1, row=7, padx="64 5", sticky=E)
