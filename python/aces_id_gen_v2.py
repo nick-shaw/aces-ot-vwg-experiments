@@ -126,9 +126,10 @@ def generate(*args):
         else:
             limitName = "_{}limited".format(limitingPrimaries.get().replace(".", ""))
     id = "{}_{}{}{}_{}nit".format(encodingName, eotfName, limitName, sim, peakLuminance)
-    id = id.replace("Rec709_Gamma_2pt2", "sRGB_Gamma_2pt2")
-    id = id.replace("Rec709_sRGB", "sRGB")
-    id = id.replace("Rec709_BT1886", "Rec709")
+    if explicit.get() == "implicit":
+        id = id.replace("Rec709_Gamma_2pt2", "sRGB_Gamma_2pt2")
+        id = id.replace("Rec709_sRGB", "sRGB")
+        id = id.replace("Rec709_BT1886", "Rec709")
     id = id.replace("XYZ_Gamma_2pt6", "DCDM")
     id = id.replace("XYZ_ST2084", "DCDM_ST2084")
     if inverse.get() == 'inverse':
@@ -176,6 +177,12 @@ inverse_entry = ttk.Checkbutton(mainframe, text='Inverse', variable=inverse,
         command=generate, onvalue='inverse', offvalue='forward')
 inverse_entry.grid(column=1, row=1,)
 inverse.set("forward")
+
+explicit = StringVar()
+explicit_entry = ttk.Checkbutton(mainframe, text='Explicit', variable=explicit,
+        command=generate, onvalue='explicit', offvalue='implicit')
+explicit_entry.grid(column=2, row=1,)
+explicit.set("implicit")
 
 peak = StringVar()
 peak_entry = ttk.Entry(mainframe, width=10, textvariable=peak)
@@ -256,7 +263,7 @@ ttk.Label(mainframe, textvariable=whiteEncodingX).grid(column=4, row=8)
 whiteEncodingY = StringVar()
 ttk.Label(mainframe, textvariable=whiteEncodingY).grid(column=5, row=8)
 
-ttk.Label(mainframe, text="Peak").grid(column=2, row=1, sticky=E)
+# ttk.Label(mainframe, text="Peak").grid(column=2, row=1, sticky=E)
 ttk.Label(mainframe, text="nits").grid(column=4, row=1, sticky=W)
 ttk.Label(mainframe, text="EOTF").grid(column=4, row=1, sticky=E)
 ttk.Label(mainframe, text="Limiting Primaries").grid(column=2, row=2, sticky=E)
