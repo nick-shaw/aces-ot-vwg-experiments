@@ -1,6 +1,5 @@
 from tkinter import *
 from tkinter import ttk
-import numpy as np
 
 import subprocess
 
@@ -23,37 +22,29 @@ eotfs = {
     'HLG':'HLG',
     'Linear':'Linear'}
 
-Rec709 = np.array(
-[
+Rec709 = [
     [0.6400, 0.3300],
     [0.3000, 0.6000],
     [0.1500, 0.0600],
 ]
-)
 
-Rec2020 = np.array(
-[
+Rec2020 = [
     [0.7080, 0.2920],
     [0.1700, 0.7970],
     [0.1310, 0.0460],
 ]
-)
 
-P3 = np.array(
-[
+P3 = [
     [0.6800, 0.3200],
     [0.2650, 0.6900],
     [0.1500, 0.0600],
 ]
-)
 
-XYZ = np.array(
-[
+XYZ = [
     [1, 0],
     [0, 1],
     [0, 0]
 ]
-)
 
 primaries = {
     "Rec.709" : 0,
@@ -61,12 +52,12 @@ primaries = {
     "P3" : 2,
     "XYZ": 3}
 
-primaries_list = np.array([Rec709, Rec2020, P3, XYZ])
+primaries_list = [Rec709, Rec2020, P3, XYZ]
 
-D65 = np.array([0.3127, 0.3290])
-D60 = np.array([0.32168, 0.33767])
-DCI = np.array([0.314,  0.351])
-EE = np.array([1/3, 1/3])
+D65 = [0.3127, 0.3290]
+D60 = [0.32168, 0.33767]
+DCI = [0.314,  0.351]
+EE = [1/3, 1/3]
 
 whites = {
     "D65" : 0,
@@ -74,27 +65,27 @@ whites = {
     "DCI" : 2,
     "E" : 3}
 
-whites_list = np.array([D65, D60, DCI, EE])
+whites_list = [D65, D60, DCI, EE]
 
 def get_white_name(primaries):
-    if np.all(primaries[3] == D65):
+    if primaries[3] == D65:
         white_name = "D65"
-    elif np.all(primaries[3] == D60):
+    elif primaries[3] == D60:
         white_name = "D60"
-    elif np.all(primaries[3] == DCI):
+    elif primaries[3] == DCI:
         white_name = "DCI"
-    elif np.all(primaries[3] == EE):
+    elif primaries[3] == EE:
         white_name = "E"
     return white_name
 
 def get_primary_name(primaries):
-    if np.all(primaries[:3] == Rec709):
+    if primaries[:3] == Rec709:
         primary_name = "Rec709"
-    elif np.all(primaries[:3] == Rec2020):
+    elif primaries[:3] == Rec2020:
         primary_name = "Rec2020"
-    elif np.all(primaries[:3] == P3):
+    elif primaries[:3] == P3:
         primary_name = "P3"
-    elif np.all(primaries[:3] == XYZ):
+    elif primaries[:3] == XYZ:
         primary_name = "XYZ"
     white_name = get_white_name(primaries)
     if primary_name[:3] == "Rec" and white_name == "D65":
@@ -104,10 +95,10 @@ def get_primary_name(primaries):
     return "{}{}".format(primary_name, white_name)
 
 def generate(*args):
-    limit = primaries_list[primaries[limitingPrimaries.get()]]
-    limit = np.append(limit, whites_list[whites[limitingWhite.get()]]).reshape(4, 2)
-    encoding = primaries_list[primaries[encodingPrimaries.get()]]
-    encoding = np.append(encoding, whites_list[whites[encodingWhite.get()]]).reshape(4, 2)
+    limit = primaries_list[primaries[limitingPrimaries.get()]].copy()
+    limit.append(whites_list[whites[limitingWhite.get()]])
+    encoding = primaries_list[primaries[encodingPrimaries.get()]].copy()
+    encoding.append(whites_list[whites[encodingWhite.get()]])
     peakLuminance = int(float(peak.get()))
     eotfName = eotfs[eotf.get()]
     limitName = get_primary_name(limit)
