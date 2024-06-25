@@ -4,6 +4,7 @@ primary_list = ["Rec.709", "Rec709", "Rec.2020", "Rec2020", "P3", "XYZ"]
 white_list = ["D65", "D60", "DCI", "E"]
 eotf_list = ["BT.1886", "BT1886", "sRGB", "Gamma 2.2", "Gamma22", "Gamma 2.6", "Gamma26", "ST.2084", "ST2084", "HLG", "Linear"]
 
+# EOTF name mappings
 eotfs = {
     'BT.1886':'BT1886',
     'BT1886':'BT1886',
@@ -17,6 +18,7 @@ eotfs = {
     'HLG':'HLG',
     'Linear':'Linear'}
 
+# Primary and white point name mapping
 def get_primary_name(primaries, white):
     primary_name = primaries.replace(".", "")
     if primary_name[:3] == "Rec" and white == "D65":
@@ -26,36 +28,43 @@ def get_primary_name(primaries, white):
     return "{}{}".format(primary_name, white)
 
 def generate_aces_id(peakLuminance, limitingPrimaries, limitingWhite, encodingPrimaries, encodingWhite, eotf, inverse=False, explicit=True):
+    # Map EOTF name to ID version
     eotfName = eotfs[eotf]
+    # Combine primary and white names, dropping white name if it is the standard white for the primaries
     limitName = get_primary_name(limitingPrimaries, limitingWhite)
     encodingName = get_primary_name(encodingPrimaries, encodingWhite)
+    # If names do not match, add D**limited to limitName
     if limitName != encodingName:
         limitName = "_" + limitName + "limited"
     else:
         limitName = ""
-    sim = ""
-    if limitingWhite == encodingWhite:
+    if limitingWhite == encodingWhite: # Matching whites are not a "sim"
         sim = ""
-    elif encodingPrimaries != "XYZ":
+    elif encodingPrimaries != "XYZ": # XYZ encodings are strictly always a "sim" but we just refer to what they are limited to
         sim = "_" + limitingWhite + "sim"
-        if limitingPrimaries == encodingPrimaries:
+        if limitingPrimaries == encodingPrimaries: # Don't describe something as both ***D**limited and **sim
             limitName = ""
         else:
             limitName = "_{}limited".format(limitingPrimaries.replace(".", ""))
+    else:
+        sim = ""
     id = "{}_{}{}{}_{}nit".format(encodingName, eotfName, limitName, sim, peakLuminance)
-    if not explicit:
+    if not explicit: # List of special cases
         id = id.replace("Rec709_Gamma2pt2", "sRGB_Gamma2pt2")
         id = id.replace("Rec709_sRGB", "sRGB")
         id = id.replace("Rec709_BT1886", "Rec709")
         id = id.replace("P3D65_sRGB", "DisplayP3")
         if encodingName[:2] == "P3" and eotfName == "Gamma2pt6":
             id = id.replace("Gamma2pt6_", "")
+    # Special cases for DCDM even if "explicit" is selected
     id = id.replace("XYZ_Gamma2pt6", "DCDM")
     id = id.replace("XYZ_ST2084", "DCDM_ST2084")
+    # Is it a forward or inverse transform?
     if inverse:
         style = "InvOutput"
     else:
         style = "Output"
+    # Put ID together
     aces_id = "<ACEStransformID>urn:ampas:aces:transformId:v2.0:{}.Academy.{}.a2.v1</ACEStransformID>".format(style, id)
     return aces_id
 
