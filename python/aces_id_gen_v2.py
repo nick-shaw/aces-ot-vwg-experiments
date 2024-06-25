@@ -132,15 +132,16 @@ def generate(*args):
     else:
         sim = ""
     id = "{}_{}{}{}_{}nit".format(encodingName, eotfName, limitName, sim, peakLuminance)
-    if explicit.get() == "implicit": # List of special cases
+    if explicit.get() == "implicit": # List of implicit special cases
         id = id.replace("Rec709_Gamma2pt2", "sRGB_Gamma2pt2")
         id = id.replace("Rec709_sRGB", "sRGB")
         id = id.replace("Rec709_BT1886", "Rec709")
         id = id.replace("P3D65_sRGB", "DisplayP3")
+        id = id.replace("XYZ_Gamma2pt6", "DCDM")
         if encodingName[:2] == "P3" and eotfName == "Gamma2pt6":
             id = id.replace("Gamma2pt6_", "")
     # Special cases for DCDM even if "explicit" is selected
-    id = id.replace("XYZ_Gamma2pt6", "DCDM")
+    id = id.replace("XYZ_Gamma2pt6", "DCDM_Gamma2pt6")
     id = id.replace("XYZ_ST2084", "DCDM_ST2084")
     # Is it a forward or inverse transform?
     if inverse.get() == 'inverse':
