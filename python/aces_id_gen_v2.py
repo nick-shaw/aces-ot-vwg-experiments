@@ -164,7 +164,7 @@ def change_encoding(*args):
     elif encodingPrimaries.get() == "P3":
         encoding_white_entry["values"] = ["D65", "D60", "DCI"]
         encodingWhite.set(limitingWhite.get())
-        eotf.set("Gamma 2.6")
+#         eotf.set("Gamma 2.6")
     else:
         encoding_white_entry["values"] = ["D65", "D60"]
         if encodingPrimaries.get()[:3] == "Rec":
