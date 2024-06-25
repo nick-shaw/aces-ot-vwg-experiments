@@ -8,10 +8,10 @@ eotfs = {
     'BT.1886':'BT1886',
     'BT1886':'BT1886',
     'sRGB':'sRGB',
-    'Gamma 2.2':'Gamma_2pt2',
-    'Gamma22':'Gamma_2pt2',
-    'Gamma 2.6':'Gamma_2pt6',
-    'Gamma26':'Gamma_2pt6',
+    'Gamma 2.2':'Gamma2pt2',
+    'Gamma22':'Gamma2pt2',
+    'Gamma 2.6':'Gamma2pt6',
+    'Gamma26':'Gamma2pt6',
     'ST.2084':'ST2084',
     'ST2084':'ST2084',
     'HLG':'HLG',
@@ -44,13 +44,13 @@ def generate_aces_id(peakLuminance, limitingPrimaries, limitingWhite, encodingPr
             limitName = "_{}limited".format(limitingPrimaries.replace(".", ""))
     id = "{}_{}{}{}_{}nit".format(encodingName, eotfName, limitName, sim, peakLuminance)
     if not explicit:
-        id = id.replace("Rec709_Gamma_2pt2", "sRGB_Gamma_2pt2")
+        id = id.replace("Rec709_Gamma2pt2", "sRGB_Gamma2pt2")
         id = id.replace("Rec709_sRGB", "sRGB")
         id = id.replace("Rec709_BT1886", "Rec709")
         id = id.replace("P3D65_sRGB", "DisplayP3")
-        if encodingName[:2] == "P3" and eotfName == "Gamma_2pt6":
-            id = id.replace("Gamma_2pt6_", "")
-    id = id.replace("XYZ_Gamma_2pt6", "DCDM")
+        if encodingName[:2] == "P3" and eotfName == "Gamma2pt6":
+            id = id.replace("Gamma2pt6_", "")
+    id = id.replace("XYZ_Gamma2pt6", "DCDM")
     id = id.replace("XYZ_ST2084", "DCDM_ST2084")
     if inverse:
         style = "InvOutput"
