@@ -47,6 +47,7 @@ def generate_aces_id(peakLuminance, limitingPrimaries, limitingWhite, encodingPr
         id = id.replace("Rec709_Gamma_2pt2", "sRGB_Gamma_2pt2")
         id = id.replace("Rec709_sRGB", "sRGB")
         id = id.replace("Rec709_BT1886", "Rec709")
+        id = id.replace("P3D65_sRGB", "DisplayP3")
         if encodingName[:2] == "P3" and eotfName == "Gamma_2pt6":
             id = id.replace("Gamma_2pt6_", "")
     id = id.replace("XYZ_Gamma_2pt6", "DCDM")
