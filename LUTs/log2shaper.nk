@@ -1,0 +1,62 @@
+push $cut_paste_input
+Group {
+ name log2shaper
+ selected true
+ addUserKnob {20 User}
+ addUserKnob {41 direction T log2shaper.direction}
+ addUserKnob {41 stops_over l "stops above white" T log2shaper.stops_over}
+ addUserKnob {41 stops_under l "stops below white" T log2shaper.stops_under}
+ addUserKnob {6 clamp_log_zero l "clamp log at zero" +STARTLINE}
+ clamp_log_zero true
+ addUserKnob {6 clamp_log_one l "clamp log at one" +STARTLINE}
+ clamp_log_one true
+}
+ Input {
+  inputs 0
+  name Input1
+  xpos -29
+  ypos -103
+ }
+ Clamp {
+  minimum_enable {{parent.clamp_log_zero}}
+  maximum {{"pow(2, parent.stops_over)"}}
+  maximum_enable {{parent.clamp_log_one}}
+  name Clamp1
+  xpos -29
+  ypos -64
+  disable {{parent.direction}}
+ }
+ Expression {
+  temp_name0 so
+  temp_expr0 "log(pow(2, stops_over) + pow(2, -stops_under))/log(2)"
+  temp_name1 su
+  temp_expr1 stops_under
+  expr0 "direction ? pow(2,(so+su)*r-su)-pow(2,-su) : (log(r+pow(2,-su))/log(2)+su)/(so+su)"
+  expr1 "direction ? pow(2,(so+su)*g-su)-pow(2,-su) : (log(g+pow(2,-su))/log(2)+su)/(so+su)"
+  expr2 "direction ? pow(2,(so+su)*b-su)-pow(2,-su) : (log(b+pow(2,-su))/log(2)+su)/(so+su)"
+  name log2shaper
+  xpos -29
+  ypos -8
+  addUserKnob {20 User}
+  addUserKnob {4 direction M {encode decode}}
+  addUserKnob {7 stops_over l "stops above white" R 0 10}
+  stops_over 10
+  addUserKnob {7 stops_under l "stops below white" R 0 10}
+  stops_under 10
+ }
+ Clamp {
+  minimum_enable {{parent.clamp_log_zero}}
+  maximum {{"pow(2, parent.stops_over)"}}
+  maximum_enable {{parent.clamp_log_one}}
+  name Clamp2
+  selected true
+  xpos -29
+  ypos 33
+  disable {{!parent.direction}}
+ }
+ Output {
+  name Output1
+  xpos -29
+  ypos 84
+ }
+end_group
