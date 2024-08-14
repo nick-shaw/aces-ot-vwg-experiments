@@ -24,6 +24,7 @@ def main():
     print()
     for file in files1:
         if not file.startswith('.'):
+            print(file + ":")
             img1 = read_image(os.path.join(path1, file))
             img2 = read_image(os.path.join(path2, file))
             if img1.shape[-1] == 4:
@@ -32,7 +33,6 @@ def main():
                 img2 = strip_alpha(img2)
             maxDiff = np.max(np.abs(img1 - img2))
             threshCount = np.count_nonzero(np.abs(img1 - img2) > thresh)
-            print(file + ":")
             print("   Max difference:", maxDiff)
             print("   {} pixels difference > {}".format(threshCount, thresh))
             print()
