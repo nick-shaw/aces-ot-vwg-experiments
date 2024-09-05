@@ -60,6 +60,7 @@ class DRTParams:
     sat_thr: float
     compr: float
     applyReachClamp: bool
+    chroma_compress_scale: float
     ccreach_RGB_to_XYZ: ArrayLike
     ccreach_XYZ_to_RGB: ArrayLike
 
@@ -82,7 +83,6 @@ class DRTParams:
     tableSize: int
     gamutCuspTable: ArrayLike
     gamutCuspTableReach: ArrayLike
-    cgamutCuspTable: ArrayLike
     cgamutReachTable: ArrayLike
     gamutTopGamma: ArrayLike
     gamutBottomGamma: float
@@ -272,6 +272,7 @@ def _drt_params(
         smoothCusps=0.12,
         smoothCuspM=0.27,
         compressionFuncParams=[0.75, 1.1, 1.3, 1],
+        chroma_compress_scale=None,
         # gcreach_RGB_to_XYZ=colour.models.RGB_COLOURSPACE_ACESCG.matrix_RGB_to_XYZ,
         # gcreach_XYZ_to_RGB=colour.models.RGB_COLOURSPACE_ACESCG.matrix_XYZ_to_RGB,
 
@@ -279,7 +280,6 @@ def _drt_params(
         tableSize=360,
         gamutCuspTable=None,
         gamutCuspTableReach=None,
-        cgamutCuspTable=None,
         cgamutReachTable=None,
         gamutTopGamma=None,
         gamutBottomGamma=1.14,
@@ -333,6 +333,7 @@ def _drt_params(
     params.sat = sat
     params.sat_thr = sat_thr
     params.compr = compr
+    params.chroma_compress_scale = pow(0.03379 * peakLuminance, 0.30596) - 0.45135
     params.applyReachClamp = False
 
     # Gamut Compression
@@ -479,26 +480,6 @@ def cusp_tables(params):
 
     h_samples = params.tableSize
 
-    # Cusp table for chroma compression gamut
-
-    gamutCuspTableUnsorted = np.zeros((h_samples, 3))
-    h = np.linspace(0, 1, h_samples, endpoint=False)
-    ones = np.ones(h.shape)
-    RGB = HSV_to_RGB(tstack([h, ones, ones]))
-    RGB *= params.peakLuminance
-    gamutCuspTableUnsorted = luminance_RGB_to_JMh(
-        RGB,
-        params.input_whiteXYZ,
-        params.L_A,
-        params.Y_b,
-        params.input_viewingConditions,
-        params.input_discountIlluminant,
-        params.matrix_lms,
-        params.ccreach_RGB_to_XYZ,
-    )
-    minhIndex = np.argmin(gamutCuspTableUnsorted[..., 2], axis=-1)
-    cgamutCuspTable = np.roll(gamutCuspTableUnsorted, -minhIndex, axis=0)
-
     # Reach table for the chroma compression reach.
 
     cgamutReachTable = np.zeros((h_samples, 3))
@@ -529,7 +510,7 @@ def cusp_tables(params):
                 low = high
                 high = high + search_range
 
-        while (high - low) > 1e-4: # how close should we be
+        while (high - low) > 1e-2: # how close should we be
             sampleM = (high + low) / 2
             JMhSearch = np.array([params.limitJmax, sampleM, hue])
             newLimitRGB = JMh_to_luminance_RGB(
@@ -614,7 +595,6 @@ def cusp_tables(params):
 
         gamutTopGamma[i] = testGamma
 
-    params.cgamutCuspTable = cgamutCuspTable
     params.cgamutReachTable = cgamutReachTable
     params.gamutCuspTable = gamutCuspTable
     params.gamutCuspTableReach = gamutCuspTableReach
