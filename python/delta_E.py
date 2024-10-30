@@ -88,7 +88,7 @@ def main():
     height = img1.shape[0]
     x = maxIndex % width
     y = int(maxIndex / img1.shape[1])
-    print('\nMax delta E ITP: {} at (x, y) = ({}, {})\n'.format(maxDelta, x, y))
+    print('\nMax delta E ITP: {} at (x, y) = ({}, {}), Nuke ({}, {})\n'.format(maxDelta, x, y, x, height - y - 1))
     colour.write_image(tstack((delta, delta, delta)), 'heatmap.tif', bit_depth='float32')
 
     plt.imshow(delta / maxDelta, cmap='hot')
