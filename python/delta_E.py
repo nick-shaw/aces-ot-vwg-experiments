@@ -28,11 +28,15 @@ def main():
         print('    BT.1886, sRGB, P3-D65, PQ (default)\n')
         exit(1)
     elif len(sys.argv) < 3:
-        print('\nError: two image paths required\n')
+        print('\nError: Two image paths required\n')
         exit(1)
 
     img1 = strip_alpha(read_image(sys.argv[1]))
     img2 = strip_alpha(read_image(sys.argv[2]))
+
+    if img1.shape != img2.shape:
+        print('Error: Image sizes do not match')
+        exit(1)
 
     Rec709 = colour.models.RGB_COLOURSPACE_BT709
     Rec2020 = colour.models.RGB_COLOURSPACE_BT2020
