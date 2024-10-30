@@ -79,8 +79,9 @@ def main():
     delta = delta_E(img1_ICtCp, img2_ICtCp, method='ITP')
 
     maxDelta = np.max(delta)
+    print(np.argmax(delta))
     print('\nMax delta E ITP:', maxDelta, '\n')
-    colour.write_image(delta, 'heatmap.tif', bit_depth='float32')
+    colour.write_image(tstack((delta, delta, delta)), 'heatmap.tif', bit_depth='float32')
 
     plt.imshow(delta / maxDelta, cmap='hot')
     plt.show()

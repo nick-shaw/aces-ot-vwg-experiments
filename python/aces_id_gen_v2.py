@@ -71,7 +71,7 @@ whites_list = [D65, D60, DCI, EE]
 
 def get_white_name(primaries):
     # Look up white name from chromaticities
-    # This is overcomplicated, but has not been changed from the original code where arbitrary chromaticities coudl be entered
+    # This is overcomplicated, but has not been changed from the original code where arbitrary chromaticities could be entered
     if primaries[3] == D65:
         white_name = "D65"
     elif primaries[3] == D60:
@@ -84,7 +84,7 @@ def get_white_name(primaries):
 
 def get_primary_name(primaries):
     # Look up primary name from chromaticities
-    # This is overcomplicated, but has not been changed from the original code where arbitrary chromaticities coudl be entered
+    # This is overcomplicated, but has not been changed from the original code where arbitrary chromaticities could be entered
     if primaries[:3] == Rec709:
         primary_name = "Rec709"
     elif primaries[:3] == Rec2020:

@@ -36,7 +36,7 @@ def process_frames( ref_path, act_path ):
     nan_err_cmd = '--fixnan error '
 
     # Print out how many pixels are greater than the test threshold of 0.002.
-    range_cmd = '--rangecheck 0,0,0 .002,.002,.002 '
+    range_cmd = '--rangecheck 0,0,0 .001,.001,.001 '
 
     # Oiiotool seems to need a -o to avoid issuing a useless warning, so add an output file
     # even though it is not used.  (Note that trying to write to /dev/null here doesn't work.)
