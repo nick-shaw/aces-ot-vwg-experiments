@@ -19,13 +19,16 @@ def strip_alpha(rgba):
 def main():
     if len(sys.argv) == 1:
         print('\n Usage')
-        print('  python3 {} <image1> <image2> <format (optional)>'.format(sys.argv[0].split('/')[-1]))
+        print('  python3 {} <image1> <image2> <format (optional)> <threshold (optional)>'.format(sys.argv[0].split('/')[-1]))
         print()
         print('  image1: path to first image for comparison')
         print('  image2: path to second image for comparison')
         print()
         print('  format: the encoding of the images from the following options:')
-        print('    BT.1886, sRGB, P3-D65, PQ (default)\n')
+        print('    BT.1886, sRGB, P3-D65, PQ (default)')
+        print()
+        print('  threshold: the highest acceptable Delta E (default 1.0)')
+        print('  (parameter only available if format is specified)\n')
         exit(1)
     elif len(sys.argv) < 3:
         print('\nError: Two image paths required\n')
@@ -77,6 +80,11 @@ def main():
         img1 *= 48
         img2 *= 48
 
+    if len(sys.argv) > 4:
+        thresh = float(sys.argv[4])
+    else:
+        thresh = 1.0
+
     img1_ICtCp = RGB_to_ICtCp(img1, method='ITU-R BT.2100-2 PQ')
     img2_ICtCp = RGB_to_ICtCp(img2, method='ITU-R BT.2100-2 PQ')
 
@@ -91,7 +99,7 @@ def main():
     print('\n' + sys.argv[1].split('/')[-2] + '/' + sys.argv[1].split('/')[-1] )
     print(sys.argv[2].split('/')[-2] + '/' + sys.argv[2].split('/')[-1]  + '\n')
     print('Max deltaE ITP: {} at (x, y) = ({}, {}), Nuke ({}, {})\n'.format(maxDelta, x, y, x, height - y - 1))
-    print('{} pixels have deltaE > 2\n'.format(np.count_nonzero(delta > 2)))
+    print('{} pixels have deltaE > {}\n'.format(np.count_nonzero(delta > thresh), thresh))
     colour.write_image(tstack((delta, delta, delta)), 'heatmap.tif', bit_depth='float32')
 
     plt.imshow(delta / maxDelta, cmap='hot')
