@@ -1,28 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def Y_to_J(Y, L_A, Y_b, surround_y):
-    k = 1.0 / (5.0 * L_A + 1.0)
-    k4 = k*k*k*k
-    F_L = 0.2 * k4 * (5.0 * L_A) + 0.1 * np.power((1.0 - k4), 2.0) * np.power(5.0 * L_A, 1.0 / 3.0)
-    n = Y_b / 100.0
-    z = 1.48 + np.sqrt(n)
-    F_L_W = np.power(F_L, 0.42)
-    A_w = (400.0 * F_L_W) / (27.13 + F_L_W)
+L_A = 100.0
+Y_b = 20.0
+surround_y = 0.59
 
+# pre-calculate viewing condition dependent values
+k = 1.0 / (5.0 * L_A + 1.0)
+k4 = k*k*k*k
+F_L = 0.2 * k4 * (5.0 * L_A) + 0.1 * np.power((1.0 - k4), 2.0) * np.power(5.0 * L_A, 1.0 / 3.0)
+n = Y_b / 100.0
+z = 1.48 + np.sqrt(n)
+F_L_W = np.power(F_L, 0.42)
+A_w = (400.0 * F_L_W) / (27.13 + F_L_W)
+
+def Y_to_J(Y, L_A, Y_b, surround_y):
     F_L_Y = np.power(F_L * abs(Y) / 100.0, 0.42)
 
     return np.sign(Y) * (100.0 * np.power(((400.0 * F_L_Y) / (27.13 + F_L_Y)) / A_w, surround_y * z))
 
 def J_to_Y(J, L_A, Y_b, surround_y):
-    k = 1.0 / (5.0 * L_A + 1.0)
-    k4 = k*k*k*k
-    F_L = 0.2 * k4 * (5.0 * L_A) + 0.1 * np.power((1.0 - k4), 2.0) * np.power(5.0 * L_A, 1.0 / 3.0)
-    n = Y_b / 100.0
-    z = 1.48 + np.sqrt(n)
-    F_L_W = np.power(F_L, 0.42)
-    A_w = (400.0 * F_L_W) / (27.13 + F_L_W)
-
     A = np.sign(J) * (A_w * np.power(np.abs(J) / 100.0, 1.0 / (surround_y * z)))
 
     return np.sign(A) * (100.0 / F_L * np.power((27.13 * np.abs(A)) / (400.0 - np.abs(A)), 1.0 / 0.42))
@@ -35,10 +32,6 @@ def daniele_evo_fwd(Y, m_2, s_2, g, t_1):
     h = np.maximum(0.0, f * f / (f + t_1))
 
     return h
-
-L_A = 100.0
-Y_b = 20.0
-surround_y = 0.59
 
 peak = np.array([100, 225, 500, 625, 1000, 2000, 4000])
 
