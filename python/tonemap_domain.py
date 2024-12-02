@@ -30,6 +30,12 @@ def J_to_Y(J, L_A, Y_b, surround_y):
 def peak_to_r_hit(peak):
   return 128 + 768 * (np.log10(peak / 100) / np.log10(10000 / 100))
 
+def daniele_evo_fwd(Y, m_2, s_2, g, t_1):
+    f = m_2 * np.power(np.maximum(0.0, Y) / (Y + s_2), g)
+    h = np.maximum(0.0, f * f / (f + t_1))
+
+    return h
+
 L_A = 100.0
 Y_b = 20.0
 surround_y = 0.59
@@ -59,9 +65,9 @@ daniele_r_hit_max = 896.0  # Scene-referred value "hitting the roof" at 10,000 n
 
 for i in range(len(peak)):
     peakLuminance = peak[i]
-    
+
     daniele_n = peakLuminance  # peak white
-    
+
     # pre-calculate Daniele Evo constants
     daniele_r_hit = daniele_r_hit_min + (daniele_r_hit_max - daniele_r_hit_min) * (np.log(daniele_n / daniele_n_r) / np.log(10000.0 / 100.0))
     daniele_m_0 = daniele_n / daniele_n_r
@@ -76,27 +82,21 @@ for i in range(len(peak)):
     daniele_s_2 = daniele_w_2 * daniele_m_1
     daniele_u_2 = pow((daniele_r_hit / daniele_m_1) / ((daniele_r_hit / daniele_m_1) + daniele_w_2), daniele_g)
     daniele_m_2 = daniele_m_1 / daniele_u_2
-    
-    def daniele_evo_fwd(Y):
-        f = daniele_m_2 * np.power(np.maximum(0.0, Y) / (Y + daniele_s_2), daniele_g)
-        h = np.maximum(0.0, f * f / (f + daniele_t_1))
-    
-        return h
-    
+
     J_in = np.linspace(0, J[i], 1000)
-    
+
     Y_in = J_to_Y(J_in, L_A, Y_b, surround_y) / 100
-    
-    Y_out = daniele_evo_fwd(Y_in)
-    
+
+    Y_out = daniele_evo_fwd(Y_in, daniele_m_2, daniele_s_2, daniele_g, daniele_t_1)
+
     J_out = Y_to_J(Y_out * 100, L_A, Y_b, surround_y)
-    
+
     plt.plot(J_in, J_out)
-    
+
     plt.title('Peak Luminance = {} nits'.format(peakLuminance))
-    
+
     plt.xlabel('Input J')
     plt.ylabel('Output J')
     plt.grid()
-    
+
     plt.show()
