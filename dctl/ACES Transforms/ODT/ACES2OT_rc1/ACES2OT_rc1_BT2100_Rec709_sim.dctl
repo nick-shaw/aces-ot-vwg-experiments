@@ -1,17 +1,27 @@
 DEFINE_ACES_PARAM(IS_PARAMETRIC_ACES_TRANSFORM: 0,
                   OUTPUT_COLORSPACE_TAG: Rec2020_1000nits_15nits_ST2084)
 
-DEFINE_UI_PARAMS(toneCurve, Tone Curve, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(d60Sim, D60 Sim, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(asPQ, Encode as BT.2100 PQ, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(ap1Clip, AP1 Clamp, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(softClip, Soft Clip, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(hardClip, Clamp, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
+// DEFINE_UI_PARAMS(toneCurve, Tone Curve, DCTLUI_CHECK_BOX, 1)
+// DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
+// DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
+// DEFINE_UI_PARAMS(d60Sim, D60 Sim, DCTLUI_CHECK_BOX, 0)
+// DEFINE_UI_PARAMS(asPQ, Encode as BT.2100 PQ, DCTLUI_CHECK_BOX, 1)
+// DEFINE_UI_PARAMS(ap1Clip, AP1 Clamp, DCTLUI_CHECK_BOX, 1)
+// DEFINE_UI_PARAMS(softClip, Soft Clip, DCTLUI_CHECK_BOX, 0)
+// DEFINE_UI_PARAMS(hardClip, Clamp, DCTLUI_CHECK_BOX, 1)
+// DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+// DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
 
+__CONSTANT__ int toneCurve = 1;
+__CONSTANT__ int compressChroma = 1;
+__CONSTANT__ int gamutCompress = 1;
+__CONSTANT__ int d60Sim = 0;
+__CONSTANT__ int asPQ = 1;
+__CONSTANT__ int ap1Clip = 1;
+__CONSTANT__ int softClip = 0;
+__CONSTANT__ int hardClip = 1;
+__CONSTANT__ int invert = 0;
+__CONSTANT__ int JMhOut = 0;
 
 typedef struct
 {

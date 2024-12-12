@@ -266,11 +266,11 @@ __DEVICE__ inline float compressPowerP( float v, float threshold, float limit, f
 
     if( inverse )
     {
-        vCompressed = (v<threshold||limit<1.0001f||v>threshold+s)?v:threshold+s*_powf(-(_powf((v-threshold)/s,power)/(_powf((v-threshold)/s,power)-1.0f)),1.0f/power);
+        vCompressed = (v<threshold||limit<=1.0001f||v>threshold+s)?v:threshold+s*_powf(-(_powf((v-threshold)/s,power)/(_powf((v-threshold)/s,power)-1.0f)),1.0f/power);
     }
     else
     {
-        vCompressed = (v<threshold||limit<1.0001f)?v:threshold+s*((v-threshold)/s)/(_powf(1.0f+_powf((v-threshold)/s,power),1.0f/power));
+        vCompressed = (v<threshold||limit<=1.0001f)?v:threshold+s*((v-threshold)/s)/(_powf(1.0f+_powf((v-threshold)/s,power),1.0f/power));
     }
 
     return vCompressed;
@@ -860,7 +860,7 @@ __DEVICE__ inline float3 findGamutBoundaryIntersection(float3 JMh_s, float2 JM_c
   {
     float2 JM_source = make_float2(JMh_s.x, JMh_s.y);
     float gamma_top = hueDependantUpperHullGamma(JMh_s.z);
-    float gamma_bottom = lowerHullGamma;
+    float gamma_bottom = lowerHullGamma + 0.07 * _log10f(daniele_n / daniele_n_r);
 
     float slope = 0.0f;
 
