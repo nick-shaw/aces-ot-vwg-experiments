@@ -28,27 +28,21 @@ This repo contains various experiments related to the ACES 2.0 [Output Transform
 
 * `ssts_lib.h` - A cutdown of the functions from `ACES_LIB_MOD` including only the SSTS curve, for use in `tonecurves.dctl`
 
-* `DRT_v30_709.dctl` - A port of v30 of the Hellwig CAM based DRT targeting Rec.709 gamma 2.4.
+* `ACES2OT_rc1_Rec709.dctl` - Pure DCTL implementation of the ACES 2.0 release candidate 1 DRT, Rec.709 100 nits
 
-* `DRT_v30_709_sim_in_PQ.dctl` - The same SDR Rec.709 DRT as above, but encoded as BT.2020 PQ to simplify HDR/SDR comparison without needing to change monitor settings.
+* `ACES2OT_rc1_BT2100_Rec709_sim.dctl` - Pure DCTL implementation of the ACES 2.0 release candidate 1 DRT, Rec.709 100 nits, encoded as Rec.2100 PQ
 
-* `DRT_v30_2100_PQ.dctl` - A 1000 nit P3-D65 limited version of the above DRT encoded as BT.2020 PQ.
+* `ACES2OT_rc1_P3_D65_26_gamma.dctl` - Pure DCTL implementation of the ACES 2.0 release candidate 1 DRT, P3-D65 2.6 gamma 48 nits
 
-* `hellwig_lib.h` - A library of functions and constants used by the above DRTs, to reduce code duplication.
+* `ACES2OT_rc1_BT2100_500nit_P3D65_limited.dctl` - Pure DCTL implementation of the ACES 2.0 release candidate 1 DRT, 500 nit PQ limited to P3-D65 but encoded as Rec.2020
 
-* `DRT_v55_709.dctl` - Pure DCTL implementation of the version 55 DRT, Rec.709 100 nits
+* `ACES2OT_rc1_BT2100_1000nit_P3D65_limited.dctl` - Pure DCTL implementation of the ACES 2.0 release candidate 1 DRT, 1000 nit PQ limited to P3-D65 but encoded as Rec.2020
 
-* `DRT_v55_P3_D65.dctl` - Pure DCTL implementation of the version 55 DRT, P3-D65 2.6 gamma 48 nits
+* `hellwig_lib_rc1.h` - Library functions used by the above v55 DRTs
 
-* `DRT_v55_PQ500.dctl` - Pure DCTL implementation of the version 55 DRT, 500 nit PQ limited to P3-D65 but encoded as Rec.2020
+* `ACES Transforms/ODT/ACES2OT_rc1/` - Copies of the above DCTL files with settings and tagging for use in Resolve's `ACES Transforms/ODT/` folder.
 
-* `DRT_v55_PQ1000.dctl` - Pure DCTL implementation of the version 55 DRT, 1000 nit PQ limited to P3-D65 but encoded as Rec.2020
-
-* `hellwig_lib_v055.h` - Library functions used by the above v55 DRTs
-
-* `ACES Transforms/ODT/DCTL_v55/` - Copies of the above DCTL files with settings and tagging for use in Resolve's `ACES Transforms/ODT/` folder.
-
-* `ACES Transforms/IDT/DCTL_v55/` - Copies of the above DCTL files with settings (including "invert") and tagging for use in Resolve's `ACES Transforms/IDT/` folder.
+* `ACES Transforms/IDT/ACES2OT_rc1/` - Copies of the above DCTL files with settings (including "invert") and tagging for use in Resolve's `ACES Transforms/IDT/` folder.
 
 To load the **Simple** and **Naive** DRTs through the DRX files, all the *.dctl*, *.cube* and *.h* files must be placed in a folder called `AMPAS` in the root of the Resolve LUT folder. Resolve should be in DaVinci YRGB mode, with the timeline colour space set to whatever the connected monitor is expecting. The first node in the node tree of the DRX is a conversion from LogC to ACEScct. This will obviously need to be modified if your source is not LogC.
 
