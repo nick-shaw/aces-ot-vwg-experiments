@@ -6,7 +6,7 @@
 // DEFINE_UI_PARAMS(ap1Clip, AP1 Clamp, DCTLUI_CHECK_BOX, 1)
 // DEFINE_UI_PARAMS(softClip, Soft Clip, DCTLUI_CHECK_BOX, 0)
 // DEFINE_UI_PARAMS(hardClip, Clamp, DCTLUI_CHECK_BOX, 1)
-// DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 // DEFINE_UI_PARAMS(JMhOut, Diagnostic JMh Output, DCTLUI_CHECK_BOX, 0)
 
 __CONSTANT__ int toneCurve = 1;
