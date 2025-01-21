@@ -606,52 +606,52 @@ __DEVICE__ inline float2 cuspFromTable(float h)
     return make_float2(cuspJ,cuspM);
 }
 
-__DEVICE__ inline float2 cCuspFromTable(float h)
-{
-    float3 lo;
-    float3 hi;
-
-    if( h <= cGamutCuspTable[0].z )
-    {
-      lo = cGamutCuspTable[359];
-      lo.z = lo.z-360.0f;
-      hi = cGamutCuspTable[0];
-    }
-    else if( h >= cGamutCuspTable[359].z )
-    {
-      lo = cGamutCuspTable[359];
-      hi = cGamutCuspTable[0];
-      hi.z = hi.z+360.0f;
-    }
-    else
-    {
-      int low_i  = 0;
-      int high_i = 359;
-      int i      = hue_position_in_uniform_table(h, 360);
-
-      while (low_i + 1 < high_i)
-      {
-        if (h > cGamutCuspTable[i].z)
-        {
-          low_i = i;
-        }
-        else
-        {
-          high_i = i;
-        }
-        i = midpoint(low_i, high_i);
-      }
-      lo = cGamutCuspTable[high_i - 1];
-      hi = cGamutCuspTable[high_i];
-    }
-
-    float t = (h - lo.z) / (hi.z - lo.z);
-
-    float cuspJ = lerp(lo.x, hi.x, t);
-    float cuspM = lerp(lo.y, hi.y, t);
-
-    return make_float2(cuspJ,cuspM);
-}
+// __DEVICE__ inline float2 cCuspFromTable(float h)
+// {
+//     float3 lo;
+//     float3 hi;
+// 
+//     if( h <= cGamutCuspTable[0].z )
+//     {
+//       lo = cGamutCuspTable[359];
+//       lo.z = lo.z-360.0f;
+//       hi = cGamutCuspTable[0];
+//     }
+//     else if( h >= cGamutCuspTable[359].z )
+//     {
+//       lo = cGamutCuspTable[359];
+//       hi = cGamutCuspTable[0];
+//       hi.z = hi.z+360.0f;
+//     }
+//     else
+//     {
+//       int low_i  = 0;
+//       int high_i = 359;
+//       int i      = hue_position_in_uniform_table(h, 360);
+// 
+//       while (low_i + 1 < high_i)
+//       {
+//         if (h > cGamutCuspTable[i].z)
+//         {
+//           low_i = i;
+//         }
+//         else
+//         {
+//           high_i = i;
+//         }
+//         i = midpoint(low_i, high_i);
+//       }
+//       lo = cGamutCuspTable[high_i - 1];
+//       hi = cGamutCuspTable[high_i];
+//     }
+// 
+//     float t = (h - lo.z) / (hi.z - lo.z);
+// 
+//     float cuspJ = lerp(lo.x, hi.x, t);
+//     float cuspM = lerp(lo.y, hi.y, t);
+// 
+//     return make_float2(cuspJ,cuspM);
+// }
 
 __DEVICE__ inline float reachFromTable(float h)
 {
@@ -690,15 +690,43 @@ __DEVICE__ inline float toe(float x, float limit, float k1, float k2, int invers
   // appropriate rate of change from display black to display white, and from
   // achromatic outward to purer colors.
   //
+  
+__DEVICE__ inline float chromaCompressionNorm(float h)
+{
+
+    float hr = degrees_to_radians(h);
+
+    float a = _cosf(hr);
+    float b = _sinf(hr);
+    float cos_hr2 = a * a - b * b;
+    float sin_hr2 = 2.0f * a * b;
+    float cos_hr3 = 4.0f * a * a * a - 3.0f * a;
+    float sin_hr3 = 3.0f * b - 4.0f * b * b * b;
+
+    float M = 11.34072f * a +
+              16.46899f * cos_hr2 +
+              7.88380f * cos_hr3 +
+              14.66441f * b +
+              -6.37224f * sin_hr2 +
+              9.19364f * sin_hr3 +
+              77.12896f;
+
+    return M * chromaCompressScale;
+}
+  
 __DEVICE__ inline float chromaCompression(float3 JMh, float origJ, float linear, int invert)
   {
+    float J = JMh.x;
     float M = JMh.y;
+    float h = JMh.z;
+
     if (M == 0.0f)
       return M;
 
     float nJ = JMh.x / limitJmax;
     float snJ = max(0.0f, 1.0f - nJ);
-    float Mnorm = cCuspFromTable(JMh.z).y;
+//     float Mnorm = cCuspFromTable(JMh.z).y;
+    float Mnorm = chromaCompressionNorm(h);
     float limit = _powf(nJ, model_gamma) * reachFromTable(JMh.z) / Mnorm;
 
     if (!invert)

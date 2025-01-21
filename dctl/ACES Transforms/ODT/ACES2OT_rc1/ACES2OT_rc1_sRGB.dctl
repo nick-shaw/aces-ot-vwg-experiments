@@ -1,3 +1,6 @@
+DEFINE_ACES_PARAM(IS_PARAMETRIC_ACES_TRANSFORM: 0,
+                  OUTPUT_COLORSPACE_TAG: sRGB_100nits_dim)
+
 // DEFINE_UI_PARAMS(toneCurve, Tone Curve, DCTLUI_CHECK_BOX, 1)
 // DEFINE_UI_PARAMS(compressChroma, Compress Chroma, DCTLUI_CHECK_BOX, 1)
 // DEFINE_UI_PARAMS(gamutCompress, Gamut Compress, DCTLUI_CHECK_BOX, 1)
@@ -13,7 +16,7 @@ __CONSTANT__ int toneCurve = 1;
 __CONSTANT__ int compressChroma = 1;
 __CONSTANT__ int gamutCompress = 1;
 __CONSTANT__ int d60Sim = 0;
-__CONSTANT__ int asPQ = 1;
+__CONSTANT__ int asPQ = 0;
 __CONSTANT__ int ap1Clip = 1;
 __CONSTANT__ int softClip = 0;
 __CONSTANT__ int hardClip = 1;
@@ -1188,7 +1191,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
     else
     {
-        in = float3spow(in, 2.4f);
+        in.x = in.x <= 0.04045f ? in.x / 12.92f : _powf((in.x + 0.055f) / 1.055f, 2.4f);
+        in.y = in.y <= 0.04045f ? in.y / 12.92f : _powf((in.y + 0.055f) / 1.055f, 2.4f);
+        in.z = in.z <= 0.04045f ? in.z / 12.92f : _powf((in.z + 0.055f) / 1.055f, 2.4f);
         XYZ = vector_dot(RGB_to_XYZ_output, in);
     }
     XYZ *= referenceLuminance;
@@ -1262,7 +1267,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             }
             else
             {
-                out = float3spow(out, 1.0f / 2.4f);
+                out.x = out.x <= 0.0031308f ? 12.92f * out.x : 1.055 * _powf(out.x, 1.0f / 2.4f) - 0.055;
+                out.y = out.y <= 0.0031308f ? 12.92f * out.y : 1.055 * _powf(out.y, 1.0f / 2.4f) - 0.055;
+                out.z = out.z <= 0.0031308f ? 12.92f * out.z : 1.055 * _powf(out.z, 1.0f / 2.4f) - 0.055;
             }
         }
         else
