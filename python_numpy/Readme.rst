@@ -1,4 +1,4 @@
-Code current version is v58.
+Code current version is v60.
 
 To apply the display rendering on an image:
 

@@ -15,6 +15,20 @@ from colour.utilities import (
 from drt_cusp_lib import cuspFromTable, cReachFromTable
 
 
+
+def chroma_compress_norm(h, chroma_compress_scale):
+    h_rad = h / 180 * np.pi
+    a = np.cos(h_rad)
+    b = np.sin(h_rad)
+    cos_hr2 = a * a - b * b
+    sin_hr2 = 2.0 * a * b
+    cos_hr3 = 4.0 * a * a * a - 3.0 * a
+    sin_hr3 = 3.0 * b - 4.0 * b * b * b
+
+    M = 11.34072 * a + 16.46899 * cos_hr2 + 7.88380 * cos_hr3 + 14.66441 * b + -6.37224 * sin_hr2 + 9.19364 * sin_hr3 + 77.12896
+    return M * chroma_compress_scale
+
+
 def chromaCompressionForward(
     JMh,
     origJ,
@@ -25,7 +39,7 @@ def chromaCompressionForward(
 
     nJ = J / params.limitJmax
     snJ = np.maximum(1.0 - nJ, np.zeros(nJ.shape))
-    Mnorm = cuspFromTable(h, params.cgamutCuspTable)[..., 1]
+    Mnorm = chroma_compress_norm(h, params.chroma_compress_scale)
     limit = (
         np.power(nJ, params.model_gamma)
         * cReachFromTable(h, params.cgamutReachTable)
@@ -84,7 +98,7 @@ def chromaCompressionInverse(
 
     nJ = J / params.limitJmax
     snJ = np.maximum(1.0 - nJ, np.zeros(nJ.shape))
-    Mnorm = cuspFromTable(h, params.cgamutCuspTable)[..., 1]
+    Mnorm = chroma_compress_norm(h, params.chroma_compress_scale)
     limit = (
         np.power(nJ, params.model_gamma)
         * cReachFromTable(h, params.cgamutReachTable)
