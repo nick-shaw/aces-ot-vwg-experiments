@@ -270,7 +270,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
   {
     outColor = maxf3(outColor, 0.f);
-    outColor = minf3(outColor, 1024.f);
+    outColor = minf3(outColor, 4096.f);
   }
 
   // Add Matrix processing
