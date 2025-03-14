@@ -231,7 +231,7 @@ __DEVICE__ float3 ocio_gamut_compress0(float3 JMh, float Jx, float3 JMGcusp, flo
     {
       return float3(J, 0.0f, h);
     }
-    float reachBoundaryM = 100.f * pow(J_intersect_source / 100.f,  0.879464149f);
+    float reachBoundaryM = 100.f * _powf(J_intersect_source / 100.f,  0.879464149f);
     reachBoundaryM = reachBoundaryM / ((100.f / reachMaxM) - gamut_slope);
     float remapped_M = ocio_remap_M_fwd0(M, gamutBoundaryM, reachBoundaryM);
     float remapped_J = J_intersect_source + remapped_M * gamut_slope;
