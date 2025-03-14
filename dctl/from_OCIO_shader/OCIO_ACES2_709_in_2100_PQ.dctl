@@ -8,6 +8,16 @@ __CONSTANT__ float3  ocio_gamut_cusp_table_0[362] = {{54.54076385f, 70.64421082f
 
 // Extra functions not from OCIO
 
+// ST2084 constants
+__CONSTANT__ float st2084_m_1=2610.0f / 4096.0f * (1.0f / 4.0f);
+__CONSTANT__ float st2084_m_2=2523.0f / 4096.0f * 128.0f;
+__CONSTANT__ float st2084_c_1=3424.0f / 4096.0f;
+__CONSTANT__ float st2084_c_2=2413.0f / 4096.0f * 32.0f;
+__CONSTANT__ float st2084_c_3=2392.0f / 4096.0f * 32.0f;
+__CONSTANT__ float st2084_m_1_d = 8192.0f / 1305.0f; // 1.0f / st2084_m_1;
+__CONSTANT__ float st2084_m_2_d = 32.0f / 2523.0f; // 1.0f / st2084_m_2;
+__CONSTANT__ float st2084_L_p = 10000.0f;
+
 typedef struct
 {
     float3 x;
@@ -78,6 +88,13 @@ __DEVICE__ inline float3 signf3(float3 a)
     a.z = _copysignf(1.0f, a.z);
 
     return a;
+}
+
+__DEVICE__ inline float linear_to_ST2084( float v )
+{
+    float Y_p = _powf(_fmaxf(0.0f, v) / st2084_L_p, st2084_m_1);
+
+    return _powf((st2084_c_1 + st2084_c_2 * Y_p) / (st2084_c_3 * Y_p + 1.0f), st2084_m_2);
 }
 
 // OCIO functions
@@ -361,12 +378,25 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     outColor = minf3(outColor, 1.f);
   }
 
-  // Add Gamma 'basicRev' processing
+  // Add Matrix processing
   
   {
-    float gamma = 0.41666666666666669f;
-    float3 res = powf3(outColor, gamma );
-    outColor = res;
+    outColor = vecmul({{0.62740389593469936f, 0.069097289358232047f, 0.016391438875150242f}, {0.32928303837788386f, 0.91954039507545848f, 0.088013307877225805f}, {0.043313065687417218f, 0.011362315566309173f, 0.89559525324762435f}}, outColor);
+  }
+
+  // Add PQ curve processing
+  
+  {
+    outColor *= 100.0f;
+    outColor.x = linear_to_ST2084(outColor.x);
+    outColor.y = linear_to_ST2084(outColor.y);
+    outColor.z = linear_to_ST2084(outColor.z);
+  }
+
+  // Add Range processing
+  
+  {
+    outColor = maxf3(outColor, 0.f);
   }
 
   return outColor;
