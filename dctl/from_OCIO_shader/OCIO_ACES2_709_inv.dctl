@@ -1,4 +1,4 @@
-// DEFINE_ACES_PARAM(IS_PARAMETRIC_ACES_TRANSFORM: 0, OUTPUT_COLORSPACE_TAG: Rec709_100nits_dim)
+// DEFINE_ACES_PARAM(IS_PARAMETRIC_ACES_TRANSFORM: 0)
 
 // Declaration of tables
 
@@ -95,23 +95,17 @@ __DEVICE__ float ocio_reach_m_table_0_sample(float h)
   return _mix(lo, hi, t);
 }
 
-__DEVICE__ float ocio_tonescale_fwd0(float J)
+float ocio_tonescale_inv0(float J)
 {
   float A = 0.0323680267f * _powf(_fabs(J) * 0.00999999978f, 0.879464149f);
   float Y = _powf(( 27.1299992f * A) / (1.0f - A), 2.3809523809523809f);
-  float f = 1.04710376f * _powf(Y / (Y + 0.73009213709383403f), 1.14999998f);
-  float Y_ts = max(0.0f, f * f / (f + 0.0399999991f));
-  float F_L_Y = _powf(0.79370057210326195f * Y_ts, 0.42f);
-  float J_ts = 100. * _powf((F_L_Y / ( 27.1299992f + F_L_Y)) * 30.8946857f, 1.13705599f);
+  float Y_i = Y / 0.79370057210326195f;
+  float Z = _fmaxf(0.0f, _fminf(1.00826871f, Y_i));
+  float ht = 0.5f * (Z + _sqrtf(Z * (0.15999999642372131f + Z)));
+  float Yo = 0.73009213709383403f / (_powf((1.04710376f / ht), (0.86956523541917463f)) - 1.0f);
+  float F_L_Y = _powf(_fabs(Yo), 0.42f);
+  float J_ts = 100.f * _powf((F_L_Y / ( 27.1299992f + F_L_Y)) * 30.8946857f, 1.13705599f);
   return J_ts;
-}
-
-__DEVICE__ float ocio_toe_fwd0(float x, float limit, float k1_in, float k2_in)
-{
-  float k2 = max(k2_in, 0.001f);
-  float k1 = _sqrtf(k1_in * k1_in + k2 * k2);
-  float k3 = (limit + k1) / (limit + k2);
-  return (x > limit) ? x : 0.5f * (k3 * x - k1 + _sqrtf((k3 * x - k1) * (k3 * x - k1) + 4.0f * k2 * k3 * x));
 }
 
 __DEVICE__ float3 ocio_gamut_cusp_table_0_sample(float h)
@@ -190,7 +184,7 @@ __DEVICE__ float ocio_find_gamut_boundary_intersection0(float2 JM_cusp, float ga
   return smin;
 }
 
-__DEVICE__ float ocio_remap_M_fwd0(float M, float gamut_boundary_M, float reach_boundary_M)
+__DEVICE__ float ocio_remap_M_inv0(float M, float gamut_boundary_M, float reach_boundary_M)
 {
   float boundary_ratio = gamut_boundary_M / reach_boundary_M;
   float proportion = max(boundary_ratio, 0.75f);
@@ -204,7 +198,14 @@ __DEVICE__ float ocio_remap_M_fwd0(float M, float gamut_boundary_M, float reach_
   float reach_offset = reach_boundary_M - threshold;
   float scale = reach_offset / ((reach_offset / gamut_offset) - 1.0f);
   float nd = m_offset / scale;
-  return threshold + scale * nd / (1.0f + nd);
+  if (nd >= 1.0f)
+  {
+    return threshold + scale;
+  }
+  else
+  {
+    return threshold + scale * -(nd / (nd - 1.0f));
+  }
 }
 
 __DEVICE__ float3 ocio_gamut_compress0(float3 JMh, float Jx, float3 JMGcusp, float reachMaxM)
@@ -234,37 +235,40 @@ __DEVICE__ float3 ocio_gamut_compress0(float3 JMh, float Jx, float3 JMGcusp, flo
     }
     float reachBoundaryM = 100.f * _powf(J_intersect_source / 100.f,  0.879464149f);
     reachBoundaryM = reachBoundaryM / ((100.f / reachMaxM) - gamut_slope);
-    float remapped_M = ocio_remap_M_fwd0(M, gamutBoundaryM, reachBoundaryM);
+    float remapped_M = ocio_remap_M_inv0(M, gamutBoundaryM, reachBoundaryM);
     float remapped_J = J_intersect_source + remapped_M * gamut_slope;
     return make_float3(remapped_J, remapped_M, h);
   }
+}
+
+__DEVICE__ float ocio_toe_inv0(float x, float limit, float k1_in, float k2_in)
+{
+  float k2 = _fmaxf(k2_in, 0.001f);
+  float k1 = _sqrtf(k1_in * k1_in + k2 * k2);
+  float k3 = (limit + k1) / (limit + k2);
+  return (x > limit) ? x : (x * x + k1 * x) / (k3 * (x + k2));
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
   float3 inPixel = make_float3(p_R, p_G, p_B);
   float3 outColor = inPixel;
-    
-  // Add Matrix processing
-
-  {
-    outColor = vecmul({{1.4514393161456653f, -0.07655377339602043f, 0.008316148425697719f}, {-0.23651074689374019f, 1.1762296998335731f, -0.0060324497910210278f}, {-0.21492856925192524f, -0.099675926437552201f, 0.9977163013653233f}}, outColor);
-  }
 
   // Add Range processing
-
+  
   {
     outColor = maxf3(outColor, 0.f);
-    outColor = minf3(outColor, 1024.f);
+    outColor = minf3(outColor, 1.f);
   }
 
-  // Add Matrix processing
-
+  // Add Gamma 'basicFwd' processing
+  
   {
-    outColor = vecmul({{0.69545224135745176f, 0.044794563372037632f, -0.0055258825581135443f}, {0.14067869647029416f, 0.85967111845642163f, 0.0040252103059786586f}, {0.16386906217225403f, 0.095534318171540358f, 1.0015006722521349f}}, outColor);
+    float gamma = 2.4f;
+    outColor = powf3(outColor, gamma );
   }
-
-  // Add FixedFunction 'ACES_OutputTransform20 (Forward)' processing
+  
+  // Add FixedFunction 'ACES_OutputTransform20 (Inverse)' processing
   
   {
     
@@ -274,7 +278,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 Aab;
     {
       {
-        float3 lms = vecmul({{0.445181042f, 0.123734146f, 0.0117007261f}, {0.34964928f, 0.613643706f, 0.0280607939f}, {-0.00112973212f, 0.0563228019f, 0.753939033f}}, outColor);
+        float3 lms = vecmul({{0.223405808f, 0.108193472f, 0.020469198f}, {0.451332718f, 0.547473967f, 0.10818094f}, {0.118962049f, 0.138033181f, 0.665050387f}}, outColor);
         float3 F_L_v = powf3(absf3(lms), 0.419999987f);
         float3 rgb_a = (signf3(lms) * F_L_v) / ( 27.1299992f + F_L_v);
         Aab = vecmul({{20.25881f, 15480.f, 1720.f}, {10.129405f, -16887.2734f, 1720.f}, {0.506470263f, 1407.27271f, -3440.f}}, rgb_a);
@@ -292,19 +296,35 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float h_rad = outColor.b * 0.0174532924f;
     float cos_hr = _cosf(h_rad);
     float sin_hr = _sinf(h_rad);
-
-    // Add ToneScale and ChromaCompress (fwd)
-    
-    float J_ts = ocio_tonescale_fwd0(outColor.r);
-    // Sample tables (fwd)
     float reachMaxM = ocio_reach_m_table_0_sample(outColor.b);
-
+    
+    // Add GamutCompress (inv)
+    
     {
-      float J = outColor.r;
-      float M = outColor.g;
+      float3 JMGcusp = ocio_gamut_cusp_table_0_sample(outColor.b);
+      float Jx = outColor.r;
+      float3 unCompressedJMh;
+      if (Jx <= mix(JMGcusp.r, 100.0f, 0.3f))
+      {
+        unCompressedJMh = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM);
+      }
+      else
+      {
+        Jx = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM).r;
+        unCompressedJMh = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM);
+      }
+      outColor = unCompressedJMh;
+    }
+    
+    // Add ToneScale and ChromaCompress (inv)
+    
+    float J = ocio_tonescale_inv0(outColor.r);
+    {
+      float J_ts = outColor.r;
+      float M_cp = outColor.g;
       float h = outColor.b;
-      float M_cp = M;
-      if (M != 0.0f)
+      float M = M_cp;
+      if (M_cp != 0.0f)
       {
         float nJ = J_ts / 100.f;
         float snJ = max(0.0f, 1.0f - nJ);
@@ -314,29 +334,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
           float sin_hr2 = 2.0f * cos_hr * sin_hr;
           float cos_hr3 = 4.0f * cos_hr * cos_hr * cos_hr - 3.0f * cos_hr;
           float sin_hr3 = 3.0f * sin_hr - 4.0f * sin_hr * sin_hr * sin_hr;
-          float3 cosines = make_float3(cos_hr, cos_hr2, cos_hr3);
+          float3 cosines = float3(cos_hr, cos_hr2, cos_hr3);
           float3 cosine_weights = float3(11.341321604032515f, 16.469863649185896f, 7.8842182208776475f);
           float3 sines = float3(sin_hr, sin_hr2, sin_hr3);
           float3 sine_weights = float3(14.665187919584513f, -6.3725780354404442f, 9.1941277054452897f);
           Mnorm = vecdot(cosines, cosine_weights) + vecdot(sines, sine_weights) + 77.133051547393805f;
         }
         float limit = _powf(nJ, 0.879464149f) * reachMaxM / Mnorm;
-        M_cp = M * _powf(J_ts / J, 0.879464149f);
-        M_cp = M_cp / Mnorm;
-        M_cp = limit - ocio_toe_fwd0(limit - M_cp, limit - 0.001f, snJ * 1.29999995f, _sqrtf(nJ * nJ + 0.00499999989f));
-        M_cp = ocio_toe_fwd0(M_cp, limit, nJ * 2.4000001f, snJ);
-        M_cp = M_cp * Mnorm;
+        M = M_cp / Mnorm;
+        M = ocio_toe_inv0(M, limit, nJ * 2.4000001f, snJ);
+        M = limit - ocio_toe_inv0(limit - M, limit - 0.001f, snJ * 1.29999995f, _sqrtf(nJ * nJ + 0.00499999989f));
+        M = M * Mnorm;
+        M = M * _powf(J_ts / J, -0.879464149f);
       }
-      outColor = make_float3(J_ts, M_cp, h);
+      outColor = float3(J, M, h);
     }
-
-    // Add GamutCompress (fwd)
     
-    {
-      float3 JMGcusp = ocio_gamut_cusp_table_0_sample(outColor.b);
-      outColor = ocio_gamut_compress0(outColor, outColor.r, JMGcusp, reachMaxM);
-    }
-
     // Add JMh to RGB
     
     {
@@ -348,29 +361,32 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Aab.b = JMh.g * sin_hr;
       }
       {
-        float3 rgb_a = vecmul({{0.0323680267f, 0.0323680267, 0.0323680267f}, {2.07657631e-05f, -4.10250432e-05f, -1.01296409e-05f}, {1.3260621e-05f, -1.20174373e-05f, -0.000290076074f}}, Aab);
+        float3 rgb_a = vecmul({{0.0323680267f, 0.0323680267f, 0.0323680267f}, {2.07657631e-05f, -4.10250432e-05f, -1.01296409e-05f}, {1.3260621e-05f, -1.20174373e-05f, -0.000290076074f}}, Aab);
         float3 lms = signf3(rgb_a) * powf3( 27.1299992f * absf3(rgb_a) / (1.0f - absf3(rgb_a)), 2.38095236f);
-        JMh = vecmul({{7.45048571f, -1.4750675f, 0.0106288502f}, {-6.1301837f, 3.11835742f, -0.31857267f}, {-0.0603808537f, -0.383369029f, 1.56786489f}}, lms);
+        JMh = vecmul({{2.66705441f, -0.535811961f, -0.0214489009f}, {-1.52505875f, 1.94158089f, -0.0485954471f}, {0.117925502f, -0.145848125f, 1.32996535f}}, lms);
       }
       outColor = JMh;
     }
   }
-
+  
+  // Add Matrix processing
+  
+  {
+    outColor = vecmul({{1.4514393161456653f, -0.07655377339602043f, 0.008316148425697719f}, {-0.23651074689374019f, 1.1762296998335731f, -0.0060324497910210278f}, {-0.21492856925192524f, -0.099675926437552201f, 0.9977163013653233f}}, outColor);
+  }
+  
   // Add Range processing
   
   {
     outColor = maxf3(outColor, 0.f);
-    outColor = minf3(outColor, 1.f);
+    outColor = minf3(outColor, 1024.f);
   }
-
-  // Add Gamma 'basicRev' processing
+  
+  // Add Matrix processing
   
   {
-    float gamma = 0.41666666666666669f;
-    float3 res = powf3(outColor, gamma );
-    outColor = res;
+    outColor = vecmul({{0.69545224135745176f, 0.044794563372037632f, -0.0055258825581135443f}, {0.14067869647029416f, 0.85967111845642163f, 0.0040252103059786586f}, {0.16386906217225403f, 0.095534318171540358f, 1.0015006722521349f}}, outColor);
   }
 
   return outColor;
 }
-
