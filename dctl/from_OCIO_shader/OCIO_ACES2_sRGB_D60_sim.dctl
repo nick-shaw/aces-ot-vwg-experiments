@@ -369,12 +369,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
   }
   
 
-  // Add Gamma 'basicRev' processing
+  // Add Gamma 'monCurveRev' processing
   
   {
-    float gamma = 0.41666666666666669f;
-    float3 res = powf3(outColor, gamma );
-    outColor = res;
+    outColor.x = outColor.x <= 0.00303993467f ? 12.9232101f * outColor.x : 1.05499995f * _powf(outColor.x, 0.416666657f) - 0.05499995f;
+    outColor.y = outColor.y <= 0.00303993467f ? 12.9232101f * outColor.y : 1.05499995f * _powf(outColor.y, 0.416666657f) - 0.05499995f;
+    outColor.z = outColor.z <= 0.00303993467f ? 12.9232101f * outColor.z : 1.05499995f * _powf(outColor.z, 0.416666657f) - 0.05499995f;
   }
 
   return outColor;
