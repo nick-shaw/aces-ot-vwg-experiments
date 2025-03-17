@@ -268,6 +268,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     outColor.y = outColor.y <= 0.0392759559364f ? outColor.y / 12.9232101f: _powf((outColor.y + 0.05499995f) / 1.05499995f, 2.4f);
     outColor.z = outColor.z <= 0.0392759559364f ? outColor.z / 12.9232101f: _powf((outColor.z + 0.05499995f) / 1.05499995f, 2.4f);
   }
+  
   // Add FixedFunction 'ACES_OutputTransform20 (Inverse)' processing
   
   {
