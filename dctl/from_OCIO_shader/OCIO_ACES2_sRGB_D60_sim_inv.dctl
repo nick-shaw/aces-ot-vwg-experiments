@@ -287,8 +287,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
   {
     
     // Add RGB to JMh
-    
-    float3 JMh;
+
     float3 Aab;
     {
       {
@@ -303,9 +302,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         float h = (Aab.g == 0.0f) ? 0.0f : _atan2f(Aab.b, Aab.g) * 57.29577951308238f;
         h = h - _floorf(h / 360.0f) * 360.0f;
         h = (h < 0.0f) ? h + 360.0f : h;
-        JMh = make_float3(J, M, h);
+        outColor = make_float3(J, M, h);
       }
-      outColor = JMh;
     }
     float h_rad = outColor.b * 0.0174532924f;
     float cos_hr = _cosf(h_rad);
