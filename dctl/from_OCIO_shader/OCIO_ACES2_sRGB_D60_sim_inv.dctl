@@ -256,10 +256,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
   // Add Range processing
   
-  {
-    outColor = maxf3(outColor, 0.f);
-    outColor = minf3(outColor, 1.f);
-  }
+//   {
+//     outColor = maxf3(outColor, 0.f);
+//     outColor = minf3(outColor, 1.f);
+//   }
 
   // Add Gamma 'monCurveFwd' processing
   
@@ -277,10 +277,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
   // Add Range processing
   
-  {
-    outColor = maxf3(outColor, 0.f);
-    outColor = minf3(outColor, 1.f);
-  }
+//   {
+//     outColor = maxf3(outColor, 0.f);
+//     outColor = minf3(outColor, 1.f);
+//   }
 
   // Add FixedFunction 'ACES_OutputTransform20 (Inverse)' processing
   
@@ -376,7 +376,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
       }
       {
         float3 rgb_a = vecmul({{0.0323680267f, 0.0323680267f, 0.0323680267f}, {2.07657631e-05f, -4.10250432e-05f, -1.01296409e-05f}, {1.3260621e-05f, -1.20174373e-05f, -0.000290076074f}}, Aab);
-        float3 rgb_a_lim = minf3(absf3(rgb_a), 0.99f);
+//         float3 rgb_a_lim = minf3(absf3(rgb_a), 0.99f);
+        float3 rgb_a_lim = absf3(rgb_a);
         float3 lms = signf3(rgb_a) * powf3( 27.1299992f * rgb_a_lim / (1.0f - rgb_a_lim), 2.38095236f);
         outColor = vecmul({{2.66705441f, -0.535811961f, -0.0214489009f}, {-1.52505875f, 1.94158089f, -0.0485954471f}, {0.117925502f, -0.145848125f, 1.32996535f}}, lms);
       }
@@ -391,10 +392,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
   
   // Add Range processing
   
-  {
-    outColor = maxf3(outColor, 0.f);
-    outColor = minf3(outColor, 1024.f);
-  }
+//   {
+//     outColor = maxf3(outColor, 0.f);
+//     outColor = minf3(outColor, 1024.f);
+//   }
   
   // Add Matrix processing
   
@@ -402,5 +403,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     outColor = vecmul({{0.69545224135745176f, 0.044794563372037632f, -0.0055258825581135443f}, {0.14067869647029416f, 0.85967111845642163f, 0.0040252103059786586f}, {0.16386906217225403f, 0.095534318171540358f, 1.0015006722521349f}}, outColor);
   }
 
-  return outColor;
+//   return outColor;
+  return make_float3(isnan(outColor.x), isnan(outColor.y), isnan(outColor.z));
 }
