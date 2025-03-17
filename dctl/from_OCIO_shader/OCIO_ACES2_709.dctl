@@ -365,8 +365,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
   // Add Gamma 'basicRev' processing
   
   {
-    float gamma = 0.41666666666666669f;
-    outColor = powf3(outColor, gamma );
+    outColor = powf3(outColor, 0.41666666666666669f );
   }
 
   return outColor;

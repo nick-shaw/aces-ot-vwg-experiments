@@ -264,8 +264,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
   // Add Gamma 'basicFwd' processing
   
   {
-    float gamma = 2.4f;
-    outColor = powf3(outColor, gamma );
+    outColor = powf3(outColor, 2.4f );
   }
 
   // Add Matrix processing
