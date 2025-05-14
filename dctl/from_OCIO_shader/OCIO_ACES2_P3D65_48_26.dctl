@@ -218,9 +218,9 @@ __DEVICE__ float3 ocio_gamut_compress0(float3 JMh, float Jx, float3 JMGcusp, flo
   }
   else
   {
-	float2 JMcusp;
-	JMcusp.x = JMGcusp.x;
-	JMcusp.y = JMGcusp.y;
+	  float2 JMcusp;
+	  JMcusp.x = JMGcusp.x;
+	  JMcusp.y = JMGcusp.y;
     float focusJ = _mix(JMcusp.x, 34.096539f, min(1.0f, 1.300000f - (JMcusp.x / 100.000000f)));
     float slope_gain = 135.f * ocio_get_focus_gain0(Jx, JMcusp.x);
     float J_intersect_source = ocio_solve_J_intersect0(JMh.x, JMh.y, focusJ, slope_gain);
