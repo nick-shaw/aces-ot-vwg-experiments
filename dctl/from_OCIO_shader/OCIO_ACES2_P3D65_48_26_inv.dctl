@@ -95,7 +95,7 @@ __DEVICE__ float ocio_reach_m_table_0_sample(float h)
   return _mix(lo, hi, t);
 }
 
-float ocio_tonescale_inv0(float J)
+__DEVICE__ float ocio_tonescale_inv0(float J)
 {
   float A = 0.0323680267f * _powf(_fabs(J) * 0.00999999978f, 0.879464149f);
   float Y = _powf(( 27.1299992f * A) / (1.0f - A), 2.3809523809523809f);
@@ -134,7 +134,7 @@ __DEVICE__ float3 ocio_gamut_cusp_table_0_sample(float h)
 
 __DEVICE__ float ocio_get_focus_gain0(float J, float cuspJ)
 {
-  float thr = mix(cuspJ, 100.000000f, 0.300000f);
+  float thr = _mix(cuspJ, 100.000000f, 0.300000f);
   if (J > thr)
   {
     float gain = ( 100.f - thr) / max(0.0001f, 100.f - J);
@@ -171,13 +171,13 @@ __DEVICE__ float ocio_solve_J_intersect0(float J, float M, float focusJ, float s
 
 __DEVICE__ float ocio_find_gamut_boundary_intersection0(float2 JM_cusp, float gamma_top_inv, float gamma_bottom_inv, float J_intersect_source, float J_intersect_cusp, float slope)
 {
-  float M_boundary_lower = J_intersect_cusp * _powf(J_intersect_source / J_intersect_cusp, gamma_bottom_inv) / (JM_cusp.r / JM_cusp.g - slope);
-  float M_boundary_upper = JM_cusp.g * (100.f - J_intersect_cusp) * _powf((100.f - J_intersect_source) / (100.f - J_intersect_cusp), gamma_top_inv) / (slope * JM_cusp.g + 100.f - JM_cusp.r);
+  float M_boundary_lower = J_intersect_cusp * _powf(J_intersect_source / J_intersect_cusp, gamma_bottom_inv) / (JM_cusp.x / JM_cusp.y - slope);
+  float M_boundary_upper = JM_cusp.y * (100.f - J_intersect_cusp) * _powf((100.f - J_intersect_source) / (100.f - J_intersect_cusp), gamma_top_inv) / (slope * JM_cusp.y + 100.f - JM_cusp.x);
   float smin = 0.0f;
   {
     float a = M_boundary_lower;
     float b = M_boundary_upper;
-    float s = 0.119999997f * JM_cusp.g;
+    float s = 0.119999997f * JM_cusp.y;
     float h = max(s - _fabs(a - b), 0.0f) / s;
     smin = min(a, b) - h * h * h * s * 0.16666666666666666f;
   }
@@ -210,28 +210,30 @@ __DEVICE__ float ocio_remap_M_inv0(float M, float gamut_boundary_M, float reach_
 
 __DEVICE__ float3 ocio_gamut_compress0(float3 JMh, float Jx, float3 JMGcusp, float reachMaxM)
 {
-  float J = JMh.r;
-  float M = JMh.g;
-  float h = JMh.b;
+  float J = JMh.x;
+  float M = JMh.y;
+  float h = JMh.z;
   if (M <= 0.0f || J > 100.f)
   {
-    return float3(J, 0.0f, h);
+    return make_float3(J, 0.0f, h);
   }
   else
   {
-    float2 JMcusp = JMGcusp.rg;
-    float focusJ = mix(JMcusp.r, 34.096539f, min(1.0f, 1.300000f - (JMcusp.r / 100.000000f)));
-    float slope_gain = 135.f * ocio_get_focus_gain0(Jx, JMcusp.r);
-    float J_intersect_source = ocio_solve_J_intersect0(JMh.r, JMh.g, focusJ, slope_gain);
+    float2 JMcusp;
+	JMcusp.x = JMGcusp.x;
+	JMcusp.y = JMGcusp.y;
+    float focusJ = _mix(JMcusp.x, 34.096539f, min(1.0f, 1.300000f - (JMcusp.x / 100.000000f)));
+    float slope_gain = 135.f * ocio_get_focus_gain0(Jx, JMcusp.x);
+    float J_intersect_source = ocio_solve_J_intersect0(JMh.x, JMh.y, focusJ, slope_gain);
     float gamut_slope = (J_intersect_source < focusJ) ? J_intersect_source : (100.f - J_intersect_source);
     gamut_slope = gamut_slope * (J_intersect_source - focusJ) / (focusJ * slope_gain);
-    float gamma_top_inv = JMGcusp.b;
+    float gamma_top_inv = JMGcusp.z;
     float gamma_bottom_inv = 0.877192974f;
-    float J_intersect_cusp = ocio_solve_J_intersect0(JMcusp.r, JMcusp.g, focusJ, slope_gain);
+    float J_intersect_cusp = ocio_solve_J_intersect0(JMcusp.x, JMcusp.y, focusJ, slope_gain);
     float gamutBoundaryM = ocio_find_gamut_boundary_intersection0(JMcusp, gamma_top_inv, gamma_bottom_inv, J_intersect_source, J_intersect_cusp, gamut_slope);
     if (gamutBoundaryM <= 0.0f)
     {
-      return float3(J, 0.0f, h);
+      return make_float3(J, 0.0f, h);
     }
     float reachBoundaryM = 100.f * _powf(J_intersect_source / 100.f,  0.879464149f);
     reachBoundaryM = reachBoundaryM / ((100.f / reachMaxM) - gamut_slope);
@@ -282,32 +284,32 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         Aab = vecmul({{20.25881f, 15480.f, 1720.f}, {10.129405f, -16887.2734f, 1720.f}, {0.506470263f, 1407.27271f, -3440.f}}, rgb_a);
       }
       {
-        float J = 100.f * _powf(Aab.r, 1.13705599f);
-        float M = (J == 0.0f) ? 0.0f : _sqrtf(Aab.g * Aab.g + Aab.b * Aab.b);
-        float h = (Aab.g == 0.0f) ? 0.0f : _atan2f(Aab.b, Aab.g) * 57.29577951308238f;
+        float J = 100.f * _powf(Aab.x, 1.13705599f);
+        float M = (J == 0.0f) ? 0.0f : _sqrtf(Aab.y * Aab.y + Aab.z * Aab.z);
+        float h = (Aab.y == 0.0f) ? 0.0f : _atan2f(Aab.z, Aab.y) * 57.29577951308238f;
         h = h - _floorf(h / 360.0f) * 360.0f;
         h = (h < 0.0f) ? h + 360.0f : h;
         outColor = make_float3(J, M, h);
       }
     }
-    float h_rad = outColor.b * 0.0174532924f;
+    float h_rad = outColor.z * 0.0174532924f;
     float cos_hr = _cosf(h_rad);
     float sin_hr = _sinf(h_rad);
-    float reachMaxM = ocio_reach_m_table_0_sample(outColor.b);
+    float reachMaxM = ocio_reach_m_table_0_sample(outColor.z);
     
     // Add GamutCompress (inv)
     
     {
-      float3 JMGcusp = ocio_gamut_cusp_table_0_sample(outColor.b);
-      float Jx = outColor.r;
+      float3 JMGcusp = ocio_gamut_cusp_table_0_sample(outColor.z);
+      float Jx = outColor.x;
       float3 unCompressedJMh;
-      if (Jx <= mix(JMGcusp.r, 100.0f, 0.3f))
+      if (Jx <= _mix(JMGcusp.x, 100.0f, 0.3f))
       {
         unCompressedJMh = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM);
       }
       else
       {
-        Jx = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM).r;
+        Jx = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM).x;
         unCompressedJMh = ocio_gamut_compress0(outColor, Jx, JMGcusp, reachMaxM);
       }
       outColor = unCompressedJMh;
@@ -315,11 +317,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     
     // Add ToneScale and ChromaCompress (inv)
     
-    float J = ocio_tonescale_inv0(outColor.r);
+    float J = ocio_tonescale_inv0(outColor.x);
     {
-      float J_ts = outColor.r;
-      float M_cp = outColor.g;
-      float h = outColor.b;
+      float J_ts = outColor.x;
+      float M_cp = outColor.y;
+      float h = outColor.z;
       float M = M_cp;
       if (M_cp != 0.0f)
       {
@@ -331,10 +333,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
           float sin_hr2 = 2.0f * cos_hr * sin_hr;
           float cos_hr3 = 4.0f * cos_hr * cos_hr * cos_hr - 3.0f * cos_hr;
           float sin_hr3 = 3.0f * sin_hr - 4.0f * sin_hr * sin_hr * sin_hr;
-          float3 cosines = float3(cos_hr, cos_hr2, cos_hr3);
-          float3 cosine_weights = float3(11.341321604032515f, 16.469863649185896f, 7.8842182208776475f);
-          float3 sines = float3(sin_hr, sin_hr2, sin_hr3);
-          float3 sine_weights = float3(14.665187919584513f, -6.3725780354404442f, 9.1941277054452897f);
+          float3 cosines = make_float3(cos_hr, cos_hr2, cos_hr3);
+          float3 cosine_weights = make_float3(11.341321604032515f, 16.469863649185896f, 7.8842182208776475f);
+          float3 sines = make_float3(sin_hr, sin_hr2, sin_hr3);
+          float3 sine_weights = make_float3(14.665187919584513f, -6.3725780354404442f, 9.1941277054452897f);
           Mnorm = vecdot(cosines, cosine_weights) + vecdot(sines, sine_weights) + 77.133051547393805f;
         }
         float limit = _powf(nJ, 0.879464149f) * reachMaxM / Mnorm;
@@ -344,7 +346,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         M = M * Mnorm;
         M = M * _powf(J_ts / J, -0.879464149f);
       }
-      outColor = float3(J, M, h);
+      outColor = make_float3(J, M, h);
     }
     
     // Add JMh to RGB
@@ -353,9 +355,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
       float3 JMh = outColor;
       float3 Aab;
       {
-        Aab.r = _powf(JMh.r * 0.00999999978f, 0.879464149f);
-        Aab.g = JMh.g * cos_hr;
-        Aab.b = JMh.g * sin_hr;
+        Aab.x = _powf(JMh.x * 0.00999999978f, 0.879464149f);
+        Aab.y = JMh.y * cos_hr;
+        Aab.z = JMh.y * sin_hr;
       }
       {
         float3 rgb_a = vecmul({{0.0323680267f, 0.0323680267f, 0.0323680267f}, {2.07657631e-05f, -4.10250432e-05f, -1.01296409e-05f}, {1.3260621e-05f, -1.20174373e-05f, -0.000290076074f}}, Aab);
