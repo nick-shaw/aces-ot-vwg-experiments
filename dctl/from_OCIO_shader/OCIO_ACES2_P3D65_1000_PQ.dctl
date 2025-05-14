@@ -157,7 +157,7 @@ __DEVICE__ float3 ocio_gamut_cusp_table_0_sample(float h)
 
 __DEVICE__ float ocio_get_focus_gain0(float J, float cuspJ)
 {
-  float thr =_mix(cuspJ, 283.249878f, 0.300000f);
+  float thr = _mix(cuspJ, 283.249878f, 0.300000f);
   if (J > thr)
   {
     float gain = ( 283.249878f - thr) / max(0.0001f, 283.249878f - J);
@@ -236,9 +236,9 @@ __DEVICE__ float3 ocio_gamut_compress0(float3 JMh, float Jx, float3 JMGcusp, flo
   else
   {
     float2 JMcusp;
-	JMcusp.x = JMGcusp.x;
-	JMcusp.y = JMGcusp.y;
-    float focusJ =_mix(JMcusp.x, 40.816883f, min(1.0f, 1.300000f - (JMcusp.x / 283.249878f)));
+	  JMcusp.x = JMGcusp.x;
+	  JMcusp.y = JMGcusp.y;
+    float focusJ = _mix(JMcusp.x, 40.816883f, min(1.0f, 1.300000f - (JMcusp.x / 283.249878f)));
     float slope_gain = 1051.56519f * ocio_get_focus_gain0(Jx, JMcusp.x);
     float J_intersect_source = ocio_solve_J_intersect0(JMh.x, JMh.y, focusJ, slope_gain);
     float gamut_slope = (J_intersect_source < focusJ) ? J_intersect_source : (283.249878f - J_intersect_source);
